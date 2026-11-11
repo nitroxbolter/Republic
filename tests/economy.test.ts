@@ -6,6 +6,8 @@ import { Stage } from '../src/sim/stages';
 import { collectBudget, monthlyBudget } from '../src/sim/systems/budget';
 import { garbageDay } from '../src/sim/systems/garbage';
 import { zoneDemand } from '../src/sim/systems/growth';
+import { deserialize, parseSave, serialize } from '../src/sim/save';
+import { presetSettings } from '../src/sim/terrain/presets';
 import { street } from './support/street';
 
 /** Budget, garbage and shop demand: money in, money out, and what the city makes. */
@@ -196,5 +198,20 @@ describe('shops and demand', () => {
     const n = t.sim.needs.byBuilding.get(shop.id);
     expect(n?.scores.customers).toBeGreaterThan(0.5);
     expect(n?.scores.workers).toBeGreaterThan(0.5);
+  });
+});
+
+describe('garbage survives a save exactly', () => {
+  it('keeps fractional tons in bins and landfills, so a loaded city continues the same', () => {
+    const t = street();
+    t.city.stage = Stage.Village;
+    const home = t.place('walkup', 20, 11);
+    const landfill = t.place('landfill', 40, 7);
+    home.garbage = 1.2345;
+    landfill.filled = 987.654;
+    const back = deserialize(parseSave(JSON.parse(JSON.stringify(serialize(t.city, presetSettings('plains', 5, 64), 'G')))));
+    const at = (x: number, y: number) => back.world.buildings.get(back.world.building[back.world.index(x, y)]);
+    expect(at(home.x, home.y)?.garbage).toBe(1.2345);
+    expect(at(landfill.x, landfill.y)?.filled).toBe(987.654);
   });
 });

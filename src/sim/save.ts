@@ -167,7 +167,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     const evolved = b.lifestyle !== Lifestyle.Basic || b.lifeDays !== 0 || b.garbage > 0 || b.filled > 0;
     buildings.push(
       evolved
-        ? [...core, b.stored, b.condition, b.repairDays, b.lifestyle, b.lifeDays, Math.round(b.garbage * 10) / 10, Math.round(b.filled)]
+        ? [...core, b.stored, b.condition, b.repairDays, b.lifestyle, b.lifeDays, b.garbage, b.filled]
         : b.condition < 1 || b.repairDays > 0
           ? [...core, b.stored, b.condition, b.repairDays]
           : b.stored > 0
@@ -479,7 +479,7 @@ export function parseSave(json: unknown): SaveData {
     buildings.push(
       lifestyle === undefined || lifeDays === undefined || garbage === undefined || filled === undefined
         ? base
-        : [...core, stored ?? 0, condition ?? 1, count(repairDays ?? 0), count(lifestyle), Math.round(lifeDays), Math.max(0, garbage), count(filled)],
+        : [...core, stored ?? 0, condition ?? 1, count(repairDays ?? 0), count(lifestyle), Math.round(lifeDays), Math.max(0, garbage), Math.max(0, filled)],
     );
   }
   const buildingTiles = parseBuildingTiles(json.buildingTiles);

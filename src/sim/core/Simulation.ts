@@ -88,7 +88,8 @@ export class Simulation {
     // An unlocked city opens at its stage straight away (the /demo city, old saves), with no toast.
     if (!city.locked) this.followPopulation();
     this.trains = new TrainSystem(world, this.commute);
-    this.onChange = [this.access, this.utilities, this.coverage, this.commute, this.air, this.needs, this.traffic, this.trains];
+    // Incidents last: vehicles re-route on the entrances and roads the others just brought up to date.
+    this.onChange = [this.access, this.utilities, this.coverage, this.commute, this.air, this.needs, this.traffic, this.trains, this.incidents];
   }
 
   get world(): World {

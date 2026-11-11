@@ -217,6 +217,8 @@ describe('incidents: the player changes things mid-incident', () => {
     // Bulldoze a stretch of the street between the station and the fire.
     applyClear(t.city, planClear(t.w, [{ x: 25, y: 10 }, { x: 26, y: 10 }]));
     t.sim.worldChanged({ roads: true });
+    // Called back at once: no route left to the fire.
+    expect(t.sim.incidents.responders[0]?.phase).toBe('back');
     t.run(INCIDENTS.burnAfter);
     expect(t.saw('resolved', 'fire')).toBe(false);
     expect(t.saw('burned')).toBe(true);
@@ -350,5 +352,54 @@ describe('incidents: the daily roll and lasting marks', () => {
     expect(clean.incidents.active).toHaveLength(0);
     const junk = loadSimulation(parseSave(JSON.parse(JSON.stringify({ ...data, city: { ...data.city, incidents: { list: [['meteor', 1, 2, 3, 4, 5], 'x'], responders: 7, marks: [[1, 2]] } } }))));
     expect(junk.incidents.active).toHaveLength(0);
+  });
+});
+
+describe('incidents: re-routing', () => {
+  /** The street plus a short loop north of it (y = 4, joined at x = 20 and x = 34), so a cut at x = 30 has a detour. */
+  function looped() {
+    const t = street([['fire_station', 10]]);
+    applyRoad(t.city, planRoad(t.w, roadPath({ x: 20, y: 10 }, { x: 20, y: 4 }, true), RoadType.Road), RoadType.Road);
+    applyRoad(t.city, planRoad(t.w, roadPath({ x: 20, y: 4 }, { x: 34, y: 4 }, true), RoadType.Road), RoadType.Road);
+    applyRoad(t.city, planRoad(t.w, roadPath({ x: 34, y: 4 }, { x: 34, y: 10 }, true), RoadType.Road), RoadType.Road);
+    t.sim.worldChanged({ roads: true });
+    return t;
+  }
+
+  it('a cut with a detour: the truck takes the other road and still puts the fire out', () => {
+    const t = looped();
+    const b = t.home(40);
+    t.sim.incidents.start('fire', b);
+    t.run(3);
+    applyClear(t.city, planClear(t.w, [{ x: 30, y: 10 }]));
+    t.sim.worldChanged({ roads: true });
+    const truck = t.sim.incidents.responders[0];
+    expect(truck?.phase).toBe('out');
+    for (const i of truck?.path ?? []) expect(t.w.road[i]).not.toBe(RoadType.None);
+    // Arrives in time, then works a day on the fire.
+    t.run(INCIDENTS.burnAfter + INCIDENTS.fireWork);
+    expect(t.saw('burned')).toBe(false);
+    expect(t.saw('resolved', 'fire')).toBe(true);
+    expect(t.w.buildings.has(b.id)).toBe(true);
+  });
+
+  it('a city saved just after a re-route continues exactly', () => {
+    const terrain = presetSettings('plains', 3, 64);
+    const begin = () => {
+      const t = looped();
+      t.sim.incidents.start('fire', t.home(40));
+      t.run(3);
+      applyClear(t.city, planClear(t.w, [{ x: 30, y: 10 }]));
+      t.sim.worldChanged({ roads: true });
+      t.run(5);
+      return t;
+    };
+    const running = begin();
+    running.run(40);
+    const first = begin();
+    const loaded = loadSimulation(parseSave(JSON.parse(JSON.stringify(serialize(first.city, terrain, 'R', first.sim)))));
+    for (let k = 0; k < 40; k++) loaded.tick();
+    const sig = (sim: Simulation) => sim.incidents.responders.map((r) => [r.phase, r.elapsed, r.duration, r.start, r.to, Array.from(r.path)]);
+    expect(sig(loaded)).toEqual(sig(running.sim));
   });
 });

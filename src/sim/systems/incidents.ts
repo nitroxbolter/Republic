@@ -2,7 +2,8 @@ import { BALANCE } from '../../shared/balance';
 import { SIM_TICK_HZ } from '../../shared/constants';
 import { BUILDINGS, buildingDef, Lifestyle, type BuildingDef, type BuildingInstance, type ResponderDef, type ResponderKind } from '../buildings/catalog';
 import type { City } from '../City';
-import type { SimSystem } from '../core/System';
+import type { SimSystem, WorldChange } from '../core/System';
+import { roadMask, RoadType } from '../roads';
 import { roadSpec } from '../roadTypes';
 import type { World } from '../World';
 import { speedFactor } from './commute';
@@ -92,9 +93,11 @@ export interface Responder {
   /** Incident id it was sent to (that incident may be over). */
   readonly incident: number;
   phase: ResponderPhase;
-  /** The outbound trip's ends (road tiles); the way back is routed from `to` to `from`. */
-  readonly from: number;
-  readonly to: number;
+  /** The station's entrance and the incident's (road tiles). They follow a building that moves. */
+  from: number;
+  to: number;
+  /** Where the current leg started: `from` (out) or `to` (back), or where it was re-routed. */
+  start: number;
   path: Int32Array;
   /** Ticks spent in this phase and how long it lasts. */
   elapsed: number;
@@ -385,11 +388,84 @@ export class IncidentSystem implements SimSystem {
       return;
     }
     r.phase = 'back';
+    this.setLeg(r, r.to, path, station);
+  }
+
+  /** Start a leg of the trip: from `start` along `path`, timed at today's congestion. */
+  private setLeg(r: Responder, start: number, path: Int32Array, station: BuildingInstance) {
+    r.start = start;
     r.path = path;
     r.agent.path = path;
+    r.agent.seg = 0;
+    r.agent.t = 0;
     r.elapsed = 0;
     r.shown = 0;
     r.duration = travelTicks(this.world, path, this.commute?.congestion ?? null, buildingDef(station.def).responder?.speed ?? 1);
+  }
+
+  /** Whether the rest of a vehicle's path is still connected road, tile to tile. */
+  private pathIntact(r: Responder): boolean {
+    const world = this.world;
+    const w = world.width;
+    const n = r.path.length;
+    const from = Math.min(n - 1, Math.floor(Math.min(1, r.elapsed / Math.max(1, r.duration)) * (n - 1)));
+    for (let k = from; k < n; k++) {
+      const i = r.path[k];
+      if (world.road[i] === RoadType.None) return false;
+      if (k + 1 >= n) break;
+      const j = r.path[k + 1];
+      const dx = (j % w) - (i % w);
+      const dy = Math.floor(j / w) - Math.floor(i / w);
+      const bit = dy === -1 ? 1 : dx === 1 ? 2 : dy === 1 ? 4 : 8;
+      if (!(roadMask(world, i % w, Math.floor(i / w)) & bit)) return false;
+    }
+    return true;
+  }
+
+  /** The road tile a moving vehicle is on now. */
+  private tileOf(r: Responder): number {
+    const n = r.path.length;
+    const s = Math.min(1, r.elapsed / Math.max(1, r.duration)) * (n - 1);
+    return r.path[Math.min(n - 1, Math.floor(s))];
+  }
+
+  /**
+   * Roads or buildings changed: every vehicle still driving re-routes from where it is, to where
+   * its incident (or station) is now. One heading out with no way through is called back; one
+   * that can't get home either is gone. Its incident then asks again, as when nobody was free.
+   */
+  onWorldChanged(change: WorldChange) {
+    const world = this.world;
+    const list = this.state.responders;
+    for (const r of [...list]) {
+      if (r.phase === 'scene') continue; // parked; the way back is routed when it leaves
+      const station = world.buildings.get(r.station);
+      if (!station) continue; // moveResponders drops it
+      if (station.entrance !== -1) r.from = station.entrance;
+      let goal = r.from;
+      if (r.phase === 'out') {
+        const inc = this.find(r.incident);
+        const b = inc ? world.buildings.get(inc.building) : undefined;
+        if (b && b.entrance !== -1) r.to = b.entrance;
+        goal = r.to;
+      }
+      // Keep the trip unless its destination moved or the road ahead is gone, so edits elsewhere
+      // (and reloading a save) never disturb a vehicle that can still get there.
+      if (goal === r.path[r.path.length - 1] && (!change.roads || this.pathIntact(r))) continue;
+      const here = this.tileOf(r);
+      const path = findRoute(world, here, goal, this.scratch);
+      if (path) {
+        this.setLeg(r, here, path, station);
+        continue;
+      }
+      const home = r.phase === 'out' ? findRoute(world, here, r.from, this.scratch) : null;
+      if (home) {
+        r.phase = 'back';
+        this.setLeg(r, here, home, station);
+      } else {
+        list.splice(list.indexOf(r), 1);
+      }
+    }
   }
 
   /** Age every incident; returns true when a building burned down (the world changed). */
@@ -501,6 +577,7 @@ export class IncidentSystem implements SimSystem {
       phase: 'out',
       from: best.s.entrance,
       to: target,
+      start: best.s.entrance,
       path: best.path,
       elapsed: 0,
       duration: best.ticks,
@@ -549,8 +626,8 @@ export class IncidentSystem implements SimSystem {
 
 /** `[kind, x, y, age, flags, work]`: the building by its footprint's top tile. */
 export type SavedIncident = readonly [kind: IncidentKind, x: number, y: number, age: number, flags: number, work: number];
-/** `[stationX, stationY, incident index, phase, elapsed, duration, from, to]`. */
-export type SavedResponder = readonly [x: number, y: number, incident: number, phase: number, elapsed: number, duration: number, from: number, to: number];
+/** `[stationX, stationY, incident index, phase, elapsed, duration, from, to, start]`: the current leg runs from `start`. */
+export type SavedResponder = readonly [x: number, y: number, incident: number, phase: number, elapsed: number, duration: number, from: number, to: number, start: number];
 /** `[x, y, robbed days, sick days]`. */
 export type SavedMark = readonly [x: number, y: number, robbed: number, sick: number];
 
@@ -576,7 +653,7 @@ export function saveIncidents(city: City): SavedIncidents | undefined {
   const responders: SavedResponder[] = [];
   for (const r of st.responders) {
     const s = world.buildings.get(r.station);
-    if (s) responders.push([s.x, s.y, index.get(r.incident) ?? -1, PHASES.indexOf(r.phase), r.elapsed, r.duration, r.from, r.to]);
+    if (s) responders.push([s.x, s.y, index.get(r.incident) ?? -1, PHASES.indexOf(r.phase), r.elapsed, r.duration, r.from, r.to, r.start]);
   }
   const marks: SavedMark[] = [];
   for (const b of world.buildings.values()) if (b.robbed > 0 || b.sick > 0) marks.push([b.x, b.y, b.robbed, b.sick]);
@@ -603,14 +680,14 @@ export function loadIncidents(city: City, saved: SavedIncidents) {
     if (!b) continue;
     st.list.push({ id, kind, building: b.id, age, answered: (flags & FLAG.answered) !== 0, work, spread: (flags & FLAG.spread) !== 0, reported: (flags & FLAG.reported) !== 0, wait: 0 });
   }
-  for (const [x, y, incident, phase, elapsed, duration, from, to] of saved.responders) {
+  for (const [x, y, incident, phase, elapsed, duration, from, to, start] of saved.responders) {
     const s = buildingAt(world, x, y);
     const kind = s ? buildingDef(s.def).responder?.kind : undefined;
     const p = PHASES[phase];
     if (!s || !kind || !p) continue;
-    const path = p === 'back' ? findRoute(world, to, from) : findRoute(world, from, to);
+    const path = findRoute(world, start, p === 'back' ? from : to);
     if (!path) continue;
-    st.responders.push({ kind, station: s.id, incident: ids[incident] ?? -1, phase: p, from, to, path, elapsed, duration, shown: elapsed, agent: newAgent(kind, path) });
+    st.responders.push({ kind, station: s.id, incident: ids[incident] ?? -1, phase: p, from, to, start, path, elapsed, duration, shown: elapsed, agent: newAgent(kind, path) });
   }
   for (const [x, y, robbed, sick] of saved.marks) {
     const b = buildingAt(world, x, y);
@@ -643,9 +720,9 @@ export function parseIncidents(v: unknown): SavedIncidents | undefined {
     if (isKind(kind) && int(x, 0, 4096) && int(y, 0, 4096) && int(age, 0, big) && int(flags, 0, 7) && int(work, 0, big)) list.push([kind, x, y, age, flags, work]);
   }
   const responders: SavedResponder[] = [];
-  for (const [x, y, incident, phase, elapsed, duration, from, to] of rows('responders', 8)) {
-    if (int(x, 0, 4096) && int(y, 0, 4096) && int(incident, -1, big) && int(phase, 0, 2) && int(elapsed, 0, big) && int(duration, 0, big) && int(from, 0, big) && int(to, 0, big)) {
-      responders.push([x, y, incident, phase, elapsed, duration, from, to]);
+  for (const [x, y, incident, phase, elapsed, duration, from, to, start] of rows('responders', 9)) {
+    if (int(x, 0, 4096) && int(y, 0, 4096) && int(incident, -1, big) && int(phase, 0, 2) && int(elapsed, 0, big) && int(duration, 0, big) && int(from, 0, big) && int(to, 0, big) && int(start, 0, big)) {
+      responders.push([x, y, incident, phase, elapsed, duration, from, to, start]);
     }
   }
   const marks: SavedMark[] = [];
