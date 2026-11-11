@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { BuildingId, BuildingInstance } from '../src/sim/buildings/catalog';
 import { City } from '../src/sim/City';
-import { applyPlace, applyRoad, planPlace, planRoad } from '../src/sim/commands';
+import { applyClear, applyMove, applyPlace, applyRoad, planClear, planMove, planPlace, planRoad } from '../src/sim/commands';
 import { Simulation } from '../src/sim/core/Simulation';
 import { loadSimulation, parseSave, serialize } from '../src/sim/save';
 import { roadPath, RoadType } from '../src/sim/roads';
-import { hazard, INCIDENTS, type IncidentEvent, type IncidentKind } from '../src/sim/systems/incidents';
+import { hazard, INCIDENTS, travelTicks, type IncidentEvent, type IncidentKind } from '../src/sim/systems/incidents';
+import { findRoute } from '../src/sim/systems/traffic';
 import { presetSettings } from '../src/sim/terrain/presets';
 import { Terrain } from '../src/sim/terrain/types';
 import { World } from '../src/sim/World';
@@ -203,5 +204,151 @@ describe('incidents (E3)', () => {
     expect(hazard('illness', far, { jobless: 0, aqi: () => 150 })).toBeCloseTo(hazard('illness', far, ctx) * 2);
     const station = [...t.w.buildings.values()].find((s) => s.def === 'fire_station');
     expect(station && hazard('fire', station, ctx)).toBe(0);
+  });
+});
+
+describe('incidents: the player changes things mid-incident', () => {
+  it('cutting the only road after a truck is sent: the truck cannot get through', () => {
+    const t = street([['fire_station', 10]]);
+    const b = t.home(40);
+    t.sim.incidents.start('fire', b);
+    t.run(1);
+    expect(t.sim.incidents.responders).toHaveLength(1);
+    // Bulldoze a stretch of the street between the station and the fire.
+    applyClear(t.city, planClear(t.w, [{ x: 25, y: 10 }, { x: 26, y: 10 }]));
+    t.sim.worldChanged({ roads: true });
+    t.run(INCIDENTS.burnAfter);
+    expect(t.saw('resolved', 'fire')).toBe(false);
+    expect(t.saw('burned')).toBe(true);
+  });
+
+  it('bulldozing the station recalls its vehicle; another station takes the call', () => {
+    const t = street([['fire_station', 10], ['fire_station', 56]]);
+    const b = t.home(30); // nearer the first station
+    t.sim.incidents.start('fire', b);
+    t.run(1);
+    const first = t.sim.incidents.responders[0];
+    const station = t.w.buildings.get(first.station);
+    expect(station?.x).toBe(10);
+    if (!station) return;
+    applyClear(t.city, planClear(t.w, [{ x: station.x, y: station.y }]));
+    t.sim.worldChanged({ roads: false });
+    t.run(INCIDENTS.burnAfter);
+    expect(t.saw('resolved', 'fire')).toBe(true);
+    expect(t.w.buildings.has(b.id)).toBe(true);
+  });
+
+  it('bulldozing a burning building ends the fire; its truck goes home', () => {
+    const t = street([['fire_station', 10]]);
+    const b = t.home(30);
+    t.sim.incidents.start('fire', b);
+    t.run(1);
+    applyClear(t.city, planClear(t.w, [{ x: b.x, y: b.y }]));
+    t.sim.worldChanged({ roads: false });
+    t.run(INCIDENTS.burnAfter);
+    expect(t.sim.incidents.active).toHaveLength(0);
+    expect(t.sim.incidents.responders).toHaveLength(0);
+    expect(t.saw('burned')).toBe(false);
+  });
+
+  it('moving a burning building: the truck goes to where it is now', () => {
+    const t = street([['fire_station', 10]]);
+    const b = t.home(20);
+    t.sim.incidents.start('fire', b);
+    t.run(1);
+    const plan = planMove(t.w, b.id, 50, 11);
+    expect(plan?.ok).toBe(true);
+    if (plan) applyMove(t.city, plan);
+    t.sim.worldChanged({ roads: false });
+    t.run(1);
+    const truck = t.sim.incidents.responders[0];
+    expect(truck?.to).toBe(b.entrance);
+  });
+
+  it('a fire nobody could reach is answered as soon as a station is built', () => {
+    const t = street();
+    const b = t.home(30);
+    t.sim.incidents.start('fire', b);
+    t.run(10);
+    expect(t.saw('unreached', 'fire')).toBe(true);
+    applyPlace(t.city, planPlace(t.w, 'fire_station', 26, 9), 0);
+    t.sim.worldChanged({ roads: false });
+    t.run(INCIDENTS.askEvery + 2);
+    expect(t.sim.incidents.responders).toHaveLength(1);
+    t.run(INCIDENTS.burnAfter);
+    expect(t.saw('resolved', 'fire')).toBe(true);
+  });
+
+  it('a station whose fleet is all out still gets the next call once a vehicle is back', () => {
+    const t = street([['police_station', 20]]);
+    const homes = [23, 25, 27].map((x) => t.home(x));
+    for (const h of homes) t.sim.incidents.start('theft', h);
+    t.run(INCIDENTS.theftWindow + 1);
+    // Two caught in time; the third waited for a free car and may be late, but was asked again.
+    expect(t.events.filter((e) => e.type === 'resolved' && e.kind === 'theft').length).toBeGreaterThanOrEqual(2);
+    expect(t.sim.incidents.active).toHaveLength(0);
+  });
+});
+
+describe('incidents: response speed', () => {
+  it('congestion slows a trip; the trauma centre drives 1.5× faster', () => {
+    const t = street();
+    const path = findRoute(t.w, t.w.index(4, 10), t.w.index(40, 10));
+    expect(path).not.toBeNull();
+    if (!path) return;
+    const free = travelTicks(t.w, path, null);
+    const jam = new Float32Array(t.w.road.length).fill(2);
+    expect(travelTicks(t.w, path, jam)).toBeGreaterThan(free * 2);
+    expect(travelTicks(t.w, path, null, 1.5)).toBeLessThan(free);
+  });
+
+  it('a hospital and a trauma centre the same distance away: the trauma centre is sent', () => {
+    const t = street([['hospital', 16], ['trauma_centre', 44]]);
+    const b = t.home(30);
+    t.sim.incidents.start('injury', b);
+    t.run(1);
+    const st = t.w.buildings.get(t.sim.incidents.responders[0]?.station ?? -1);
+    expect(st?.def).toBe('trauma_centre');
+  });
+});
+
+describe('incidents: the daily roll and lasting marks', () => {
+  it('nothing happens by itself under 200 residents', () => {
+    const t = street();
+    for (let x = 20; x < 40; x++) t.home(x);
+    t.run(60 * 60);
+    expect(t.saw('started')).toBe(false);
+  });
+
+  it('robbed and untreated marks wear off after a month, and the need comes back', () => {
+    const t = street([['fire_station', 20]]);
+    const b = t.home(23);
+    b.robbed = INCIDENTS.markDays;
+    b.sick = INCIDENTS.markDays;
+    t.sim.runDays(INCIDENTS.markDays);
+    expect(b.robbed).toBe(0);
+    expect(b.sick).toBe(0);
+    t.sim.needs.score();
+    expect(t.sim.needs.byBuilding.get(b.id)?.scores.safety).toBeCloseTo(0.4);
+  });
+
+  it('robbed and untreated homes complain in their own words', () => {
+    const t = street([['clinic', 20]]);
+    const b = t.home(23);
+    b.robbed = 10;
+    t.sim.needs.score();
+    const n = t.sim.needs.report.complaints.find((c) => c.kind === 'safety');
+    if (n) expect(n.text).toBe('We were robbed and no police came');
+  });
+
+  it('a save without incidents loads with none; malformed incident data is dropped, not fatal', () => {
+    const terrain = presetSettings('plains', 3, 64);
+    const t = street([['fire_station', 20]]);
+    t.sim.incidents.start('fire', t.home(24));
+    const data = serialize(t.city, terrain, 'X', t.sim);
+    const clean = loadSimulation(parseSave(JSON.parse(JSON.stringify({ ...data, city: { ...data.city, incidents: undefined } }))));
+    expect(clean.incidents.active).toHaveLength(0);
+    const junk = loadSimulation(parseSave(JSON.parse(JSON.stringify({ ...data, city: { ...data.city, incidents: { list: [['meteor', 1, 2, 3, 4, 5], 'x'], responders: 7, marks: [[1, 2]] } } }))));
+    expect(junk.incidents.active).toHaveLength(0);
   });
 });

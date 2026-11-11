@@ -26,6 +26,9 @@ function corridor(type: BuildableRoad) {
   applyPlace(city, planPlace(w, 'water_tower', 7, 2), 0);
   applyPlace(city, planPlace(w, 'water_tower', 56, 2), 0);
   for (let x = 0; x < 14; x++) for (const y of [3, 4, 6, 7]) applyPlace(city, planPlace(w, 'walkup', x, y), 0);
+  // Fires burn unanswered buildings down (E3); a fire station keeps the homes standing, so the
+  // test measures the road, not the luck of the fire roll.
+  applyPlace(city, planPlace(w, 'fire_station', 7, 8), 0);
   for (let x = 50; x < 64; x += 2) for (const y of [3, 6]) applyPlace(city, planPlace(w, 'office_tower', x, y), 0);
   const sim = new Simulation(city);
   sim.worldChanged({ roads: true });
