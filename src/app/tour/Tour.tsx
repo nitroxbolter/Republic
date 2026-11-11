@@ -1,7 +1,7 @@
 import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { activeToolAtom, authAtom, cityAtom, fundsAtom, gameAtom, worldVersionAtom } from '../atoms';
-import { COMPACT, TOUCH, useMedia } from '../mobile/useMedia';
+import { SMALL_UI, TOUCH, useMedia } from '../mobile/useMedia';
 import { TOUR_STEPS, type TourSnapshot } from './steps';
 import { loadTourProgress, saveTourProgress, tourStepAtom } from './tourState';
 
@@ -129,7 +129,7 @@ function TourCard({ index }: { index: number }) {
   const store = useStore();
   const setStep = useSetAtom(tourStepAtom);
   const touch = useMedia(TOUCH);
-  const compact = useMedia(COMPACT);
+  const compact = useMedia(SMALL_UI);
   const [minimized, setMinimized] = useState(false);
 
   const tool = useAtomValue(activeToolAtom);
@@ -203,7 +203,7 @@ function TourCard({ index }: { index: number }) {
     />
   );
 
-  // Landscape phones: the card docks to the right edge and can fold into a pill to free the map.
+  // Phones: the card docks (right edge on landscape, top on portrait) and folds into a pill to free the map.
   if (compact && minimized) {
     return (
       <>

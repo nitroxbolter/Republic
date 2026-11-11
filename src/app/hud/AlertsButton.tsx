@@ -1,6 +1,7 @@
 import { useAtom } from 'jotai';
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { inboxAtom } from '../atoms';
+import { useDismiss, useOverlay } from '../overlay/overlay';
 
 /**
  * The alerts inbox (top bar bell): notices worth keeping (problems, milestones, the month's
@@ -9,21 +10,13 @@ import { inboxAtom } from '../atoms';
  */
 export function AlertsButton() {
   const [alerts, setAlerts] = useAtom(inboxAtom);
-  const [open, setOpen] = useState(false);
+  const { open, toggle: toggleMenu, close } = useOverlay('alerts');
   const wrap = useRef<HTMLSpanElement>(null);
+  useDismiss(wrap, open, close);
   const unread = alerts.filter((a) => !a.read).length;
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (e.target instanceof Node && !wrap.current?.contains(e.target)) setOpen(false);
-    };
-    window.addEventListener('pointerdown', onDown);
-    return () => window.removeEventListener('pointerdown', onDown);
-  }, [open]);
-
   const toggle = () => {
-    setOpen((o) => !o);
+    toggleMenu();
     // Seen once the list is open.
     setAlerts((list) => (list.some((a) => !a.read) ? list.map((a) => ({ ...a, read: true })) : list));
   };

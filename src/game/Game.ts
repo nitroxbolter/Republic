@@ -43,6 +43,7 @@ import type { Point, ViewTransform } from '../render/view/ViewTransform';
 import { EventBus, type DayNightMode, type GameEventMap, type Notice, type ProgressInfo } from './events';
 import { InputController, type ScreenPoint } from './input/InputController';
 import { GameLoop } from './loop';
+import { type LoadProgress, type LoadStage } from './loading';
 import { coveragePreviewTiles, isRoadTool, isZoneTool, planTool, type RoadToolId, strandedZoneTiles, previewTiles, TOOL_KEYS, type ToolDrag, type ToolId, type ToolPlan } from './tools';
 
 export interface GameOptions {
@@ -183,14 +184,24 @@ export class Game {
     );
   }
 
-  static async create(host: HTMLElement, opts: GameOptions): Promise<Game> {
+  /**
+   * Build the city and its renderer. `progress` hears each loading stage as it starts (D-099)
+   * and may hold creation for a painted frame, so the loading screen can show it.
+   */
+  static async create(host: HTMLElement, opts: GameOptions, progress?: LoadProgress): Promise<Game> {
+    const stage = async (s: LoadStage) => {
+      await progress?.(s);
+    };
     // A saved city comes back with its systems already up to date (and continues exactly).
     let sim: Simulation;
     let demo: ReturnType<typeof buildDemoCity> | null = null;
+    await stage('world');
     if (opts.save) {
       sim = loadSimulation(opts.save);
     } else {
-      const city = new City(generateTerrain(opts.terrain), opts.funds);
+      const terrain = generateTerrain(opts.terrain);
+      await stage('simulation');
+      const city = new City(terrain, opts.funds);
       // Player cities unlock buildings stage by stage (D-086); the /demo showcase has everything.
       city.locked = !opts.demo;
       // ... and collect their taxes by hand at the Town Hall (docs/specs/evolution.md, E5).
@@ -203,7 +214,8 @@ export class Game {
       if (demo) sim.worldChanged({ roads: true });
     }
     const world = sim.world;
-    const renderer = await Renderer.create(host, world);
+    const renderer = await Renderer.create(host, world, stage);
+    await stage('enter');
     const game = new Game(sim, renderer, opts);
     // Start over downtown (a little zoomed out), or over what the player built in a saved city.
     const centre = demo?.centre ?? (opts.save ? builtCentre(world) : null);

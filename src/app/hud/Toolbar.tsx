@@ -1,8 +1,10 @@
 import { useAtomValue } from 'jotai';
-import { Fragment, type ReactNode } from 'react';
-import { isRoadTool, type ToolId } from '../../game/tools';
+import { Fragment, useState, type ReactNode } from 'react';
+import type { Game } from '../../game/Game';
+import { isRoadTool, isZoneTool, type ToolId } from '../../game/tools';
 import { BALANCE } from '../../shared/balance';
 import { activeToolAtom, gameAtom } from '../atoms';
+import { PHONE, useMedia } from '../mobile/useMedia';
 
 interface ToolDef {
   id: ToolId;
@@ -131,41 +133,154 @@ const TOOLS: readonly ToolDef[] = [
   },
 ];
 
+/** Every road type lives behind the one Roads button. */
+const isActiveIn = (active: ToolId) => (id: ToolId) => (id === 'road' ? isRoadTool(active) || active === 'rail' : active === id);
+
+/** Pressing a tool button: pick it, or drop back to Select if it was already on. */
+function press(game: Game | null, id: ToolId, on: boolean) {
+  if (!game) return;
+  if (on && id !== 'select') game.setTool('select');
+  // The Roads button returns to the road type used last (the picker chooses others).
+  else game.setTool(id === 'road' ? game.lastRoadTool : id);
+}
+
+function ToolGlyph({ t }: { t: ToolDef }) {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      {t.icon}
+    </svg>
+  );
+}
+
 export function Toolbar() {
+  const phone = useMedia(PHONE);
+  return phone ? <PhoneDock /> : <WideToolbar />;
+}
+
+function WideToolbar() {
   const game = useAtomValue(gameAtom);
   const active = useAtomValue(activeToolAtom);
-  // Every road type lives behind the one Roads button.
-  const isActive = (id: ToolId) => (id === 'road' ? isRoadTool(active) || active === 'rail' : active === id);
+  const isActive = isActiveIn(active);
 
   return (
     <div className="panel toolbar" role="toolbar" aria-label="Build tools">
       {TOOLS.map((t, k) => (
         <Fragment key={t.id}>
-        {k > 0 && TOOLS[k - 1].group !== t.group && <span className="toolbar-divider" aria-hidden="true" />}
-        <button
-          type="button"
-          className={`tool-button ${t.tone ?? ''} ${isActive(t.id) ? 'is-active' : ''}`}
-          data-tour={`tool-${t.id}`}
-          aria-pressed={isActive(t.id)}
-          disabled={!game}
-          onClick={() => {
-            if (!game) return;
-            if (isActive(t.id) && t.id !== 'select') game.setTool('select');
-            // The Roads button returns to the road type used last (the picker chooses others).
-            else game.setTool(t.id === 'road' ? game.lastRoadTool : t.id);
-          }}
-        >
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            {t.icon}
-          </svg>
-          <span className="tool-label">{t.label}</span>
-          <kbd className="tool-key">{t.key}</kbd>
-          <span className="tool-tip" role="tooltip">
-            <strong>{t.label}</strong> {t.hint}
-          </span>
-        </button>
+          {k > 0 && TOOLS[k - 1].group !== t.group && <span className="toolbar-divider" aria-hidden="true" />}
+          <button
+            type="button"
+            className={`tool-button ${t.tone ?? ''} ${isActive(t.id) ? 'is-active' : ''}`}
+            data-tour={`tool-${t.id}`}
+            aria-pressed={isActive(t.id)}
+            disabled={!game}
+            onClick={() => press(game, t.id, isActive(t.id))}
+          >
+            <ToolGlyph t={t} />
+            <span className="tool-label">{t.label}</span>
+            <kbd className="tool-key">{t.key}</kbd>
+            <span className="tool-tip" role="tooltip">
+              <strong>{t.label}</strong> {t.hint}
+            </span>
+          </button>
         </Fragment>
       ))}
+    </div>
+  );
+}
+
+const ZONES = TOOLS.filter((t) => t.group === 'zone');
+const ZONES_BUTTON: ToolDef = {
+  id: 'zone-r',
+  group: 'zone',
+  label: 'Zones',
+  key: '',
+  hint: 'Homes, shops, offices and industry',
+  // Three small lots in the zone colours.
+  icon: (
+    <g strokeWidth="1.4" strokeLinejoin="round">
+      <path d="M7 4l5 2.8-5 2.8-5-2.8z" fill="var(--zone-r)" fillOpacity="0.35" stroke="var(--zone-r)" />
+      <path d="M17 4l5 2.8-5 2.8-5-2.8z" fill="var(--zone-c)" fillOpacity="0.35" stroke="var(--zone-c)" />
+      <path d="M12 13l5 2.8-5 2.8-5-2.8z" fill="var(--zone-i)" fillOpacity="0.35" stroke="var(--zone-i)" />
+    </g>
+  ),
+};
+
+/**
+ * Phones held upright (D-097): one thumb-height row of five (Select, Clear, Civic, Zones, Roads)
+ * that fits without scrolling. The five zone types sit in a row that opens above Zones, and stays
+ * open while a zone tool is in use.
+ */
+function PhoneDock() {
+  const game = useAtomValue(gameAtom);
+  const active = useAtomValue(activeToolAtom);
+  const isActive = isActiveIn(active);
+  const zoning = isZoneTool(active);
+  const [zonesOpen, setZonesOpen] = useState(false);
+  const showZones = zonesOpen || zoning;
+  const byId = (id: ToolId) => TOOLS.find((t) => t.id === id)!;
+  /** Another dock tool: the zone row folds away. */
+  const pick = (id: ToolId) => {
+    setZonesOpen(false);
+    press(game, id, id !== 'select' && isActive(id));
+  };
+
+  const dockButton = (t: ToolDef, on: boolean, onClick: () => void, tour: string | undefined, expanded?: boolean) => (
+    <button
+      key={t.label}
+      type="button"
+      className={`tool-button ${t.tone ?? ''} ${on ? 'is-active' : ''}`}
+      data-tour={tour}
+      aria-pressed={expanded === undefined ? on : undefined}
+      aria-expanded={expanded}
+      disabled={!game}
+      onClick={onClick}
+    >
+      <ToolGlyph t={t} />
+      <span className="tool-label">{t.label}</span>
+    </button>
+  );
+
+  return (
+    <div className="dock" role="toolbar" aria-label="Build tools">
+      {showZones && (
+        <div className="panel dock-zones" role="group" aria-label="Zones">
+          {ZONES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`zone-chip ${t.tone ?? ''} ${isActive(t.id) ? 'is-active' : ''}`}
+              data-tour={`tool-${t.id}`}
+              aria-pressed={isActive(t.id)}
+              onClick={() => press(game, t.id, isActive(t.id))}
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                {t.icon}
+              </svg>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="panel toolbar is-dock">
+        {dockButton(byId('select'), isActive('select'), () => pick('select'), 'tool-select')}
+        {dockButton(byId('clear'), isActive('clear'), () => pick('clear'), 'tool-clear')}
+        {dockButton(byId('build'), isActive('build'), () => pick('build'), 'tool-build')}
+        {dockButton(
+          ZONES_BUTTON,
+          zoning,
+          () => {
+            // Closing the row also puts a zone tool down.
+            if (showZones) {
+              setZonesOpen(false);
+              if (zoning) game?.setTool('select');
+            } else setZonesOpen(true);
+          },
+          // The tour's "pick Homes" step points here until the row is open.
+          showZones ? undefined : 'tool-zone-r',
+          showZones,
+        )}
+        {dockButton(byId('road'), isActive('road'), () => pick('road'), 'tool-road')}
+      </div>
     </div>
   );
 }

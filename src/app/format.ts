@@ -19,3 +19,13 @@ export function cityDate(day: number): string {
   const months = Math.floor(day / BALANCE.daysPerMonth);
   return `${MONTHS[months % 12]}, Y${1 + Math.floor(months / 12)}`;
 }
+
+/** Short amounts for tight spaces: 950, 12.4k, 3.2M, 1.1B. Exact below 10,000. */
+export function compactNumber(n: number): string {
+  const a = Math.abs(n);
+  const sign = n < 0 ? '−' : '';
+  if (a < 10_000) return `${sign}${Math.round(a).toLocaleString()}`;
+  const [div, unit] = a >= 1e9 ? [1e9, 'B'] : a >= 1e6 ? [1e6, 'M'] : [1e3, 'k'];
+  const v = a / div;
+  return `${sign}${v >= 100 ? Math.round(v) : v.toFixed(1).replace(/\.0$/, '')}${unit}`;
+}

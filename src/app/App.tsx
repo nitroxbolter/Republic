@@ -10,6 +10,7 @@ import { authAtom } from './atoms';
 import { useAuthBootstrap } from './auth';
 import { clearUrlOptions, demoOptions, isDemoRoute, readCityRef, readUrlOptions, writeCityUrl, writeDemoUrl, writeUrlOptions } from './options';
 import { GameScreen } from './screens/GameScreen';
+import { LoadingScreen } from './screens/LoadingScreen';
 import { NewGameScreen } from './screens/NewGameScreen';
 import { guestAtom, setChoseGuest } from './screens/landing/guest';
 import { LandingScreen } from './screens/landing/LandingScreen';
@@ -122,11 +123,7 @@ export function App() {
       {menu && auth.status === 'checking' && <div className="landing-blank" />}
       {landing && <LandingScreen onPlay={playAsGuest} onDemo={() => start(demoOptions())} />}
       {menu && !landing && auth.status !== 'checking' && <NewGameScreen onStart={start} onOpen={open} notice={screen.notice} />}
-      {(screen.kind === 'loading' || screen.kind === 'recovering') && (
-        <div className="loading-screen" role="status">
-          <div className="panel loading-card">Loading your city…</div>
-        </div>
-      )}
+      {(screen.kind === 'loading' || screen.kind === 'recovering') && <LoadingScreen kind="save" current="fetch" />}
       {screen.kind === 'play' && (
         <GameScreen
           options={screen.options}

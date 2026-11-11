@@ -1,8 +1,12 @@
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtomValue } from 'jotai';
+import { useRef } from 'react';
 import type { UtilityTotals } from '../../sim/systems/utilities';
 import { BALANCE } from '../../shared/balance';
 import type { BudgetReport } from '../../sim/systems/budget';
-import { budgetAtom, budgetOpenAtom, gameAtom } from '../atoms';
+import { budgetAtom, gameAtom } from '../atoms';
+import { SLIM_BAR, useMedia } from '../mobile/useMedia';
+import { useDismiss, useOverlay } from '../overlay/overlay';
+import { Sheet } from './Sheet';
 import { EnergyMix } from './EnergyMix';
 
 const money = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString()}`;
@@ -56,18 +60,45 @@ function Supply({ label, t }: { label: string; t: UtilityTotals }) {
   );
 }
 
-/** Opened from the funds in the top bar: tax rate, monthly budget and utility supply. */
+/**
+ * Opened from the funds in the top bar: tax rate, monthly budget and utility supply. A panel
+ * under the top bar on wide screens (Escape closes it; the map stays usable around it), a
+ * bottom sheet on phones.
+ */
 export function BudgetPanel() {
-  const [open, setOpen] = useAtom(budgetOpenAtom);
+  const { open, close } = useOverlay('budget');
+  const phone = useMedia(SLIM_BAR);
+  const info = useAtomValue(budgetAtom);
+  if (!open || !info) return null;
+  return phone ? (
+    <Sheet label="City budget" onClose={close}>
+      <BudgetBody onClose={close} />
+    </Sheet>
+  ) : (
+    <WideBudget onClose={close} />
+  );
+}
+
+function WideBudget({ onClose }: { onClose: () => void }) {
+  const ref = useRef<HTMLElement>(null);
+  // Escape only: the panel stays while the player looks around the map.
+  useDismiss(ref, true, onClose, { outside: false });
+  return (
+    <aside ref={ref} className="panel budget-panel" aria-label="City budget">
+      <BudgetBody onClose={onClose} />
+    </aside>
+  );
+}
+
+function BudgetBody({ onClose }: { onClose: () => void }) {
   const info = useAtomValue(budgetAtom);
   const game = useAtomValue(gameAtom);
-  if (!open || !info) return null;
-
+  if (!info) return null;
   return (
-    <aside className="panel budget-panel" aria-label="City budget">
+    <>
       <header className="info-header">
         <h2 className="info-title">Budget</h2>
-        <button type="button" className="icon-button" aria-label="Close" onClick={() => setOpen(false)}>
+        <button type="button" className="icon-button" aria-label="Close" onClick={onClose}>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -139,6 +170,6 @@ export function BudgetPanel() {
       <h3 className="budget-heading">Utilities</h3>
       <EnergyMix power={info.power} hour={info.hour} />
       <Supply label="💧 Water" t={info.water} />
-    </aside>
+    </>
   );
 }

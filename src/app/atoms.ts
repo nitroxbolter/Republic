@@ -41,7 +41,7 @@ export const cityAtom = atom<CityInfo | null>(null);
 export const inspectAtom = atom<InspectInfo | null>(null);
 export const dayNightAtom = atom<DayNightMode>('cycle');
 export const budgetAtom = atom<BudgetInfo | null>(null);
-export const budgetOpenAtom = atom(false);
+
 export const trafficViewAtom = atom(false);
 export const happinessViewAtom = atom(false);
 export const airViewAtom = atom(false);

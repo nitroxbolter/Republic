@@ -1,4 +1,6 @@
-import { atom } from 'jotai';
+import { atom, useSetAtom } from 'jotai';
+import { useCallback } from 'react';
+import { overlayAtom } from '../overlay/overlay';
 import { api } from '../../save/api';
 import type { TourProgress } from '../../shared/api';
 
@@ -59,3 +61,13 @@ export function saveTourProgress(p: TourProgress, signedIn: boolean) {
 
 /** Index of the open tour step, or null when the tour is closed. */
 export const tourStepAtom = atom<number | null>(null);
+
+/** Replay the tour from the welcome card (the ? button), closing any open menu first. */
+export function useStartTour(): () => void {
+  const setStep = useSetAtom(tourStepAtom);
+  const setOverlay = useSetAtom(overlayAtom);
+  return useCallback(() => {
+    setOverlay(null);
+    setStep(0);
+  }, [setOverlay, setStep]);
+}

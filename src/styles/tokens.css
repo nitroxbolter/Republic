@@ -30,4 +30,42 @@
   --sign-deep: #c98a17;
   --rule: rgba(236, 228, 211, 0.14);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Notch and home-indicator insets. */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  /* Smallest comfortable touch target. */
+  --tap: 44px;
+
+  /*
+   * Layers (D-098). Every overlay sits in one of these; nothing invents its own number.
+   * Within the HUD, later siblings paint over earlier ones, so a layer only needs raising
+   * when it must cover a different kind of surface.
+   *   hud       floating bars and panels over the world (top bar, toolbar, minimap, side panels)
+   *   sheet     what the player is using right now: pickers, the inspect/budget sheets on phones
+   *   popover   menus that drop from the top bar (clock, stage, alerts, account, More)
+   *   toast     short notices; never take input except a tap to dismiss
+   *   guide     the onboarding tour (card, ring, pill)
+   *   modal     dialogs that block the game (auth, the guest limit)
+   *   screen    full-screen states: loading, failure
+   */
+  --z-hud: 10;
+  --z-sheet: 20;
+  --z-popover: 30;
+  --z-toast: 40;
+  --z-guide: 50;
+  --z-modal: 90;
+  --z-screen: 100;
 }
+
+/*
+ * Breakpoints (mirrored in src/app/mobile/useMedia.ts; CSS custom properties can't be used in
+ * media queries, so the numbers live in both places):
+ *   phone      max-width 640px and taller than 520px: portrait phones. Slim top bar, thumb dock, sheets.
+ *   compact    max-height 520px: landscape phones. Compact HUD along the edges.
+ *   small UI   either of the two: pickers become a sideways strip, panels go opaque (no blur).
+ *   tablet     641–1100px wide: desktop layout, toolbar at the left, top-bar groups fold.
+ *   desktop    wider than 1100px.
+ */

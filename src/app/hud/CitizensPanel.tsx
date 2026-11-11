@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai';
 import { useState } from 'react';
-import { COMPACT } from '../mobile/useMedia';
+import { SMALL_UI } from '../mobile/useMedia';
 import type { ComplaintKind } from '../../sim/systems/needs';
 import { cityAtom, gameAtom } from '../atoms';
 
@@ -27,7 +27,7 @@ const TONE: Readonly<Record<ComplaintKind, string>> = {
 
 const OPEN_KEY = 'openpolis.citizensOpen';
 
-/** Open or closed, remembered per device; folded by default on short (landscape phone) screens. */
+/** Open or closed, remembered per device; folded by default on phones. */
 function initialOpen(): boolean {
   try {
     const saved = localStorage.getItem(OPEN_KEY);
@@ -35,7 +35,7 @@ function initialOpen(): boolean {
   } catch {
     // Storage blocked (private mode): fall back to the screen-size default.
   }
-  return !window.matchMedia(COMPACT).matches;
+  return !window.matchMedia(SMALL_UI).matches;
 }
 
 /**

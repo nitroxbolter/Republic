@@ -1,7 +1,40 @@
-import { useAtomValue } from 'jotai';
+import { atom, useAtomValue } from 'jotai';
 import { useEffect, useRef, type PointerEvent } from 'react';
 import { minimapToViewTile, paintMinimap, viewTileToMinimap, type MinimapLayout } from '../../render/minimap';
 import { gameAtom, worldVersionAtom } from '../atoms';
+import { PHONE, useMedia } from '../mobile/useMedia';
+
+const SHOWN_KEY = 'openpolis.minimapOnPhone';
+
+/** The player's choice, else: shown on tablets, hidden on phones. */
+function readShown(): boolean {
+  const byDefault = !window.matchMedia('(max-width: 640px)').matches;
+  try {
+    const saved = localStorage.getItem(SHOWN_KEY);
+    return saved === null ? byDefault : saved === '1';
+  } catch {
+    return byDefault;
+  }
+}
+
+const shownBaseAtom = atom(readShown());
+
+/**
+ * Whether upright phones and tablets show the minimap (D-097): off at first on phones, since it
+ * covers a lot of a small screen; the More sheet toggles it, and the choice is remembered.
+ * Other layouts always show it.
+ */
+export const minimapShownAtom = atom(
+  (get) => get(shownBaseAtom),
+  (_get, set, on: boolean) => {
+    set(shownBaseAtom, on);
+    try {
+      localStorage.setItem(SHOWN_KEY, on ? '1' : '0');
+    } catch {
+      // Not remembered this time.
+    }
+  },
+);
 
 const W = 208;
 const H = 112;
@@ -10,6 +43,12 @@ const REPAINT_MS = 250;
 
 /** Bottom-right overview of the whole city: click or drag to move the camera. */
 export function Minimap() {
+  const phone = useMedia(PHONE);
+  const shownOnPhone = useAtomValue(minimapShownAtom);
+  return phone && !shownOnPhone ? null : <MinimapView />;
+}
+
+function MinimapView() {
   const game = useAtomValue(gameAtom);
   const version = useAtomValue(worldVersionAtom);
   const mapRef = useRef<HTMLCanvasElement>(null);

@@ -134,7 +134,12 @@ export class Renderer {
     this.toolPreview = new ToolPreview(this.viewRef);
   }
 
-  static async create(host: HTMLElement, world: World): Promise<Renderer> {
+  /**
+   * Start the graphics, paint the art atlas and build the map. `stage` hears each step as it
+   * starts (the game's loading screen) and may hold creation for a painted frame.
+   */
+  static async create(host: HTMLElement, world: World, stage?: (s: 'graphics' | 'art' | 'map') => Promise<void>): Promise<Renderer> {
+    await stage?.('graphics');
     const app = new Application();
     await app.init({
       resizeTo: host,
@@ -150,7 +155,16 @@ export class Renderer {
       powerPreference: 'high-performance',
     });
     const r = new Renderer(app, world);
-    r.setup();
+    try {
+      await stage?.('art');
+      r.setupArt();
+      await stage?.('map');
+      r.setupMap();
+    } catch (err) {
+      // Don't leave a live WebGL context behind: browsers allow only a few.
+      app.destroy(true, { children: true });
+      throw err;
+    }
     host.appendChild(app.canvas);
     return r;
   }
@@ -216,11 +230,16 @@ export class Renderer {
     if (!batch.empty) this.trafficLayer.addChild(batch.build());
   }
 
-  private setup() {
-    let t0 = performance.now();
-    const tex = buildTerrainTextures();
+  /** Paint the texture atlas (terrain, buildings, vehicles, effects): the longest boot step. */
+  private setupArt() {
+    const t0 = performance.now();
+    this.textures = buildTerrainTextures();
     this.timings.atlas = performance.now() - t0;
-    this.textures = tex;
+  }
+
+  /** Build the layers and the ground meshes, and put the camera over the map. */
+  private setupMap() {
+    const tex = this.textures;
     this.effects = new Effects(tex.fx, this.viewRef);
     this.smoke = new Smoke(tex.fx.puff, this.viewRef);
     this.rotors = new Rotors(this.viewRef);
@@ -228,7 +247,7 @@ export class Renderer {
     this.agents = new AgentRenderer(tex, this.viewRef);
     this.indicators = new Indicators({ road: tex.warnRoad, power: tex.warnPower, water: tex.warnWater, coin: tex.taxCoin }, this.viewRef);
     this.hover = new HoverHighlight(tex.hover, this.viewRef);
-    t0 = performance.now();
+    const t0 = performance.now();
     this.ext = generateBorderlands(this.world, this.ring);
     this.buildTerrain();
     this.timings.chunks = performance.now() - t0;
