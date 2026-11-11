@@ -111,11 +111,33 @@ Full-screen backdrop with a slowly panning generated map. A centered card holds:
 - The **account dialog** has Log in / Sign up tabs, inline field checks after leaving a field, a show/hide toggle and Caps Lock warning on passwords, a strength meter and a confirm-password field on sign up, and a countdown when the server asks us to wait (429).
 - Signed in, the top-right shows the account avatar; its menu shows the email, that cities are saved to the account, and Log out (which saves first).
 
-## Phones and Tablets (D-078)
+## Layers and Overlays (D-098)
 
-- **Orientation:** the game and the start screen are built for landscape. On a phone held upright, a "Turn your phone sideways" prompt covers them, with **Play in full screen** (which also locks landscape where the browser allows it: Android Chrome, not iOS Safari) and **Continue in portrait**. The landing page works in portrait. The web manifest asks installed copies to open in landscape.
+- **One slot for menus and sheets.** The clock, stage, alerts and account menus, the budget, and the phone More sheet share one `overlayAtom` (`src/app/overlay/overlay.ts`): opening one closes whichever was open, so two never stack. `useDismiss` closes a menu on a press outside it or on Escape; Escape is caught before the game sees it, so the first Escape closes the menu and the next one reaches the game (cancel tool, close inspect).
+- **Contextual panels** follow the game, not the slot: the inspect panel (Select tool) and the pickers (Civic, Roads). On phones a modal sheet (budget, More) puts a dimmed layer over them; tapping it closes the sheet and never reaches the map.
+- **Layer scale** (`tokens.css`, `--z-*`): hud < sheet < popover < toast < guide < modal < screen. Nothing invents its own number.
+- **Toasts** stack at most three, fade on their own (milestones stay longer), and a tap dismisses one early. Ones worth keeping wait in the alerts inbox (the bell) until resolved or dismissed.
+
+## Loading a City (D-099)
+
+- Between choosing a city and seeing it, a full-screen loading screen (survey-paper grid, a block of towers rising as an indeterminate indicator) lists the real steps and ticks them off as `Game.create` reports them: *Fetching your saved city* (saved cities), *Shaping the terrain* / *Reading your saved city*, *Founding the city*, *Starting the graphics*, *Painting buildings, trees and traffic*, *Laying out the map*, *Entering the city*. No percentage: the steps take very different times on different machines, so a number would be made up.
+- Each step is painted before its (synchronous) work starts: `Game.create` waits one frame between steps (`game/loading.ts`, with a short timeout for background tabs). This adds about a frame per step, not a fixed delay.
+- The HUD only appears once the city is ready; the loading screen fades out over the first frames of the map. No black screen with floating controls.
+- If a step fails, the screen says which one (the graphics step gets the WebGL advice), shows the error, and offers **Try again** and **Your cities**.
+
+## Phones and Tablets (D-078, D-097)
+
+- **Upright phones and tablets** (width ≤ 900 px, taller than 520 px), D-097. The city fills the screen:
+  - a **slim top bar**: menu (☰), funds (short form, opens the budget), population, demand bars, pause and a speed button that steps 1×→2×→3×, and the alerts bell. A dot on ☰ means citizens are complaining.
+  - the **More sheet** (☰) holds the rest: city name, date and clock, save status, jobs, happiness, AQI, stage, what each zone's demand means and why, the next stage's checklist, map views (happiness, air, traffic, minimap), day/night, rotate, sound, the tour, your cities, and the account.
+  - a **thumb dock** of five: Select, Clear, Civic, Zones, Roads. Zones opens a row of the five zone types above it, which stays open while zoning. 56 px tall buttons.
+  - **bottom sheets**: pickers and the inspect panel rise from the dock and scroll inside; the budget and More sheets are modal with a dimmed map behind. On tablets (641–900 px) the dock and sheets keep a comfortable width.
+  - the **minimap** starts hidden on phones (on tablets, shown) and is toggled in the More sheet; the choice is remembered. "Citizens say" starts folded on phones.
+  - the touch Build/Cancel bar sits under the top bar; toasts just below it.
+- **Landscape tablets** (901–1100 px wide): the same slim top bar (centred) and sheets, with the wide toolbar at the left and the minimap.
+- **Landscape phones** (height ≤ 520 px), D-078: the same slim top bar (centred, 40 px), More and budget sheets; the compact toolbar bottom-left (scrolling sideways, with a fade on the narrowest phones), a smaller minimap bottom-right, side panels between the top bar and the bottom row.
+- **Both phone layouts**: pickers show only picture, name and price in rows that scroll sideways; panels are nearly opaque instead of blurred (a backdrop blur over a canvas that redraws every frame is expensive on phone GPUs). Everything respects the notch and home-indicator safe areas.
 - **Touch:** one finger builds with the active tool, or pans when no tool takes the drag; a tap inspects. Two fingers pinch to zoom and drag to pan, and cancel a half-done build drag. Edge scrolling is mouse-only. A short touch hint replaces the keyboard list and fades after a few seconds.
-- **Compact HUD** on short screens (height ≤ 520 px, i.e. landscape phones): a slimmer top bar without the city name, date, jobs and compass; the toolbar bottom-left (scrolling sideways, with a fade on the right, on the narrowest phones); a smaller minimap bottom-right; pickers above the toolbar and in front of other panels; side panels between the top bar and the bottom row, scrolling inside; "Citizens say" starts folded. Everything respects the notch and home-indicator safe areas.
 - **Start screen and dialogs** scroll on small screens instead of clipping, and keep clear of the account buttons.
 - Review sizes with the dev pages: `/src/dev/device.html?w=390&h=844&src=/` (any size, for portrait phones below headless Chrome's 500 px minimum) and `/src/dev/press.html?keys=KeyE` (the demo city with hotkeys pressed, to see pickers).
 
@@ -126,7 +148,7 @@ Full-screen backdrop with a slowly panning generated map. A centered card holds:
 - **When it shows.** By itself on a new city until finished or skipped; on an opened city only to carry on a tour left midway; never on the demo. The **?** button in the top bar replays it.
 - **Where progress lives.** The step id and a done flag (`{ step, done }`), saved on every step: on the device for everyone (`citybuilder.tour`), and in the account for signed-in players (`/api/tour`, table `tour_progress`). Ids, not positions, so steps can be reordered. A guest who signs up has their progress copied into the account.
 - **Desktop.** The card sits above or below the control it means, with an arrow and a pulsing ring around the control; steps about the map sit top centre. Mouse wording (right-drag, wheel, Shift, keys).
-- **Phones** (`max-height: 520px`). The card docks on the right, clear of the toolbar, pickers and minimap; the − button folds it into a pill showing the step. Touch wording (drag then tap Build, pinch, two fingers). The ring still marks the control, and a sideways-scrolling toolbar scrolls it into view. Bigger tap targets on coarse pointers.
+- **Phones** (`max-height: 520px` or width ≤ 640 px). The card docks (on the right on landscape phones, under the top bar on upright ones), clear of the toolbar, pickers and minimap; the − button folds it into a pill showing the step. On upright phones the "pick Homes" step points at Zones until its row is open. Touch wording (drag then tap Build, pinch, two fingers). The ring still marks the control, and a sideways-scrolling toolbar scrolls it into view. Bigger tap targets on coarse pointers.
 
 ## Guest Trial (D-082, D-083)
 

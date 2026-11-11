@@ -3439,9 +3439,9 @@ summary {
   }
 }
 
-/* Mid-size windows (small laptops, split screens): the full top bar is ~1340px wide, so it
+/* Up to wide laptops: the full top bar is ~1500px wide, so it
    tightens and drops the least-needed bits; the controls hint would sit under the toolbar. */
-@media (max-width: 1400px) and (min-height: 521px) {
+@media (max-width: 1600px) and (min-height: 521px) {
   .top-bar {
     gap: 9px;
     padding: 8px 12px;
@@ -3478,7 +3478,7 @@ summary {
   display: none;
 }
 /* Up to small laptops, and landscape phones: at most one group open; a folded group shows only its toggle. */
-@media (max-width: 1360px), (max-height: 520px) {
+@media (max-width: 1600px), (max-height: 520px) {
   .top-fold:not(.is-open) > :not(.top-fold-toggle) {
     display: none;
   }
@@ -5155,8 +5155,10 @@ summary {
   animation: none;
 }
 
-/* The slim top bar (phones and upright tablets, D-097). Each layout places it. */
+/* The slim top bar (phones and tablets, D-097): centred at the top; upright phones stretch it. */
 .top-bar.is-phone {
+  top: calc(12px + var(--safe-t));
+  height: 48px;
   max-width: none;
   gap: 4px;
   padding: 0 4px;

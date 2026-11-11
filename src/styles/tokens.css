@@ -63,9 +63,12 @@
 /*
  * Breakpoints (mirrored in src/app/mobile/useMedia.ts; CSS custom properties can't be used in
  * media queries, so the numbers live in both places):
- *   phone      max-width 640px and taller than 520px: portrait phones. Slim top bar, thumb dock, sheets.
- *   compact    max-height 520px: landscape phones. Compact HUD along the edges.
- *   small UI   either of the two: pickers become a sideways strip, panels go opaque (no blur).
- *   tablet     641–1100px wide: desktop layout, toolbar at the left, top-bar groups fold.
- *   desktop    wider than 1100px.
+ *   phone      max-width 900px and taller than 520px: phones and tablets held upright. Slim top
+ *              bar, a thumb dock of five tools, bottom sheets (D-097). 641–900px caps their width.
+ *   compact    max-height 520px: landscape phones. Slim top bar, compact toolbar and minimap
+ *              along the bottom edge (D-078).
+ *   small UI   max-width 640px or compact: pickers become a sideways strip, the tour docks,
+ *              panels go opaque (no backdrop blur).
+ *   tablet     901–1100px wide: slim top bar and sheets, with the wide toolbar at the left.
+ *   desktop    wider than 1100px; top-bar groups fold (one open at a time) up to 1600px.
  */

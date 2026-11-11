@@ -2,6 +2,15 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-11: UI/UX pass: phones, overlays, loading (D-097, D-098, D-099)
+- **Unblocked startup.** `HEAD` (incidents work) crashed every city on start and failed typecheck: the new Trauma Centre had no art, the three emergency vehicles had no sizes, and `Game.showDay` read the removed `DayOutcome.burned`. Added a trauma-centre recipe (hospital family), liveries and sizes for fire trucks, ambulances and police cars, and `Game.showBurned()` reading `incidents.takeEvents()` (only `burned` is shown; the other incident events are still unused).
+- **Phones and upright tablets (D-097):** slim top bar + More sheet, five-button dock with a zone row, bottom sheets for pickers/inspect/budget, opt-in minimap on phones. Landscape phones share the slim bar (it had overflowed). Rotate prompt removed; manifest orientation `any`. Opaque panels instead of backdrop blur on small/touch screens.
+- **Overlays (D-098):** `src/app/overlay/overlay.ts` (`overlayAtom`, `useOverlay`, `useDismiss`); Clock, StageChip, AlertsButton, AccountButton and BudgetPanel use it; `budgetOpenAtom` removed; z-index layer tokens; dismissible toasts.
+- **Loading (D-099):** `game/loading.ts` stages; `LoadingScreen` with real steps, fade-out handoff, error + retry; HUD mounts only when ready; old `.fade-in` curtain and render-failed card removed.
+- **Desktop/tablet:** the full top bar (~1500 px) overflowed at 1280 and 1440: its groups now fold up to 1600 px; windows up to 1100 px use the slim bar; 56 px tool buttons at ≤1100 px.
+- Checked in headless Chrome at 375×812, 390×844, 768×1024, 844×390, 1024×768, 1280×800, 1440×900 (loading, play, More sheet, zone row, Civic picker, budget, tour). 336 tests pass; typecheck and lint clean.
+- **Not done:** swipe-to-close on sheets; incident toasts/alerts (fires started, thefts, patients) beyond "burned down".
+
 ## 2026-11-05: Art Track: modern architecture and landmarks (D-096)
 - Recipes split one file per building (`buildings/recipes/<category>/<id>.ts`).
 - Modern kit `atlas/modern/`: `facets.ts` (facets lit by their normals, depth-sorted), `plans.ts` (superellipse, chamfered, trefoil, sail, rotate), `loft.ts` (lofts, prisms, sweeps, plan shadows), `skins.ts` (curtain glass with floor lines, mullions and night-light marks; bands; fabric), `parts.ts` (spires, slabs, light rings, halos), `vault.ts`, `wheel.ts`, `coaster.ts`.

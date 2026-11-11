@@ -56,7 +56,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
     title: 'Look around',
     body: {
       mouse: 'Right-drag or use W A S D to move the map, scroll to zoom, and , . to rotate the view.',
-      touch: 'Drag with one finger to move the map, pinch to zoom. The arrows at the top rotate the view.',
+      touch: 'Drag with one finger to move the map, pinch to zoom. The ☰ menu turns the view and shows the rest of the city’s numbers.',
     },
   },
   {

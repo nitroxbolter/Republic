@@ -74,61 +74,61 @@ export function StageDetails({ progress: p }: { progress: CityInfo['progress'] }
   const share = (n: number) => (residents === 0 ? 0 : Math.round((n / residents) * 100));
   return (
     <>
-        <strong className="stage-menu-title">{p.stageName}</strong>
-        {p.next ? (
-          <>
-            <span className="stage-menu-sub">
-              {p.locked ? `To become a ${p.next.name}, the city needs:` : `Next: ${p.next.name} (this city has every building unlocked)`}
-            </span>
-            <ul className="stage-reqs">
-              {(p.locked ? reqs : reqs.slice(0, 1)).map((q) => (
-                <li key={q.label} className={q.met ? 'is-met' : ''}>
-                  <span className="stage-req-label">
-                    <span aria-hidden="true">{q.met ? '✓' : '○'}</span> {q.label}
-                  </span>
-                  <span className="stage-req-detail">{q.detail}</span>
-                  <span className="meter">
-                    <span className="meter-fill" style={{ width: `${Math.round(q.have * 100)}%` }} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <span className="stage-menu-sub">The highest stage. Congratulations, mayor!</span>
-        )}
-        {p.research && (
-          <span className="stage-life">
-            <span>Research · {p.research.rate.toFixed(1)} points a day</span>
-            {p.research.current ? (
-              <>
+      <strong className="stage-menu-title">{p.stageName}</strong>
+      {p.next ? (
+        <>
+          <span className="stage-menu-sub">
+            {p.locked ? `To become a ${p.next.name}, the city needs:` : `Next: ${p.next.name} (this city has every building unlocked)`}
+          </span>
+          <ul className="stage-reqs">
+            {(p.locked ? reqs : reqs.slice(0, 1)).map((q) => (
+              <li key={q.label} className={q.met ? 'is-met' : ''}>
                 <span className="stage-req-label">
-                  {p.research.current.name}: {p.research.current.points} / {p.research.current.needed}
+                  <span aria-hidden="true">{q.met ? '✓' : '○'}</span> {q.label}
                 </span>
+                <span className="stage-req-detail">{q.detail}</span>
                 <span className="meter">
-                  <span className="meter-fill" style={{ width: `${Math.round((p.research.current.points / p.research.current.needed) * 100)}%` }} />
+                  <span className="meter-fill" style={{ width: `${Math.round(q.have * 100)}%` }} />
                 </span>
-                <span className="stage-life-legend">{p.research.current.effect}</span>
-              </>
-            ) : (
-              <span className="stage-life-legend">Every project is finished.</span>
-            )}
-            {p.research.done.length > 0 && <span className="stage-life-legend">Done: {p.research.done.join(' · ')}</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <span className="stage-menu-sub">The highest stage. Congratulations, mayor!</span>
+      )}
+      {p.research && (
+        <span className="stage-life">
+          <span>Research · {p.research.rate.toFixed(1)} points a day</span>
+          {p.research.current ? (
+            <>
+              <span className="stage-req-label">
+                {p.research.current.name}: {p.research.current.points} / {p.research.current.needed}
+              </span>
+              <span className="meter">
+                <span className="meter-fill" style={{ width: `${Math.round((p.research.current.points / p.research.current.needed) * 100)}%` }} />
+              </span>
+              <span className="stage-life-legend">{p.research.current.effect}</span>
+            </>
+          ) : (
+            <span className="stage-life-legend">Every project is finished.</span>
+          )}
+          {p.research.done.length > 0 && <span className="stage-life-legend">Done: {p.research.done.join(' · ')}</span>}
+        </span>
+      )}
+      {residents > 0 && (
+        <span className="stage-life">
+          <span>Lifestyle</span>
+          <span className="stage-life-bar" aria-label={`Basic ${share(basic)}%, Comfortable ${share(comfortable)}%, Prosperous ${share(prosperous)}%`}>
+            <i className="tier-0" style={{ width: `${share(basic)}%` }} />
+            <i className="tier-1" style={{ width: `${share(comfortable)}%` }} />
+            <i className="tier-2" style={{ width: `${share(prosperous)}%` }} />
           </span>
-        )}
-        {residents > 0 && (
-          <span className="stage-life">
-            <span>Lifestyle</span>
-            <span className="stage-life-bar" aria-label={`Basic ${share(basic)}%, Comfortable ${share(comfortable)}%, Prosperous ${share(prosperous)}%`}>
-              <i className="tier-0" style={{ width: `${share(basic)}%` }} />
-              <i className="tier-1" style={{ width: `${share(comfortable)}%` }} />
-              <i className="tier-2" style={{ width: `${share(prosperous)}%` }} />
-            </span>
-            <span className="stage-life-legend">
-              Basic {share(basic)}% · Comfortable {share(comfortable)}% · Prosperous {share(prosperous)}%
-            </span>
+          <span className="stage-life-legend">
+            Basic {share(basic)}% · Comfortable {share(comfortable)}% · Prosperous {share(prosperous)}%
           </span>
-        )}
+        </span>
+      )}
     </>
   );
 }

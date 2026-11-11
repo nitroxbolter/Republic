@@ -342,14 +342,14 @@ function Population({ short }: { short?: boolean }) {
   );
 }
 
-/** The top bar: the wide one, or the slim one on phones and upright tablets. */
+/** The top bar: the wide one, or the slim one on phones and tablets. */
 export function TopBar(props: TopBarProps) {
   const slim = useMedia(SLIM_BAR);
   return slim ? <PhoneTopBar /> : <WideTopBar {...props} />;
 }
 
 /**
- * Phones (either way up) and upright tablets (D-097): only what a player checks every few seconds stays in view (funds,
+ * Phones (either way up) and tablets (D-097): only what a player checks every few seconds stays in view (funds,
  * people, demand, speed, alerts). Everything else is one tap away in the More sheet.
  */
 function PhoneTopBar() {

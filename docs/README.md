@@ -9,7 +9,7 @@ work session, read **Current Status** below, then the relevant spec.
 |---|---|
 | **Current phase** | City evolution (specs/evolution.md): E0 stages ✅, E1 lifestyle ✅, E2 garbage ✅ |
 | **Next phase** | E3 incidents (fire, theft, illness working together), then AQI, Town Hall tax collection, industry materials; server-run cities after (D-085) |
-| **Last updated** | 2026-11-04 |
+| **Last updated** | 2026-11-11 |
 
 ## Run It
 

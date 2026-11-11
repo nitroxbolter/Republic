@@ -22,8 +22,8 @@ export function useMedia(query: string): boolean {
 export const PHONE = '(max-width: 900px) and (min-height: 521px)';
 /** A short landscape screen (phones on their side): the HUD goes compact along the edges. */
 export const COMPACT = '(max-height: 520px)';
-/** The slim top bar, with a More sheet for the rest and the budget as a sheet: PHONE and COMPACT. */
-export const SLIM_BAR = '(max-width: 900px) and (min-height: 521px), (max-height: 520px)';
+/** The slim top bar, with a More sheet for the rest and the budget as a sheet: anything up to tablet width, and landscape phones. */
+export const SLIM_BAR = '(max-width: 1100px), (max-height: 520px)';
 /** Small screens: pickers are a sideways strip, the tour docks instead of pointing. */
 export const SMALL_UI = '(max-width: 640px), (max-height: 520px)';
 /** No hover and a coarse pointer: a touch screen. */
