@@ -31,6 +31,20 @@ export interface EnergyDef {
   readonly repairCost?: number;
 }
 
+/** Emergency vehicles (sim/systems/incidents.ts, docs/specs/evolution.md E3). */
+export type ResponderKind = 'fire' | 'police' | 'ambulance';
+
+/** A station that sends vehicles to incidents over the roads. */
+export interface ResponderDef {
+  readonly kind: ResponderKind;
+  /** Vehicles it can have out at once. */
+  readonly vehicles: number;
+  /** Ambulances that can take injuries (hospitals, the trauma centre); clinics only take illness. */
+  readonly injuries?: boolean;
+  /** Speed multiplier over the emergency speed (the trauma centre's rapid response). */
+  readonly speed?: number;
+}
+
 /** Civic panel tabs. */
 export type CivicGroup = 'services' | 'transport' | 'utilities' | 'parks';
 
@@ -60,6 +74,8 @@ export interface BuildingDef {
   energy?: EnergyDef;
   /** Garbage facilities (sim/systems/garbage.ts): tons collected per day, reach in tiles, and (landfills) how much it holds. */
   garbage?: { readonly trucks: number; readonly reach: number; readonly holds?: number; readonly recycles?: number };
+  /** Emergency services: the vehicles it sends to fires, thefts and patients (docs/specs/evolution.md, E3). */
+  responder?: ResponderDef;
   /** Train stations: must be built with track beside the footprint (sim/rail.ts). */
   railStation?: boolean;
   /** Bus stations: a fleet of buses runs from it, and nearby homes commute by bus (sim/systems/traffic.ts, commute.ts). */
@@ -440,6 +456,7 @@ export const BUILDINGS = {
     upkeep: 60,
     service: 'police',
     radius: 14,
+    responder: { kind: 'police', vehicles: 2 },
   },
   fire_station: {
     name: 'Fire Station',
@@ -455,6 +472,7 @@ export const BUILDINGS = {
     upkeep: 60,
     service: 'fire',
     radius: 14,
+    responder: { kind: 'fire', vehicles: 2 },
   },
   clinic: {
     name: 'Clinic',
@@ -470,6 +488,7 @@ export const BUILDINGS = {
     upkeep: 80,
     service: 'health',
     radius: 12,
+    responder: { kind: 'ambulance', vehicles: 1 },
   },
   school: {
     name: 'School',
@@ -500,6 +519,7 @@ export const BUILDINGS = {
     upkeep: 320,
     service: 'hospital',
     radius: 24,
+    responder: { kind: 'ambulance', vehicles: 3, injuries: true },
   },
   university: {
     name: 'University',
@@ -515,7 +535,23 @@ export const BUILDINGS = {
     upkeep: 420,
     service: 'university',
     radius: 32,
+  },  trauma_centre: {
+    name: 'Trauma Centre',
+    category: 'civic',
+    zone: null,
+    density: null,
+    level: 0,
+    size: { w: 3, h: 3 },
+    cost: 26000,
+    capacity: 180,
+    description: 'Six rapid-response ambulances for patients and fire injuries across the city. It also counts as a hospital.',
+    group: 'services',
+    upkeep: 480,
+    service: 'hospital',
+    radius: 28,
+    responder: { kind: 'ambulance', vehicles: 6, injuries: true, speed: 1.5 },
   },
+
   landfill: {
     name: 'Landfill',
     category: 'civic',
@@ -781,6 +817,9 @@ export interface BuildingInstance {
   condition: number;
   /** In-game days remaining before a failed generator can run again. */
   repairDays: number;
+  /** Days left of the hurt from a theft nobody stopped, and from patients nobody reached (E3). */
+  robbed: number;
+  sick: number;
 }
 
 /** What a caller supplies when placing or growing; the runtime fields start empty. */

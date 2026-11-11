@@ -8,7 +8,7 @@ import { CommuteSystem } from '../systems/commute';
 import { NeedsSystem } from '../systems/needs';
 import { CoverageSystem, updateCoverage } from '../systems/coverage';
 import { AirSystem } from '../systems/air';
-import { FireSystem } from '../systems/fire';
+import { IncidentSystem } from '../systems/incidents';
 import { GarbageSystem } from '../systems/garbage';
 import { MaterialsSystem } from '../systems/materials';
 import { TrainSystem } from '../systems/trains';
@@ -33,9 +33,10 @@ const SALT = { growth: 0x6077, fire: 0xf12e } as const;
 /**
  * The simulation core (D-058): owns the systems and runs them in a fixed order.
  *   - after an edit:  access → utilities → coverage → commute (if roads changed) → air → needs → traffic
- *   - each day:       stage → materials → growth → fire → (the edit refresh) → garbage → commute → air → needs → lifestyle → population → traffic,
+ *   - each day:       stage → materials → growth → (the edit refresh) → garbage → commute → air → needs → lifestyle → population → traffic → trains → incidents,
  *                     plus budget (then the garbage month reset) at month end
- *   - each frame:     the clock and traffic
+ *   - each tick:      incidents (vehicles drive, fires burn; a fire that takes a building runs the edit refresh)
+ *   - each frame:     the clock, traffic, trains and the emergency vehicles' drawn positions
  * The game layer only calls these entry points and shows the outcome.
  */
 export class Simulation {
@@ -43,7 +44,7 @@ export class Simulation {
   readonly utilities: UtilitiesSystem;
   readonly coverage: CoverageSystem;
   readonly growth: GrowthSystem;
-  readonly fire: FireSystem;
+  readonly incidents: IncidentSystem;
   readonly population: PopulationSystem;
   readonly budget: BudgetSystem;
   readonly commute: CommuteSystem;
@@ -74,11 +75,12 @@ export class Simulation {
     this.growth = new GrowthSystem(city, this.streams.growth.next);
     this.materials = new MaterialsSystem(city);
     this.growth.stock = () => this.materials.stock;
-    this.fire = new FireSystem(world, this.streams.fire.next);
     this.population = new PopulationSystem(world);
     this.budget = new BudgetSystem(city);
     this.commute = new CommuteSystem(world);
     this.air = new AirSystem(world, this.commute, () => techEffects(city));
+    // Incidents roll on the fire stream (its name predates them, and saves carry it).
+    this.incidents = new IncidentSystem(city, this.streams.fire.next, this.commute, (b) => this.air.aqiOf(b));
     this.needs = new NeedsSystem(world, this.commute, () => city.stage, this.air);
     this.traffic = new TrafficSystem(world, this.commute);
     this.garbage = new GarbageSystem(city);
@@ -107,7 +109,6 @@ export class Simulation {
     t.run('materials.day', () => this.materials.onDay());
     t.run('growth.day', () => this.growth.onDay(out));
     this.materials.afterGrowth();
-    t.run('fire.day', () => this.fire.onDay(out));
     t.run('utilities.day', () => this.utilities.onDay?.());
     this.worldChanged({ roads: false });
     t.run('garbage.day', () => this.garbage.onDay());
@@ -118,12 +119,14 @@ export class Simulation {
     t.run('population.day', () => this.population.onDay());
     t.run('traffic.day', () => this.traffic.onDay());
     t.run('trains.day', () => this.trains.onDay());
+    t.run('incidents.day', () => this.incidents.onDay());
     t.run('research.day', () => {
       out.research = researchDay(this.city);
     });
     if (this.city.day % BALANCE.daysPerMonth === 0) {
       t.run('budget.month', () => this.budget.onMonth(out));
       t.run('garbage.month', () => this.garbage.onMonth());
+      this.incidents.onMonth();
     }
     return out;
   }
@@ -162,6 +165,8 @@ export class Simulation {
     this.city.ticks++;
     const hour = Math.floor(this.city.hour);
     if (hour !== before) this.timings.run('utilities.hour', () => this.utilities.onHour(hour, this.city.day));
+    // Incidents run on the tick: vehicles drive, fires burn. A building lost to fire changes the world now.
+    if (this.timings.run('incidents.tick', () => this.incidents.tick())) this.worldChanged({ roads: false });
     return this.city.ticks % TICKS_PER_DAY === 0 ? this.day() : null;
   }
 
@@ -174,6 +179,7 @@ export class Simulation {
   frame(dt: number) {
     this.timings.run('traffic.frame', () => this.traffic.onFrame(dt, this.city.hour));
     this.trains.onFrame(dt);
+    this.incidents.onFrame(dt);
   }
 }
 

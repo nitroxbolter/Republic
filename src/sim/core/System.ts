@@ -1,4 +1,4 @@
-import type { BuildingInstance, Lifestyle } from '../buildings/catalog';
+import type { Lifestyle } from '../buildings/catalog';
 import type { Stage } from '../stages';
 import type { TechDef } from '../research';
 import type { BudgetReport } from '../systems/budget';
@@ -33,8 +33,6 @@ export interface DayOutcome {
   /** Construction sites started today, and buildings finished today (ids). */
   started: number[];
   completed: number[];
-  /** Buildings lost to fire (already removed). */
-  burned: BuildingInstance[];
   /** Buildings abandoned today, and abandoned ones that recovered (ids). */
   abandoned: number[];
   recovered: number[];
@@ -49,5 +47,5 @@ export interface DayOutcome {
 }
 
 export function emptyOutcome(): DayOutcome {
-  return { changed: [], started: [], completed: [], burned: [], abandoned: [], recovered: [], budget: null, stage: null, lifestyle: null, research: null };
+  return { changed: [], started: [], completed: [], abandoned: [], recovered: [], budget: null, stage: null, lifestyle: null, research: null };
 }

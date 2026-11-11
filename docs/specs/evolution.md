@@ -24,7 +24,7 @@ unlocks buildings and brings a new problem (D-086).
 | **Hamlet** | 0 | roads, zones, coal plant, wind turbine, water tower, substation, park, town hall, police, fire, clinic | power, water, first jobs |
 | **Village** | 150 | school, **landfill**, riverside market, central park | **garbage** starts piling up |
 | **Town** | 2,500 | **hospital**, **recycling centre**, gas plant, solar farm, battery bank, botanical garden, shopping complex | homes become *Comfortable* and want a hospital |
-| **City** | 10,000 | **university**, **incinerator** (later: trauma centre, trains) | homes become *Prosperous* and want a university |
+| **City** | 10,000 | **university**, **incinerator**, **trauma centre** | homes become *Prosperous* and want a university |
 | **Metropolis** | 30,000 | research centre (automatic research, E7) | — |
 
 - **Locking** is a `City` setting (`locked`): on for new player cities, off for `/demo`, tests,
@@ -179,6 +179,81 @@ under 0.5 ms a day on /demo.
 - Budget: recycling income appears under income.
 - Later: visible garbage bags at high zoom, garbage trucks sampled from collection, sickness.
 
+## E3: Incidents (`sim/systems/incidents.ts`; D-097)
+
+Fires, thefts and illness happen to buildings, and the fire, police and health services answer
+them **over the roads**. Reach, road layout and traffic decide whether help arrives in time,
+and a gap in one service shows up as another's load. It replaces the old fire roll, which
+deleted uncovered buildings on the spot.
+
+**Everything is sim state.** Incidents and responders live in `City.incidents`, advance on the
+fixed tick (60 ticks a day) and roll on the saved fire stream, so a city plays the same on every
+machine and on the server (D-085). The renderer only draws them.
+
+### Hazard (daily roll, once the city has 200 residents)
+
+Each finished, occupied zoned building rolls once a day. Chance = base × size × modifiers:
+
+| Incident | Base | Raised by | Lowered by |
+|---|---|---|---|
+| **Fire** | 0.0004 | industry ×2, abandoned ×3, level 3 ×1.3 | fire coverage ×0.35 |
+| **Theft** (homes, shops) | 0.0005 | unemployment (×1 + 2 × jobless share), shops ×1.5, Prosperous ×1.3 | police coverage ×0.35 |
+| **Illness** (homes) | 0.0004 | bad air (×1 + (AQI − 50) / 100 over 50), uncollected garbage ×1.5 | clinic coverage ×0.5 |
+
+Size is √(capacity ÷ 10), clamped to 0.6–3, so a tower has more going on than a cottage. At
+most 6 of each kind are active at once, so a big city never floods.
+
+### Response
+
+When an incident starts, the city sends a vehicle from the responder with the **fastest road
+route** to the building's entrance:
+
+| Responder | Answers | Vehicles | Notes |
+|---|---|---|---|
+| Fire Station | fires | 2 fire trucks | |
+| Police Station | thefts | 2 patrol cars | |
+| Clinic | illness | 1 ambulance | not injuries |
+| Hospital | illness, injuries | 3 ambulances | |
+| **Trauma Centre** (new, City stage) | illness, injuries | 6 ambulances, 1.5× faster | counts as a hospital |
+
+- Travel time sums each road tile at emergency speed (2× a car, times the road type's speed),
+  slowed by that tile's congestion, so **traffic delays help**. Only stations with a vehicle
+  free and a route within 80 road tiles are asked; the 3 nearest are routed and the fastest goes.
+- A vehicle drives out, works at the scene (fire 1 day, police and ambulance a third of a day)
+  and drives back; only then is it free again. An incident with no free vehicle waits and asks
+  again every few ticks.
+
+### Outcomes
+
+| Incident | Help in time | Too late or never |
+|---|---|---|
+| **Fire** | Out after the truck has worked 1 day; the building stays | After 1.5 days unanswered it **spreads** to one touching building; after 3 days the building **burns down** (the lot is cleared, the zone regrows) |
+| **Theft** | The police car arrives within 1 day: caught | **Robbed**: for 30 days its safety need is halved and it shows a theft marker |
+| **Illness** | The ambulance arrives within 1.5 days: treated | **Untreated**: for 30 days its health need is halved |
+| **Injury** (a fire in an occupied building, half the time) | A hospital or trauma-centre ambulance within 1.5 days | As untreated illness. Clinics can't take injuries, so a fire with no hospital nearby hurts people |
+
+Robbed and untreated homes complain in their own words ("We were robbed and no police came",
+"Nobody came when we were sick") when that need is their worst.
+
+### On the map and in the HUD
+
+- **Burning buildings:** flickering flames over the footprint and a column of dark smoke,
+  growing as the fire goes on; dust and a toast if it burns down.
+- **Markers:** a theft marker over a building being robbed or recently robbed, and a red cross
+  over a patient waiting for an ambulance (the badges above buildings).
+- **Vehicles:** fire trucks, patrol cars and ambulances with flashing light bars, driving their
+  route out and back; on flyover decks they ride raised like other cars.
+- **Alerts:** fires that no truck can reach; buildings robbed or patients missed (at most one
+  of each kind a month). Successes stay quiet.
+- **Info panel:** a building shows its incident and the vehicle on its way; a responder shows
+  its vehicles out and this month's calls answered in time and too late.
+
+**Saved** as `city.incidents` (absent: none). Vehicles out aren't saved: after a load, active
+incidents ask for help again. Robbed and untreated days are saved on the building.
+
+**Cost:** one roll per building a day, and at most 3 route searches per new incident (a few a
+day): well under 1 ms a day.
+
 ## E4: Air quality (`sim/systems/air.ts`)
 
 The air is a coarse field: one cell per 4×4 tiles (32×32 on a 128 map), recomputed every day
@@ -215,7 +290,7 @@ own block 84, the next 61, two away 38; /demo's residents average 63 (Moderate),
 
 **Effects:** the clean-air need now reads the AQI where the building stands: 1 up to AQI 50,
 falling to 0 at AQI 200, minus highway noise as before. It replaces the old 6-tile radius
-check. (Later: illness from bad air, E3.)
+check. Bad air also makes illness more likely (E3).
 
 **Showing it:**
 - **Top bar:** the city AQI (residents' average) with its label and colour; click it, or press
@@ -354,12 +429,7 @@ panel shows riders a day and buses out. /demo has one south-west of downtown.
 
 Each gets its spec section before code.
 
-- **E3 Incidents that work together:** fires, theft and illness arise from hazard (density,
-  condition, unemployment, missing coverage). Fire stations, police and hospitals answer them
-  over the roads, so traffic and reach matter, and one service's gap shows up as another's
-  load (a fire with no ambulance nearby hurts people). On the map: burning buildings with
-  flames and smoke, a theft marker over robbed shops and homes, and an ambulance or patrol car
-  heading there. The trauma centre (City) joins here.
+- **E3 Incidents:** built, see "E3: Incidents" above.
 - **E4 Air quality index (AQI):** built, see "E4: Air quality" below.
 - **E5 Taxes collected at the Town Hall:** built, see "E5: Taxes at the Town Hall" below.
 - **E6 Industry makes construction materials:** built, see "E6: Construction materials" below.

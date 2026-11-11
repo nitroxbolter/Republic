@@ -162,6 +162,14 @@ function needWeights(def: BuildingDef, b: BuildingInstance, stage: Stage): Weigh
   };
 }
 
+/** A complaint in the words of the building that makes it: incidents and bad air have their own. */
+function complaintText(kind: ComplaintKind, b: BuildingInstance, air: AirSystem | null): string {
+  if (kind === 'air' && air && air.aqiOf(b) > 150) return 'The air is making us sick';
+  if (kind === 'safety' && b.robbed > 0) return 'We were robbed and no police came';
+  if (kind === 'health' && b.sick > 0) return 'Nobody came when we were sick';
+  return COMPLAINT_TEXT[kind];
+}
+
 const centre = (b: BuildingInstance) => {
   const s = BUILDINGS[b.def].size;
   return { x: b.x + s.w / 2, y: b.y + s.h / 2 };
@@ -270,8 +278,9 @@ export class NeedsSystem implements SimSystem {
         scores[kind] = this.needScore(kind, b, {
           jobCover,
           workerShare,
-          safety: (b.services & police ? 0.6 : 0) + (b.services & fire ? 0.4 : 0),
-          health: b.services & health ? 1 : 0,
+          // A theft nobody stopped, or a patient nobody reached, halves the need for a month (E3).
+          safety: ((b.services & police ? 0.6 : 0) + (b.services & fire ? 0.4 : 0)) * (b.robbed > 0 ? 0.5 : 1),
+          health: (b.services & health ? 1 : 0) * (b.sick > 0 ? 0.5 : 1),
           education: b.services & education ? 1 : 0,
           hospital: b.services & hospital ? 1 : 0,
           university: b.services & university ? 1 : 0,
@@ -412,7 +421,7 @@ export class NeedsSystem implements SimSystem {
       const c = centre(g.worst);
       complaints.push({
         kind,
-        text: kind === 'air' && this.air && this.air.aqiOf(g.worst) > 150 ? 'The air is making us sick' : COMPLAINT_TEXT[kind],
+        text: complaintText(kind, g.worst, this.air),
         count: g.count,
         building: g.worst.id,
         x: c.x,

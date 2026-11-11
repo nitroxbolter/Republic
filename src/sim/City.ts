@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/balance';
 import { SIM_TICK_HZ } from '../shared/constants';
 import type { ResearchState } from './research';
+import { emptyIncidents, type IncidentState } from './systems/incidents';
 import { Stage } from './stages';
 import type { World } from './World';
 
@@ -36,6 +37,8 @@ export class City {
   materials = 0;
   /** Research progress (sim/research.ts): points toward the current project, projects finished. */
   research: ResearchState = { points: 0, done: 0 };
+  /** Fires, thefts and patients in progress, and the vehicles answering them (docs/specs/evolution.md, E3). */
+  incidents: IncidentState = emptyIncidents();
 
   readonly world: World;
 

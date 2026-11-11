@@ -68,9 +68,7 @@ export const BALANCE = {
 
   // --- Zoning & growth (sim/growth.ts, docs/specs/buildings.md) ---
   // --- Services & utilities (sim/services.ts, docs/specs/core.md) ---
-  /** Daily chance that a finished building outside fire coverage burns down (once the city is this big). */
-  fireChance: 0.0003,
-  firePopulation: 200,
+  // Fires, thefts and illness: sim/systems/incidents.ts (INCIDENTS).
   /** Default tax rate in percent; income scales with rate ÷ this. Each point away shifts demand by taxDemandStep. */
   baseTaxRate: 9,
   maxTaxRate: 20,

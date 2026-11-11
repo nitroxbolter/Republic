@@ -7,6 +7,7 @@ import { PAVEMENTS, roadSpec } from './roadTypes';
 import { isStage, Stage } from './stages';
 import { TECHS } from './research';
 import { Rail } from './rail';
+import { loadIncidents, parseIncidents, saveIncidents, type SavedIncidents } from './systems/incidents';
 import { GENERATOR_VERSION, generateTerrain } from './terrain/generate';
 import { PRESET_IDS, type PresetId, type TerrainSettings } from './terrain/presets';
 import { Decor, Terrain } from './terrain/types';
@@ -69,6 +70,8 @@ export interface SavedCity {
   readonly materials?: number;
   /** Research progress (E7). */
   readonly research?: { readonly points: number; readonly done: number };
+  /** Fires, thefts and patients in progress, vehicles out, and robbed or untreated buildings (E3). */
+  readonly incidents?: SavedIncidents;
 }
 
 /** Run-length encoded, base64 typed-array layers (one byte per tile). */
@@ -187,7 +190,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research } },
+    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -284,6 +287,7 @@ export function deserialize(data: SaveData): City {
   city.materials = Math.max(0, data.city.materials ?? 0);
   if (data.city.research) city.research = { points: Math.max(0, data.city.research.points), done: Math.max(0, Math.min(TECHS.length, Math.floor(data.city.research.done))) };
   city.stage = data.city.stage !== undefined && isStage(data.city.stage) ? data.city.stage : Stage.Hamlet;
+  if (data.city.incidents) loadIncidents(city, data.city.incidents);
   return city;
 }
 
@@ -496,6 +500,7 @@ export function parseSave(json: unknown): SaveData {
       ...(typeof c.needsMaterials === 'boolean' && { needsMaterials: c.needsMaterials }),
       ...(isFiniteNumber(c.materials) && { materials: c.materials }),
       ...(isObj(c.research) && isFiniteNumber(c.research.points) && isFiniteNumber(c.research.done) && { research: { points: c.research.points, done: c.research.done } }),
+      ...optionalIncidents(parseIncidents(c.incidents)),
     },
     layers: {
       road: str(l, 'road'),
@@ -513,6 +518,16 @@ export function parseSave(json: unknown): SaveData {
     ...parseSimState(json.sim),
     ...(isFiniteNumber(json.savedAt) && { savedAt: json.savedAt }),
   };
+}
+
+/** Incidents only when there are any, so quiet cities save as before. */
+function incidentsField(city: City): { incidents?: SavedIncidents } {
+  const saved = saveIncidents(city);
+  return saved ? { incidents: saved } : {};
+}
+
+function optionalIncidents(saved: SavedIncidents | undefined): { incidents?: SavedIncidents } {
+  return saved ? { incidents: saved } : {};
 }
 
 /** The optional tile map; a malformed one is dropped (footprints come from the building records). */

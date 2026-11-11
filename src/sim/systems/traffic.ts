@@ -30,7 +30,8 @@ const NO_MAJOR = 2;
  * render/AgentRenderer.ts draws them. See docs/specs/simulation.md.
  */
 
-export type AgentKind = 'car' | 'taxi' | 'bus' | 'truck' | 'person';
+/** Emergency vehicles come from sim/systems/incidents.ts (drawn with the traffic, moved by the tick). */
+export type AgentKind = 'car' | 'taxi' | 'bus' | 'truck' | 'fire_truck' | 'police_car' | 'ambulance' | 'person';
 
 export interface Agent {
   kind: AgentKind;
