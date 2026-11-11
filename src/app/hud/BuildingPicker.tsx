@@ -6,11 +6,13 @@ import type { ZoneToolId } from '../../game/tools';
 import { STAGES, unlockStage, unlockTech } from '../../sim/stages';
 import { TECHS } from '../../sim/research';
 import { activeToolAtom, buildingChoiceAtom, cityAtom, fundsAtom, gameAtom } from '../atoms';
+import { PickerChip, usePickerFold } from './pickerFold';
 
-const THUMB = 64;
+const CARD_THUMB = 64;
 
 /** Paints the building with the same code as the in-game atlas, scaled to fit the card. */
-function BuildingThumb({ id }: { id: BuildingId }) {
+function BuildingThumb({ id, size = CARD_THUMB }: { id: BuildingId; size?: number }) {
+  const THUMB = size;
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -24,7 +26,7 @@ function BuildingThumb({ id }: { id: BuildingId }) {
     if (!ctx) return;
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, ((THUMB - f.w * scale) / 2) * dpr, (THUMB - f.h * scale) * dpr);
     paintBuilding(ctx, id, 0, 0, { stillParts: true });
-  }, [id]);
+  }, [id, THUMB]);
   return <canvas ref={ref} className="building-thumb" style={{ width: THUMB, height: THUMB }} aria-hidden="true" />;
 }
 
@@ -71,14 +73,27 @@ function cardStat(d: BuildingDef): string {
 
 /** Panel above the toolbar while the Civic tool is active: services, utilities, parks. */
 export function BuildingPicker() {
-  const game = useAtomValue(gameAtom);
   const tool = useAtomValue(activeToolAtom);
+  return tool === 'build' ? <BuildingPickerPanel /> : null;
+}
+
+function BuildingPickerPanel() {
+  const game = useAtomValue(gameAtom);
   const choice = useAtomValue(buildingChoiceAtom);
   const funds = useAtomValue(fundsAtom);
   const progress = useAtomValue(cityAtom)?.progress;
-  const [tab, setTab] = useState<CivicGroup>('services');
+  // Opens on the tab of the building chosen last, so "Change" lands where the player was.
+  const [tab, setTab] = useState<CivicGroup>(() => {
+    const d: BuildingDef = BUILDINGS[choice];
+    return d.group ?? 'services';
+  });
+  const fold = usePickerFold();
 
-  if (tool !== 'build') return null;
+  if (fold.drafting) return null;
+  if (fold.folded) {
+    const d: BuildingDef = BUILDINGS[choice];
+    return <PickerChip kind="building-picker" picture={<BuildingThumb id={choice} size={36} />} name={d.name} cost={`$${d.cost.toLocaleString()}`} onChange={fold.unfold} />;
+  }
   // Locked buildings (D-086) come last, greyed, with the stage that unlocks them.
   const isLocked = (id: BuildingId) => {
     if (!progress?.locked) return false;
@@ -114,7 +129,11 @@ export function BuildingPicker() {
             : d.description
         }
         aria-disabled={locked}
-        onClick={() => (locked ? undefined : game?.setBuilding(id))}
+        onClick={() => {
+          if (locked) return;
+          game?.setBuilding(id);
+          fold.chosen();
+        }}
       >
         <BuildingThumb id={id} />
         <span className="card-name">{d.name}</span>

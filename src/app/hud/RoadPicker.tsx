@@ -10,6 +10,7 @@ import {
 } from '../../game/tools';
 import { PAVEMENTS, ROAD_SPECS, type PavementStyle } from '../../sim/roadTypes';
 import { activeToolAtom, gameAtom, pavementAtom, flyoverAtom } from '../atoms';
+import { PickerChip, usePickerFold } from './pickerFold';
 
 /** One line under each road's name (docs/specs/transport.md). */
 const BLURB: Readonly<Record<RoadToolId, string>> = {
@@ -159,12 +160,33 @@ function CrossSection({ tool }: { tool: RoadToolId }): ReactNode {
 
 /** Panel above the toolbar while a road tool is active: every road type, and the footpath style. */
 export function RoadPicker() {
+  const tool = useAtomValue(activeToolAtom);
+  return isRoadTool(tool) || tool === 'rail' ? <RoadPickerPanel /> : null;
+}
+
+function RoadPickerPanel() {
   const game = useAtomValue(gameAtom);
   const tool = useAtomValue(activeToolAtom);
   const pavement = useAtomValue(pavementAtom);
   const flyover = useAtomValue(flyoverAtom);
-  if (!isRoadTool(tool) && tool !== 'rail') return null;
+  const fold = usePickerFold();
   const spec = isRoadTool(tool) ? ROAD_SPECS[ROAD_TOOLS[tool]] : null;
+  if (fold.drafting) return null;
+  if (fold.folded && isRoadTool(tool) && spec) {
+    return (
+      <PickerChip
+        kind="road-picker"
+        picture={
+          <svg viewBox="0 0 40 24" width="40" height="24" className="road-section">
+            <CrossSection tool={tool} />
+          </svg>
+        }
+        name={spec.name}
+        cost={`$${(spec.cost * spec.width).toLocaleString()}/tile`}
+        onChange={fold.unfold}
+      />
+    );
+  }
 
   return (
     <div className="panel road-picker" role="dialog" aria-label="Choose a road">
@@ -177,7 +199,10 @@ export function RoadPicker() {
               type="button"
               className={`road-card ${tool === id ? 'is-active' : ''}`}
               aria-pressed={tool === id}
-              onClick={() => game?.setTool(id)}
+              onClick={() => {
+                game?.setTool(id);
+                fold.chosen();
+              }}
               title={`${s.name}: ${BLURB[id]} · carries ${s.cars ? `${(s.capacity * s.width).toLocaleString()} cars a day` : 'walkers only'}`}
             >
               <svg

@@ -5513,3 +5513,146 @@ summary {
     max-height: calc(100dvh - 54px - var(--safe-t));
   }
 }
+
+/* ---------- Folded picker (phones, D-097): what's chosen, and Change ---------- */
+.is-chip.building-picker,
+.is-chip.road-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  max-width: calc(100vw - 16px - var(--safe-l) - var(--safe-r));
+  right: auto;
+  padding: 4px 4px 4px 8px;
+  overflow: visible;
+  animation: chip-in 140ms ease-out both;
+}
+@keyframes chip-in {
+  from {
+    opacity: 0;
+  }
+}
+.chip-picture {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.chip-picture .building-thumb {
+  width: 36px !important;
+  height: 36px !important;
+}
+.chip-what {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.chip-what strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip-what .card-cost {
+  font-size: 12px;
+}
+.chip-change {
+  min-width: 76px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(79, 209, 197, 0.45);
+  border-radius: 9px;
+  background: rgba(79, 209, 197, 0.12);
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.chip-change:active {
+  transform: scale(0.96);
+}
+/* Upright tablets centre the pickers; the chip keeps to the dock's left edge instead. */
+@media (min-width: 641px) and (max-width: 900px) and (min-height: 521px) {
+  .is-chip.building-picker,
+  .is-chip.road-picker {
+    left: calc(50% - 260px);
+    width: auto;
+    transform: none;
+  }
+}
+
+/* ---------- Landscape phones: the picker is one sideways row; bars keep their own spots ---------- */
+@media (max-height: 520px) {
+  .building-picker,
+  .road-picker {
+    /* Between the slim top bar and the toolbar, however short the screen gets with the browser bar showing. */
+    max-height: calc(100dvh - 52px - 66px - var(--safe-t) - var(--safe-b));
+    overflow-y: auto;
+  }
+  /* Every section's cards in one row, titles above their own cards. */
+  .building-picker .picker-sections {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .building-picker .picker-sections::-webkit-scrollbar {
+    display: none;
+  }
+  .building-picker .picker-section {
+    flex: none;
+  }
+  .building-picker .picker-section .picker-grid {
+    overflow: visible;
+  }
+  .picker-section-title {
+    margin: 0 0 3px;
+    font-size: 10px;
+  }
+  .picker-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .picker-tab {
+    flex: none;
+    white-space: nowrap;
+  }
+  /* Build / Cancel by the right thumb, above the minimap; toasts under the top bar. */
+  .draft-confirm {
+    top: auto;
+    left: auto;
+    right: calc(8px + var(--safe-r));
+    bottom: calc(84px + var(--safe-b));
+    transform: none;
+  }
+  .notices {
+    top: calc(52px + var(--safe-t));
+    bottom: auto;
+    max-width: 56vw;
+  }
+}
+
+/* Phones: panels appear with a short fade, not a slide-and-scale, so the screen doesn't ripple. */
+@media (max-width: 640px), (max-height: 520px) {
+  .panel {
+    animation: chip-in 120ms ease-out both;
+  }
+  .sheet {
+    animation-duration: 160ms;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .sheet,
+  .dock-zones {
+    animation: none;
+  }
+}
+/* The slim bar is centred with a transform: animating transform would slide it in from the side. */
+.top-bar.is-phone,
+.toolbar.is-dock {
+  animation: chip-in 120ms ease-out both;
+}

@@ -9,6 +9,7 @@ Newest first. One entry per work session.
 - **Loading (D-099):** `game/loading.ts` stages; `LoadingScreen` with real steps, fade-out handoff, error + retry; HUD mounts only when ready; old `.fade-in` curtain and render-failed card removed.
 - **Desktop/tablet:** the full top bar (~1500 px) overflowed at 1280 and 1440: its groups now fold up to 1600 px; windows up to 1100 px use the slim bar; 56 px tool buttons at ≤1100 px.
 - Checked in headless Chrome at 375×812, 390×844, 768×1024, 844×390, 1024×768, 1280×800, 1440×900 (loading, play, More sheet, zone row, Civic picker, budget, tour). 336 tests pass; typecheck and lint clean.
+- **Follow-up from a real phone (landscape, browser bar showing: ~250 px tall):** the Civic picker was squeezed to its tabs, with the Build/Cancel bar and a toast on top of it. Pickers now fold into a chip after a choice (`hud/pickerFold.tsx`) and hide during a draft; the landscape picker is one sideways row capped to the free height; Build/Cancel moved by the right thumb, toasts under the bar; phone panels fade instead of sliding (the centred slim bar used to slide in from the side).
 - **Not done:** swipe-to-close on sheets; incident toasts/alerts (fires started, thefts, patients) beyond "burned down".
 
 ## 2026-11-05: Art Track: modern architecture and landmarks (D-096)
