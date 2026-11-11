@@ -615,20 +615,29 @@ export class Game {
         'abandoned',
       );
     }
-    if (out.burned.length > 0) {
-      for (const b of out.burned) {
-        const { w, h } = BUILDINGS[b.def].size;
-        for (let y = b.y; y < b.y + h; y++) for (let x = b.x; x < b.x + w; x++) fx.burst(x, y, 'dust', 10, Math.random() * 0.4);
-      }
-      this.sound.play('clear');
-      const name = BUILDINGS[out.burned[0].def].name;
-      this.notify(
-        'error',
-        out.burned.length === 1 ? `A fire destroyed a ${name}. Build a Fire Station nearby.` : `${out.burned.length} buildings burned down. Build Fire Stations to cover the city.`,
-        'fire',
-      );
-    }
+    this.showBurned();
     this.afterSimChange();
+  }
+
+  /**
+   * Buildings fires took since the last day (the incident system burns them on its tick):
+   * dust where they stood and one toast. Other incident events are not shown yet.
+   */
+  private showBurned() {
+    const burned = this.sim.incidents.takeEvents().flatMap((e) => (e.type === 'burned' ? [e.building] : []));
+    if (burned.length === 0) return;
+    const fx = this.renderer.effects;
+    for (const b of burned) {
+      const { w, h } = BUILDINGS[b.def].size;
+      for (let y = b.y; y < b.y + h; y++) for (let x = b.x; x < b.x + w; x++) fx.burst(x, y, 'dust', 10, Math.random() * 0.4);
+    }
+    this.sound.play('clear');
+    const name = BUILDINGS[burned[0].def].name;
+    this.notify(
+      'error',
+      burned.length === 1 ? `A fire destroyed a ${name}. Build a Fire Station nearby.` : `${burned.length} buildings burned down. Build Fire Stations to cover the city.`,
+      'fire',
+    );
   }
 
   /** The "pop" a building makes when it appears. */

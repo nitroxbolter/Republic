@@ -35,7 +35,16 @@ const DIMS: Readonly<Record<Exclude<AgentKind, 'person'>, Dims>> = {
   taxi: { len: 0.32, wid: 0.16 },
   bus: { len: 0.56, wid: 0.19 },
   truck: { len: 0.48, wid: 0.18 },
+  fire_truck: { len: 0.52, wid: 0.19 },
+  ambulance: { len: 0.4, wid: 0.18 },
+  police_car: { len: 0.34, wid: 0.16 },
 };
+
+/** Emergency vehicles wear one livery each (body, cargo box); cars and trucks pick by variant. */
+const LIVERY = {
+  fire_truck: { cab: '#d42f2f', body: '#e03b3b' },
+  ambulance: { cab: '#f4f4f0', body: '#f7f7f3' },
+} as const;
 
 /**
  * A vehicle centred on the tile, facing `dir` (0 NE, 1 SE, 2 SW, 3 NW).
@@ -76,21 +85,29 @@ export function paintVehicle(ctx: CanvasRenderingContext2D, kind: Exclude<AgentK
     end(b0 + 0.02, b1 - 0.02, 5, 8.5, GLASS);
     end(b0 + 0.02, b0 + 0.05, 2, 3.5, forward ? HEADLIGHT : TAILLIGHT);
     end(b1 - 0.05, b1 - 0.02, 2, 3.5, forward ? HEADLIGHT : TAILLIGHT);
-  } else if (kind === 'truck') {
-    const c = TRUCK_COLORS[variant % TRUCK_COLORS.length];
+  } else if (kind === 'truck' || kind === 'fire_truck' || kind === 'ambulance') {
+    const livery = kind === 'truck' ? null : LIVERY[kind];
+    const c = livery ? livery.cab : TRUCK_COLORS[variant % TRUCK_COLORS.length];
+    const cargo = livery ? livery.body : '#eceae4';
     // Cargo box at the back, cab at the front.
     const cabFront = forward;
     const split = cabFront ? a1 - 0.14 : a0 + 0.14;
     const [boxS0, boxS1] = cabFront ? [a0, split] : [split, a1];
     const [cabS0, cabS1] = cabFront ? [split + 0.01, a1] : [a0, split - 0.01];
     box(cabS0, cabS1, 1, 6.5, c, shade(c, -0.25), shade(c, 0.2));
-    box(boxS0, boxS1, 1, 10, '#eceae4', '#c9c6be', '#f7f6f2');
+    box(boxS0, boxS1, 1, 10, cargo, shade(cargo, -0.18), shade(cargo, 0.1));
     side(cabS0 + 0.02, cabS1 - 0.02, 3.8, 6, GLASS);
+    // A stripe along the side, and a light bar on the cab roof.
+    if (livery) {
+      side(boxS0 + 0.02, boxS1 - 0.02, 4, 5, kind === 'ambulance' ? '#d23b3b' : '#f4f4f0');
+      const mid = (cabS0 + cabS1) / 2;
+      box(mid - 0.03, mid + 0.03, 6.5, 7.6, '#3b82f6', '#2a5fb8', '#ff4a3d');
+    }
     if (cabFront) end(b0 + 0.02, b1 - 0.02, 3.8, 6, GLASS);
     end(b0 + 0.02, b0 + 0.05, 1.8, 3, forward ? HEADLIGHT : TAILLIGHT);
     end(b1 - 0.05, b1 - 0.02, 1.8, 3, forward ? HEADLIGHT : TAILLIGHT);
   } else {
-    const c = kind === 'taxi' ? '#f5c518' : CAR_COLORS[variant % CAR_COLORS.length];
+    const c = kind === 'taxi' ? '#f5c518' : kind === 'police_car' ? '#1f3a68' : CAR_COLORS[variant % CAR_COLORS.length];
     box(a0, a1, 1, 4.5, c, shade(c, -0.25), shade(c, 0.15));
     // Cabin sits slightly behind centre.
     const back = forward ? a0 : a1;
@@ -105,6 +122,10 @@ export function paintVehicle(ctx: CanvasRenderingContext2D, kind: Exclude<AgentK
     if (kind === 'taxi') {
       const mid = (cab0 + cab1) / 2;
       box(mid - 0.03, mid + 0.03, 7.5, 9, '#ffffff', '#d8d8d8', '#ffffff');
+    } else if (kind === 'police_car') {
+      side(a0 + 0.02, a1 - 0.02, 2.2, 3.4, '#f4f4f0');
+      const mid = (cab0 + cab1) / 2;
+      box(mid - 0.04, mid + 0.04, 7.5, 8.6, '#3b82f6', '#2a5fb8', '#ff4a3d');
     }
   }
   // Wheels on the visible side.

@@ -4,6 +4,7 @@ import { clinic } from './clinic';
 import { school } from './school';
 import { hospital } from './hospital';
 import { university } from './university';
+import { traumaCentre } from './trauma_centre';
 import { recyclingCentre } from './recycling_centre';
 import { incinerator } from './incinerator';
 import { researchCentre } from './research_centre';
@@ -19,6 +20,7 @@ export const SERVICES = {
   school,
   hospital,
   university,
+  trauma_centre: traumaCentre,
   recycling_centre: recyclingCentre,
   incinerator,
   research_centre: researchCentre,
