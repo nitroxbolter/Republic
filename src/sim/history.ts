@@ -37,7 +37,7 @@ export interface CitySample {
 }
 
 export function sampleCity(sim: Simulation): CitySample {
-  const s = cityStats(sim.world);
+  const s = cityStats(sim.world, sim.city.taxRate);
   const demand = sim.growth.demand();
   const traffic = sim.commute.report;
   const needs = sim.needs.report;

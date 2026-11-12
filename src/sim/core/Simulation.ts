@@ -18,6 +18,7 @@ import { researchDay, techEffects } from '../research';
 import { nextStage, stageFor } from '../stages';
 import { GrowthSystem } from '../systems/growth';
 import { cityStats, PopulationSystem } from '../systems/population';
+import { societyDay } from '../systems/society';
 import { TrafficSystem } from '../systems/traffic';
 import { UtilitiesSystem, updateUtilities, type UtilityReport } from '../systems/utilities';
 import type { World } from '../World';
@@ -75,13 +76,13 @@ export class Simulation {
     this.growth = new GrowthSystem(city, this.streams.growth.next);
     this.materials = new MaterialsSystem(city);
     this.growth.stock = () => this.materials.stock;
-    this.population = new PopulationSystem(world);
+    this.population = new PopulationSystem(world, () => city.taxRate, () => city.society, () => city.minimumWage);
     this.budget = new BudgetSystem(city);
     this.commute = new CommuteSystem(world);
     this.air = new AirSystem(world, this.commute, () => techEffects(city));
     // Incidents roll on the fire stream (its name predates them, and saves carry it).
     this.incidents = new IncidentSystem(city, this.streams.fire.next, this.commute, (b) => this.air.aqiOf(b));
-    this.needs = new NeedsSystem(world, this.commute, () => city.stage, this.air);
+    this.needs = new NeedsSystem(world, this.commute, () => city.stage, this.air, () => city.taxRate, () => city);
     this.traffic = new TrafficSystem(world, this.commute);
     this.garbage = new GarbageSystem(city);
     this.lifestyle = new LifestyleSystem(city);
@@ -121,6 +122,7 @@ export class Simulation {
     t.run('traffic.day', () => this.traffic.onDay());
     t.run('trains.day', () => this.trains.onDay());
     t.run('incidents.day', () => this.incidents.onDay());
+    t.run('society.day', () => societyDay(this.city, this.incidents.takeSocietyEvents(), this.streams.fire.next));
     t.run('research.day', () => {
       out.research = researchDay(this.city);
     });

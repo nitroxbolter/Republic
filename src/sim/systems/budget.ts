@@ -6,6 +6,7 @@ import { BridgeAxis, RoadType } from '../roads';
 import { roadSpec } from '../roadTypes';
 import type { World } from '../World';
 import { cityStats } from './population';
+import { demographics } from './society';
 import type { DayOutcome, SimSystem } from '../core/System';
 
 /** Budget system: monthly taxes (by lifestyle) and recycling sales against road and civic upkeep (docs/specs/core.md, "Budget & Taxes"). */
@@ -16,7 +17,7 @@ export interface BudgetReport {
   net: number;
   /** Tax rate (percent) the income was collected at. */
   taxRate: number;
-  breakdown: { roads: number; services: number; utilities: number; parks: number };
+  breakdown: { roads: number; services: number; utilities: number; parks: number; pensions: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
 }
@@ -65,7 +66,7 @@ export function monthlyUpkeep(world: World, building: BuildingInstance): number 
 }
 
 /** Taxes scale with the rate: the base rate gives the BALANCE per-resident and per-worker amounts. */
-export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRate): BudgetReport {
+export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRate, minimumWage: number = BALANCE.defaultMinimumWage, pensionShare: number = BALANCE.pensionShare): BudgetReport {
   const s = cityStats(world);
   const rate = taxRate / BALANCE.baseTaxRate;
   // Better-off residents pay more (docs/specs/evolution.md); cityStats' population is the same homes.
@@ -85,7 +86,8 @@ export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRat
   for (let i = 0; i < world.road.length; i++) {
     const r = world.road[i];
     if (r === RoadType.None) continue;
-    roads += world.bridge[i] !== BridgeAxis.None ? BALANCE.bridgeUpkeep : (roadSpec(r)?.upkeep ?? BALANCE.roadUpkeep);
+    const spec = roadSpec(r);
+    roads += world.bridge[i] !== BridgeAxis.None ? (spec?.bridgeUpkeep ?? BALANCE.bridgeUpkeep) : (spec?.upkeep ?? BALANCE.roadUpkeep);
   }
   // Rail track (E7b) is paid with the roads.
   for (let i = 0; i < world.rail.length; i++) if (world.rail[i] !== 0) roads += BALANCE.railUpkeep;
@@ -99,13 +101,14 @@ export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRat
     else if (d.group === 'utilities') utilities += upkeep;
     else parks += upkeep;
   }
-  const expenses = Math.round(roads + services + utilities + parks);
+  const pensions = demographics(s.population).seniors * Math.round(minimumWage * pensionShare);
+  const expenses = Math.round(roads + services + utilities + parks + pensions);
   return {
     income,
     expenses,
     net: income - expenses,
     taxRate,
-    breakdown: { roads: Math.round(roads), services, utilities, parks },
+    breakdown: { roads: Math.round(roads), services, utilities, parks, pensions },
     recycling,
   };
 }
@@ -122,7 +125,7 @@ export interface HeldTaxes {
 
 /** Apply a month's budget to the city: upkeep from the funds, taxes to the funds or the Town Hall's chest. */
 export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | null } {
-  const r = monthlyBudget(city.world, city.taxRate);
+  const r = monthlyBudget(city.world, city.taxRate, city.minimumWage, city.pensionShare);
   if (!city.collectsTaxes) {
     city.funds += r.net;
     return { ...r, held: null };
@@ -174,6 +177,6 @@ export class BudgetSystem implements SimSystem {
   }
   /** Next month at today's numbers. */
   forecast(): BudgetReport {
-    return monthlyBudget(this.city.world, this.city.taxRate);
+    return monthlyBudget(this.city.world, this.city.taxRate, this.city.minimumWage, this.city.pensionShare);
   }
 }

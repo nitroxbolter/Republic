@@ -26,12 +26,13 @@ Every finished, connected zoned building scores each need it has from 0 (bad) to
 | Commute | homes | 1 up to 15 min, falling to 0 at 60 min (from the traffic system); 0.5 while unknown |
 | Clean air & quiet | homes, shops, offices | 1 − pollution. Pollution comes from industry and power plants within 6 tiles (weighted by size and distance) and highway tiles within 2 |
 | Parks | homes | parks (and the town hall) within 6 tiles ÷ 2, at most 1 |
+| Affordability | homes | household purchasing power relative to the 9% tax baseline |
 | Workers | job buildings | the city's worker share (workers ÷ jobs, at most 1) |
-| Customers | shops, offices | residents within 12 tiles ÷ 200, at most 1 |
+| Customers | shops, offices | residents in the accessible city × traffic × household purchasing power, at most 1 |
 
 **Happiness** is the weighted average of a building's needs:
 
-- **Homes:** jobs 0.20, safety 0.15, commute 0.13, shopping 0.12, clean air 0.12, health 0.10, education 0.10, parks 0.08.
+- **Homes:** the listed needs are normalized by their total weights; purchasing power adds a 0.06 affordability weight.
 - **Shops and offices:** workers 0.35, safety 0.25, customers 0.25, clean air 0.15.
 - **Industry:** workers 0.6, safety 0.4.
 
@@ -65,6 +66,7 @@ Every finished, connected zoned building scores each need it has from 0 (bad) to
 | commute | "The commute is terrible" |
 | clean air | "Too much smoke and noise" |
 | parks | "No parks to enjoy" |
+| affordability | "Taxes reduced our purchasing power" |
 | workers | "We can't find workers" |
 | customers | "Not enough customers" |
 

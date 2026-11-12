@@ -4,6 +4,14 @@
 
 Moradias são criadas em zonas residenciais. Uma casa só recebe moradores se estiver concluída, tiver acesso a uma via e receber água e energia. A população cresce gradualmente em direção à capacidade do edifício; quanto maior a felicidade, maior a ocupação possível.
 
+## Idades, saúde e segurança
+
+A população é representada em grupos agregados: 20% crianças, 15% jovens, 52% adultos e 13% idosos. Aproximadamente 45% dos jovens e 90% dos adultos podem trabalhar; crianças e idosos não entram na força de trabalho. Doentes e presos reduzem temporariamente essa força de trabalho. Os grupos são estimativas da população atual, não personagens individuais.
+
+Ocorrências de doença e ferimentos acrescentam doentes. Atendimento remove doentes; sem atendimento, a mortalidade diária dos doentes sobe de 0,1% para 0,4%. As mortes retiram moradores das casas e reduzem temporariamente a satisfação com a saúde. Uma delegacia em funcionamento oferece oito vagas para presos. Crimes atendidos ocupam essas vagas; casos sem vaga ou não atendidos aumentam a pressão criminal e reduzem a sensação de segurança. Parte dos presos é liberada a cada mês.
+
+O salário mínimo é ajustado em **Orçamento e políticas**, entre $ 20 e $ 500 por mês, com valor inicial de $ 100. O painel abre ao clicar no saldo no topo ou pelo menu **Mais**. Nele também se vê o número de idosos e se ajusta a aposentadoria entre 5% e 30% do salário mínimo por idoso. O salário influencia o poder de compra e a satisfação das famílias; valores muito altos podem reduzir contratações nas empresas. O estado social e as políticas são salvos com a cidade.
+
 O jogo considera que **60% da população está em idade de trabalhar**. Moradores ocupam os empregos disponíveis em lojas, escritórios e indústrias. Se faltarem vagas, a ocupação residencial fica limitada; se faltarem trabalhadores, os negócios não conseguem preencher todos os postos. Comércios também precisam de clientes e acesso viário.
 
 ## O que afeta a felicidade
@@ -11,6 +19,7 @@ O jogo considera que **60% da população está em idade de trabalhar**. Morador
 Cada moradia e negócio avalia suas próprias necessidades. Para as moradias, os principais fatores são:
 
 - **Empregos e deslocamento:** disponibilidade de trabalho alcançável e tempo de viagem.
+- **Poder de compra:** impostos mais altos reduzem a renda disponível e contam como uma necessidade própria das moradias; impostos menores podem recuperá-la.
 - **Segurança:** cobertura de delegacias e bombeiros; furtos não atendidos prejudicam temporariamente essa avaliação.
 - **Saúde e educação:** proximidade de clínicas/hospitais e escolas.
 - **Comércio e parques:** lojas dentro da área de acesso e parques próximos.

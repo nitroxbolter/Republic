@@ -6,11 +6,14 @@ import { isActive } from './access';
 import type { CommuteSystem } from './commute';
 import { serviceBit } from './coverage';
 import { cityStats } from './population';
+import { householdPurchasingPower } from './economy';
 import { roadSpec } from '../roadTypes';
 import { Stage } from '../stages';
 import { garbageScore } from './garbage';
 import { RAIL } from '../rail';
 import { airScore, aqiBand, type AirSystem } from './air';
+import type { City } from '../City';
+import { workingAge } from './society';
 
 /**
  * Needs system (docs/specs/needs.md): every finished, connected zoned building scores its
@@ -35,6 +38,7 @@ export type NeedKind =
   | 'traffic'
   | 'air'
   | 'parks'
+  | 'affordability'
   | 'workers'
   | 'customers';
 
@@ -53,6 +57,7 @@ export const NEED_KINDS: readonly NeedKind[] = [
   'traffic',
   'air',
   'parks',
+  'affordability',
   'workers',
   'customers',
 ];
@@ -75,6 +80,7 @@ export const COMPLAINT_TEXT: Readonly<Record<ComplaintKind, string>> = {
   traffic: 'O trânsito dificulta o acesso dos clientes',
   air: 'Fumaça e ruído demais',
   parks: 'Não há parques para aproveitar',
+  affordability: 'Os impostos reduziram nosso poder de compra',
   workers: 'Não encontramos trabalhadores',
   customers: 'Não há clientes suficientes',
   abandoned: 'Este lugar está abandonado',
@@ -83,13 +89,13 @@ export const COMPLAINT_TEXT: Readonly<Record<ComplaintKind, string>> = {
 type Weights = Readonly<Partial<Record<NeedKind, number>>>;
 
 /**
- * Need weights per kind of building, and for homes per lifestyle tier (each sums to 1;
+ * Need weights per kind of building, and for homes per lifestyle tier (normalized by total;
  * docs/specs/evolution.md). Garbage joins from the Village stage with GARBAGE_WEIGHT, and
  * happiness is averaged over the weights a building has, so the others' shares shrink to fit.
  */
 const HOME_WEIGHTS: Readonly<Record<Lifestyle, Weights>> = {
-  [Lifestyle.Basic]: { jobs: 0.2, safety: 0.15, commute: 0.13, shopping: 0.12, air: 0.12, health: 0.1, education: 0.1, parks: 0.08 },
-  [Lifestyle.Comfortable]: { jobs: 0.18, safety: 0.14, commute: 0.12, shopping: 0.11, air: 0.11, health: 0.08, education: 0.08, parks: 0.08, hospital: 0.1 },
+  [Lifestyle.Basic]: { jobs: 0.2, safety: 0.15, commute: 0.13, shopping: 0.12, air: 0.12, health: 0.1, education: 0.1, parks: 0.08, affordability: 0.06 },
+  [Lifestyle.Comfortable]: { jobs: 0.18, safety: 0.14, commute: 0.12, shopping: 0.11, air: 0.11, health: 0.08, education: 0.08, parks: 0.08, hospital: 0.1, affordability: 0.06 },
   [Lifestyle.Prosperous]: {
     jobs: 0.16,
     safety: 0.13,
@@ -101,6 +107,7 @@ const HOME_WEIGHTS: Readonly<Record<Lifestyle, Weights>> = {
     parks: 0.08,
     hospital: 0.1,
     university: 0.1,
+    affordability: 0.06,
   },
 };
 const WEIGHTS = {
@@ -187,12 +194,23 @@ export class NeedsSystem implements SimSystem {
   private readonly stage: () => Stage;
   /** The air quality field (clean air reads its AQI); without it the air is clean. */
   private readonly air: AirSystem | null;
+  private readonly taxRate: () => number;
+  private readonly policy: () => City | null;
 
-  constructor(world: World, commute: CommuteSystem | null = null, stage: () => Stage = () => Stage.Hamlet, air: AirSystem | null = null) {
+  constructor(
+    world: World,
+    commute: CommuteSystem | null = null,
+    stage: () => Stage = () => Stage.Hamlet,
+    air: AirSystem | null = null,
+    taxRate: () => number = () => BALANCE.baseTaxRate,
+    policy: () => City | null = () => null,
+  ) {
     this.world = world;
     this.commute = commute;
     this.stage = stage;
     this.air = air;
+    this.taxRate = taxRate;
+    this.policy = policy;
   }
 
   /** Re-score after edits (so placing a clinic shows up straight away). */
@@ -233,8 +251,10 @@ export class NeedsSystem implements SimSystem {
   score() {
     const w = this.world;
     const all = [...w.buildings.values()];
-    const stats = cityStats(w);
-    const workforce = stats.population * BALANCE.workforceShare;
+    const taxRate = this.taxRate();
+    const city = this.policy();
+    const stats = cityStats(w, taxRate, city?.society, city?.minimumWage);
+    const workforce = workingAge(stats.population, city?.society.sick, city?.society.prisoners);
     const jobCover = workforce === 0 ? 1 : Math.min(1, stats.jobs / workforce);
     const workerShare = stats.jobs === 0 ? 1 : Math.min(1, stats.workers / stats.jobs);
     const traffic = this.commute ? Math.max(0, Math.min(1, 1 - Math.max(0, this.commute.report.avgMinutes - 15) / 45)) : 1;
@@ -278,9 +298,10 @@ export class NeedsSystem implements SimSystem {
         scores[kind] = this.needScore(kind, b, {
           jobCover,
           workerShare,
+          purchasingPower: householdPurchasingPower(taxRate, city?.minimumWage),
           // A theft nobody stopped, or a patient nobody reached, halves the need for a month (E3).
-          safety: ((b.services & police ? 0.6 : 0) + (b.services & fire ? 0.4 : 0)) * (b.robbed > 0 ? 0.5 : 1),
-          health: (b.services & health ? 1 : 0) * (b.sick > 0 ? 0.5 : 1),
+          safety: ((b.services & police ? 0.6 : 0) + (b.services & fire ? 0.4 : 0)) * (b.robbed > 0 ? 0.5 : 1) * Math.max(0.35, 1 - Math.max(0, (city?.society.prisonOverflow ?? 0) - 2) / Math.max(5, stats.population * 0.02)),
+          health: (b.services & health ? 1 : 0) * (b.sick > 0 ? 0.5 : 1) * Math.max(0.5, 1 - ((city?.society.sick ?? 0) + 5 * (city?.society.recentDeaths ?? 0)) / Math.max(1, stats.population)),
           education: b.services & education ? 1 : 0,
           hospital: b.services & hospital ? 1 : 0,
           university: b.services & university ? 1 : 0,
@@ -325,6 +346,7 @@ export class NeedsSystem implements SimSystem {
     ctx: {
       jobCover: number;
       workerShare: number;
+      purchasingPower: number;
       safety: number;
       traffic: number;
       health: number;
@@ -372,10 +394,12 @@ export class NeedsSystem implements SimSystem {
         return ctx.air();
       case 'parks':
         return Math.min(1, ctx.parks() / 2);
+      case 'affordability':
+        return Math.min(1, ctx.purchasingPower * 0.9);
       case 'workers':
         return ctx.workerShare;
       case 'customers':
-        return Math.min(1, ctx.residents() / 200) * ctx.traffic;
+        return Math.min(1, Math.min(1, ctx.residents() / 200) * ctx.traffic * ctx.purchasingPower);
       case 'traffic':
         return ctx.traffic;
     }
@@ -458,7 +482,7 @@ export class NeedsSystem implements SimSystem {
       return [{ label: 'Uncollected garbage', value: `${Math.round(b.garbage)} t` }];
     }
     if (kind === 'workers') {
-      const stats = cityStats(this.world);
+      const stats = cityStats(this.world, this.taxRate());
       return [
         { label: 'Available workers', value: stats.workers.toLocaleString() },
         { label: 'Building jobs', value: d.capacity.toLocaleString() },

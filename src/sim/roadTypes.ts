@@ -23,6 +23,8 @@ export interface RoadSpec {
   readonly bridgeCost: number;
   /** Monthly upkeep per tile. */
   readonly upkeep: number;
+  /** Monthly upkeep per bridge tile. */
+  readonly bridgeUpkeep: number;
   /** Loud enough to bother nearby homes (sim/systems/needs.ts). */
   readonly noisy: boolean;
   /** Bigger roads replace smaller ones when dragged over them (paying the difference); never the reverse. */
@@ -50,6 +52,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     cost: BALANCE.roadCost,
     bridgeCost: BALANCE.bridgeCost,
     upkeep: BALANCE.roadUpkeep,
+    bridgeUpkeep: 500,
     noisy: false,
     rank: 1,
     width: 1,
@@ -66,6 +69,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     cost: BALANCE.avenueCost,
     bridgeCost: BALANCE.avenueBridgeCost,
     upkeep: BALANCE.avenueUpkeep,
+    bridgeUpkeep: 800,
     noisy: false,
     rank: 2,
     width: 1,
@@ -83,6 +87,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     cost: BALANCE.boulevardCost,
     bridgeCost: BALANCE.boulevardBridgeCost,
     upkeep: BALANCE.boulevardUpkeep,
+    bridgeUpkeep: 1_100,
     noisy: false,
     rank: 3,
     width: 2,
@@ -99,6 +104,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     cost: BALANCE.highwayCost,
     bridgeCost: BALANCE.highwayBridgeCost,
     upkeep: BALANCE.highwayUpkeep,
+    bridgeUpkeep: 1_600,
     noisy: true,
     rank: 4,
     width: 1,
@@ -116,6 +122,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     cost: BALANCE.expresswayCost,
     bridgeCost: BALANCE.expresswayBridgeCost,
     upkeep: BALANCE.expresswayUpkeep,
+    bridgeUpkeep: 2_000,
     noisy: true,
     rank: 5,
     width: 2,
@@ -132,6 +139,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     cost: BALANCE.rampCost,
     bridgeCost: BALANCE.rampBridgeCost,
     upkeep: BALANCE.rampUpkeep,
+    bridgeUpkeep: 900,
     noisy: true,
     rank: 1.8,
     width: 1,
@@ -149,6 +157,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     cost: BALANCE.pedestrianCost,
     bridgeCost: BALANCE.bridgeCost,
     upkeep: BALANCE.pedestrianUpkeep,
+    bridgeUpkeep: 500,
     noisy: false,
     rank: 1.5,
     width: 1,

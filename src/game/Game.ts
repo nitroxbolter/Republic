@@ -29,6 +29,8 @@ import { windFactor } from '../sim/systems/energy';
 import { demandFor } from '../sim/systems/growth';
 import { PAVEMENTS, ROAD_SPECS } from '../sim/roadTypes';
 import { cityStats } from '../sim/systems/population';
+import { economyReport } from '../sim/systems/economy';
+import { societyReport } from '../sim/systems/society';
 import type { Traffic } from '../sim/systems/traffic';
 import { happinessColor, type OverlayTile } from '../render/Renderer';
 import { rectTiles, RoadType, roadMask, type BuildableRoad, type TilePos } from '../sim/roads';
@@ -830,11 +832,28 @@ export class Game {
     this.emitCity();
   }
 
+  setMinimumWage(amount: number) {
+    this.city.minimumWage = Math.max(BALANCE.minMinimumWage, Math.min(BALANCE.maxMinimumWage, Math.round(amount)));
+    this.edits++;
+    this.sim.needs.score();
+    this.emitBudget();
+    this.emitCity();
+  }
+
+  setPensionShare(percent: number) {
+    this.city.pensionShare = Math.max(BALANCE.minPensionShare, Math.min(BALANCE.maxPensionShare, Math.round(percent) / 100));
+    this.edits++;
+    this.emitBudget();
+    this.emitCity();
+  }
+
   /** Budget panel data: the tax rate, last month's report and what next month looks like now. */
   emitBudget() {
     const u = this.sim.utilities.report;
     this.events.emit('budget', {
       taxRate: this.city.taxRate,
+      minimumWage: this.city.minimumWage,
+      pensionShare: this.city.pensionShare,
       last: this.sim.budget.last,
       forecast: this.sim.budget.forecast(),
       power: u.power,
@@ -893,11 +912,13 @@ export class Game {
 
   /** Push current city stats to listeners (also used by the UI bridge on connect). */
   emitCity() {
-    const s = cityStats(this.world);
+    const s = cityStats(this.world, this.city.taxRate, this.city.society, this.city.minimumWage);
     let cars = 0;
     for (const a of this.traffic.agents) if (a.kind !== 'person') cars++;
     this.events.emit('city', {
       ...s,
+      economy: economyReport(this.world, this.city.taxRate, this.city.minimumWage),
+      society: societyReport(this.city),
       demand: this.sim.growth.demand(),
       demandWhy: this.sim.growth.explain(),
       traffic: this.sim.commute.report,

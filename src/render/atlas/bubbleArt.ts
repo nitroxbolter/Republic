@@ -4,7 +4,7 @@ import type { ComplaintKind } from '../../sim/systems/needs';
 
 export const BUBBLE_W = 22;
 export const BUBBLE_H = 22;
-export const BUBBLE_KINDS: readonly ComplaintKind[] = ['jobs', 'shopping', 'safety', 'health', 'education', 'commute', 'air', 'parks', 'workers', 'customers', 'hospital', 'university', 'garbage', 'transit', 'research', 'abandoned'];
+export const BUBBLE_KINDS: readonly ComplaintKind[] = ['jobs', 'shopping', 'safety', 'health', 'education', 'commute', 'air', 'parks', 'affordability', 'workers', 'customers', 'hospital', 'university', 'garbage', 'transit', 'research', 'abandoned'];
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -115,6 +115,17 @@ export function paintBubble(ctx: CanvasRenderingContext2D, kind: ComplaintKind) 
       ctx.lineTo(6, 11);
       ctx.closePath();
       ctx.fill();
+      break;
+    case 'affordability': // coins
+      fill('#d6a84f');
+      for (const [x, y] of [[8, 10], [13, 10]] as const) {
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        fill('#fff3b0');
+        ctx.fillRect(x - 1.5, y - 0.5, 3, 1);
+        fill('#d6a84f');
+      }
       break;
     case 'workers': // person
       fill('#3b6fd8');

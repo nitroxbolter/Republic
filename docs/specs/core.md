@@ -58,9 +58,9 @@ Five zone tools, keys `1`–`5`:
 
 ## 5. Budget & Taxes
 
-- **Tax rate:** 0–20%, default 9%.
+- **Tax rate:** 5–100%, default 9%.
   - Income = (residents × $3 + workers × $2) × rate ÷ 9%.
-  - Each point above 9% lowers R/C/I demand by 0.04; each point below raises it by 0.04.
+  - Taxes change household spending relative to disposable income at the base rate. The household-spending factor flows through commercial sales, commercial hiring, industrial production, employment and housing demand; there is no separate tax subtraction from every zoning bar.
 - **Upkeep (monthly):** roads as before, plus each civic building's `upkeep` (park $1, town hall $50, the services and utilities in the tables above).
 - **Budget panel:** opened by clicking the funds in the top bar. It shows the tax slider, last month's income, expenses by group (roads, services, utilities, parks) and the net result.
 

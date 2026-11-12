@@ -22,6 +22,7 @@ import { isZoned, ZONE_DENSITY, ZONE_LETTER, ZONED_TYPES, zoneOf, type ZonedType
 import type { City } from '../City';
 import type { DayOutcome, SimSystem } from '../core/System';
 import { materialsFor, UNLIMITED, type MaterialStock } from './materials';
+import { economyReport, effectiveJobs, householdPurchasingPower } from './economy';
 
 /**
  * Zoned growth: demand, new lots, construction and levelling up. Runs once per in-game day.
@@ -61,7 +62,7 @@ export interface GrowthResult {
 }
 
 /** Investor confidence rises as the city becomes prosperous, served and well occupied. */
-export function investorScore(world: World): number {
+export function investorScore(world: World, taxRate: number = BALANCE.baseTaxRate): number {
   let occupied = 0;
   let capacity = 0;
   let happy = 0;
@@ -78,7 +79,7 @@ export function investorScore(world: World): number {
   }
   const homes = capacity === 0 ? 0 : occupied / capacity;
   const mood = happyCount === 0 ? 0 : happy / happyCount;
-  const stats = cityStats(world);
+  const stats = cityStats(world, taxRate);
   const jobs = stats.housing === 0 ? 0 : Math.min(1, stats.jobs / Math.max(1, stats.population * BALANCE.workforceShare));
   return Math.max(0, Math.min(1, homes * 0.35 + mood * 0.4 + jobs * 0.25));
 }
@@ -115,8 +116,6 @@ interface DemandInputs {
   wantShops: number;
   wantOffices: number;
   wantI: number;
-  /** Demand points taken off every bar by taxes above the base rate (negative: added). */
-  tax: number;
   /** University graduates in the city (docs/specs/evolution.md); each wants office work. */
   graduates: number;
 }
@@ -128,6 +127,7 @@ function demandInputs(world: World, taxRate: number): DemandInputs {
   let industrial = 0;
   let civic = 0;
   let graduates = 0;
+  const economy = economyReport(world, taxRate);
   const university = serviceBit('university');
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
@@ -141,8 +141,15 @@ function demandInputs(world: World, taxRate: number): DemandInputs {
     } else if (d.category === 'industrial') industrial += d.capacity;
     else civic += d.capacity;
   }
-  const jobs = shops + offices + industrial + civic;
-  const openJobs = housing * BALANCE.workforceShare * BALANCE.jobSlack - jobs;
+  const structuralJobs = shops + offices + industrial + civic;
+  let jobs = civic;
+  for (const b of world.buildings.values()) {
+    const d = BUILDINGS[b.def];
+    if (d.category === 'commercial' || d.category === 'industrial') jobs += effectiveJobs(b, economy);
+  }
+  // Zone supply uses structural jobs to avoid building duplicate offices/industry just because
+  // a tax shock temporarily lowered current production and staffing.
+  const openJobs = housing * BALANCE.workforceShare * BALANCE.jobSlack - structuralJobs;
   return {
     housing,
     shops,
@@ -150,17 +157,16 @@ function demandInputs(world: World, taxRate: number): DemandInputs {
     industrial,
     openJobs,
     wantR: (jobs / BALANCE.workforceShare) * BALANCE.housingSlack + BALANCE.seedHousing,
-    wantShops: housing * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs,
+    wantShops: (housing * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs) * economy.purchasingPower,
     wantOffices: offices + openJobs * BALANCE.officeJobShare + graduates * BALANCE.graduateOfficeJobs,
     wantI: industrial + openJobs * (1 - BALANCE.officeJobShare) + BALANCE.seedIndustrialJobs,
-    tax: (taxRate - BALANCE.baseTaxRate) * BALANCE.taxDemandStep,
     graduates,
   };
 }
 
 export function zoneDemand(world: World, taxRate: number = BALANCE.baseTaxRate): ZoneDemand {
   const x = demandInputs(world, taxRate);
-  const adjust = (d: number) => Math.max(-1, Math.min(1, d - x.tax));
+  const adjust = (d: number) => Math.max(-1, Math.min(1, d));
   return {
     r: adjust(ratio(x.wantR, x.housing, DEMAND_FLOOR.r)),
     c: adjust(ratio(x.wantShops, x.shops, DEMAND_FLOOR.c)),
@@ -175,7 +181,12 @@ export type DemandWhy = Readonly<Record<keyof ZoneDemand, string>>;
 export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRate): DemandWhy {
   const x = demandInputs(world, taxRate);
   const n = (v: number) => Math.round(Math.abs(v)).toLocaleString();
-  const taxNote = x.tax > 0.005 ? ` Impostos acima de ${BALANCE.baseTaxRate}% reduzem a demanda.` : '';
+  const purchasingPower = householdPurchasingPower(taxRate);
+  const taxNote = taxRate > BALANCE.baseTaxRate
+    ? ` Com impostos de ${taxRate}%, o poder de compra é ${Math.round(purchasingPower * 100)}% do nível de referência e reduz as vendas do comércio.`
+    : taxRate < BALANCE.baseTaxRate
+      ? ` Com impostos de ${taxRate}%, o poder de compra é ${Math.round(purchasingPower * 100)}% do nível de referência.`
+      : '';
   const tooManyJobs = `A cidade já tem ${n(x.openJobs)} empregos a mais que trabalhadores. Moradias atraem trabalhadores.`;
   return {
     r:
@@ -253,7 +264,7 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
   }
 
   const demand = zoneDemand(world, taxRate);
-  const confidence = investorScore(world);
+  const confidence = investorScore(world, taxRate);
   const build = (def: BuildingId, x: number, y: number, occupants = 0, lifestyle: Lifestyle = Lifestyle.Basic) => {
     const { w, h } = BUILDINGS[def].size;
     for (let ty = y; ty < y + h; ty++) {

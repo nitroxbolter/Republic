@@ -320,8 +320,8 @@ function Funds({ short }: { short?: boolean }) {
     <button
       type="button"
       className={`funds ${flash ? `flash-${flash === 'down' ? 'spend' : 'gain'}` : ''}`}
-      title={`$${funds.toLocaleString()} · Orçamento e impostos`}
-      aria-label={`Saldo de $${funds.toLocaleString()}. Abrir orçamento`}
+      title={`$${funds.toLocaleString()} · Abrir orçamento, salário mínimo e aposentadorias`}
+      aria-label={`Saldo de $${funds.toLocaleString()}. Abrir orçamento, salário mínimo e aposentadorias`}
       aria-expanded={budget.open}
       onClick={budget.toggle}
     >

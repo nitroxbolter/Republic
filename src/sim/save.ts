@@ -59,6 +59,9 @@ export interface SavedCity {
   readonly day: number;
   readonly clock: number;
   readonly taxRate: number;
+  readonly minimumWage?: number;
+  readonly pensionShare?: number;
+  readonly society?: { readonly sick: number; readonly prisoners: number; readonly deaths: number; readonly recentDeaths: number; readonly untreatedDeaths: number; readonly prisonOverflow: number };
   /** Highest stage reached and whether stages lock buildings (D-086); absent in older saves. */
   readonly stage?: number;
   readonly locked?: boolean;
@@ -190,7 +193,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, minimumWage: city.minimumWage, pensionShare: city.pensionShare, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -279,6 +282,9 @@ export function deserialize(data: SaveData): City {
   city.day = data.city.day;
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
+  city.minimumWage = data.city.minimumWage ?? BALANCE.defaultMinimumWage;
+  city.pensionShare = data.city.pensionShare ?? BALANCE.pensionShare;
+  if (data.city.society) city.society = { ...data.city.society };
   // Cities saved before stages existed keep everything they could build (user call, D-086).
   city.locked = data.city.locked ?? false;
   city.collectsTaxes = data.city.collectsTaxes ?? false;
@@ -442,6 +448,7 @@ export function parseSave(json: unknown): SaveData {
     coastSides: num(t, 'coastSides', 0, 4),
   };
   const c = obj(json, 'city');
+  const social = isObj(c.society) ? c.society : null;
   const l = obj(json, 'layers');
   if (!Array.isArray(json.buildings)) throw new SaveError('bad buildings');
   const list: readonly unknown[] = json.buildings;
@@ -493,6 +500,13 @@ export function parseSave(json: unknown): SaveData {
       day: num(c, 'day', 0),
       clock: num(c, 'clock', 0),
       taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
+      ...(isFiniteNumber(c.minimumWage) && c.minimumWage >= BALANCE.minMinimumWage && c.minimumWage <= BALANCE.maxMinimumWage && { minimumWage: c.minimumWage }),
+      ...(isFiniteNumber(c.pensionShare) && c.pensionShare >= BALANCE.minPensionShare && c.pensionShare <= BALANCE.maxPensionShare && { pensionShare: c.pensionShare }),
+      ...(social && ['sick', 'prisoners', 'deaths', 'untreatedDeaths', 'prisonOverflow'].every((key) => isFiniteNumber(social[key]) && social[key] >= 0) && { society: {
+        sick: social.sick as number, prisoners: social.prisoners as number, deaths: social.deaths as number,
+        recentDeaths: isFiniteNumber(social.recentDeaths) && social.recentDeaths >= 0 ? social.recentDeaths : 0,
+        untreatedDeaths: social.untreatedDeaths as number, prisonOverflow: social.prisonOverflow as number,
+      } }),
       ...(isFiniteNumber(c.stage) && isStage(c.stage) && { stage: c.stage }),
       ...(typeof c.locked === 'boolean' && { locked: c.locked }),
       ...(typeof c.collectsTaxes === 'boolean' && { collectsTaxes: c.collectsTaxes }),

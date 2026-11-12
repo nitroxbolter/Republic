@@ -12,6 +12,8 @@ import type { Stage } from '../sim/stages';
 import type { AirReport } from '../sim/systems/air';
 import type { TechId } from '../sim/research';
 import type { MaterialsReport } from '../sim/systems/materials';
+import type { EconomyReport } from '../sim/systems/economy';
+import type { societyReport } from '../sim/systems/society';
 import type { ToolId } from './tools';
 
 /** Typed event bus: the game emits, the UI bridge / renderer listen. Nothing polls. */
@@ -58,6 +60,8 @@ export interface CityInfo {
   jobs: number;
   workers: number;
   unemployed: number;
+  economy: EconomyReport;
+  society: ReturnType<typeof societyReport>;
   date: { year: number; month: number; dayOfMonth: number };
   /** Index into GAME_SPEEDS (0 = paused). */
   speed: number;
@@ -96,6 +100,8 @@ export interface ProgressInfo {
 export interface BudgetInfo {
   /** Percent. */
   taxRate: number;
+  minimumWage: number;
+  pensionShare: number;
   /** Last month's collected budget (null before the first month ends). */
   last: BudgetReport | null;
   /** Next month at today's numbers. */

@@ -1,4 +1,3 @@
-import { BALANCE } from '../../shared/balance';
 import { SIM_TICK_HZ } from '../../shared/constants';
 import { BUILDINGS, buildingDef, Lifestyle, type BuildingDef, type BuildingInstance, type ResponderDef, type ResponderKind } from '../buildings/catalog';
 import type { City } from '../City';
@@ -152,6 +151,7 @@ function sizeFactor(d: BuildingDef): number {
 export interface HazardContext {
   /** Share of the workforce without a job (0..1). */
   readonly jobless: number;
+  readonly prisonOverflow?: number;
   /** AQI where a building stands (50 or less is clean). */
   readonly aqi: (b: BuildingInstance) => number;
 }
@@ -170,7 +170,7 @@ export function hazard(kind: IncidentKind, b: BuildingInstance, ctx: HazardConte
     }
     case 'theft': {
       if (b.occupants === 0 || b.abandoned || d.category === 'industrial') return 0;
-      const risk = (1 + 2 * ctx.jobless) * (home ? 1 : 1.5) * (b.lifestyle === Lifestyle.Prosperous ? 1.3 : 1);
+      const risk = (1 + 2 * ctx.jobless + Math.min(2, (ctx.prisonOverflow ?? 0) / 10)) * (home ? 1 : 1.5) * (b.lifestyle === Lifestyle.Prosperous ? 1.3 : 1);
       return INCIDENTS.theftChance * size * risk * (b.services & serviceBit('police') ? INCIDENTS.policeCovered : 1);
     }
     case 'illness': {
@@ -226,6 +226,7 @@ export class IncidentSystem implements SimSystem {
   private readonly commute: CongestionSource | null;
   private readonly aqi: (b: BuildingInstance) => number;
   private events: IncidentEvent[] = [];
+  private societyCursor = 0;
   private scratch: Int32Array;
 
   constructor(city: City, rng: () => number, commute: CongestionSource | null = null, aqi: (b: BuildingInstance) => number = () => 0) {
@@ -248,6 +249,14 @@ export class IncidentSystem implements SimSystem {
   takeEvents(): IncidentEvent[] {
     const out = this.events;
     this.events = [];
+    this.societyCursor = 0;
+    return out;
+  }
+
+  /** New events for the social model, without taking them away from the game or harness. */
+  takeSocietyEvents(): IncidentEvent[] {
+    const out = this.events.slice(this.societyCursor);
+    this.societyCursor = this.events.length;
     return out;
   }
 
@@ -291,10 +300,10 @@ export class IncidentSystem implements SimSystem {
       if (b.robbed > 0) b.robbed--;
       if (b.sick > 0) b.sick--;
     }
-    const stats = cityStats(world);
+    const stats = cityStats(world, this.city.taxRate, this.city.society, this.city.minimumWage);
     if (stats.population < INCIDENTS.minPopulation) return;
-    const workforce = stats.population * BALANCE.workforceShare;
-    const ctx: HazardContext = { jobless: workforce > 0 ? Math.min(1, stats.unemployed / workforce) : 0, aqi: this.aqi };
+    const workforce = stats.workers + stats.unemployed;
+    const ctx: HazardContext = { jobless: workforce > 0 ? Math.min(1, stats.unemployed / workforce) : 0, prisonOverflow: this.city.society.prisonOverflow, aqi: this.aqi };
     const count = new Map<IncidentKind, number>(INCIDENT_KINDS.map((k) => [k, 0]));
     const busy = new Set<string>();
     for (const inc of this.state.list) {

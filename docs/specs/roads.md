@@ -85,13 +85,17 @@ Dash positions line up across tile edges. The ghost preview auto-tiles as if the
 
 | Item | Cost |
 |---|---|
-| Starting funds | $20,000 |
-| Road | $10 / tile |
-| Highway | $40 / tile |
-| Bridge (road / highway) | $60 / $160 per water tile |
+| Starting funds | $40,000 |
+| Road construction | $200 / tile |
+| Avenue / boulevard construction | $350 / $500 per tile |
+| Ramp / highway / expressway construction | $400 / $650 / $800 per tile |
+| Pedestrian street construction | $200 / tile |
+| Bridge construction (road / avenue / boulevard / ramp / highway / expressway) | $250 / $450 / $600 / $500 / $700 / $800 per water tile |
+| Monthly road upkeep (road / avenue / boulevard / ramp / highway / expressway) | $100 / $400 / $800 / $300 / $1,200 / $2,000 per tile |
+| Monthly pedestrian street upkeep | $100 / tile |
 | Clear tree | $3 per tree (a tile holds 1–3) |
 | Clear rocks / boulder | $6 / $15 |
-| Flowers, tall grass, roads | free |
+| Clearing flowers / tall grass / roads | free (removed roads have no refund) |
 
 ## Code Map
 

@@ -21,6 +21,7 @@ const NEED_LABEL: Readonly<Record<NeedKind, string>> = {
   traffic: 'Traffic',
   air: 'Clean air',
   parks: 'Parks',
+  affordability: 'Affordability',
   workers: 'Workers',
   customers: 'Customers',
 };
@@ -41,6 +42,7 @@ const NEED_HINT: Readonly<Record<NeedKind, string>> = {
   traffic: 'Wider roads around here',
   air: 'Keep factories, power plants and landfills further away',
   parks: 'Build parks within 6 tiles',
+  affordability: 'Lower taxes to restore household spending power',
   workers: 'Zone more homes nearby',
   customers: 'More residents nearby',
 };

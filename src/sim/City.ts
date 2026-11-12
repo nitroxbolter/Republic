@@ -12,6 +12,11 @@ export class City {
   day = 0;
   /** Tax rate in percent (BALANCE.minTaxRate … BALANCE.maxTaxRate). */
   taxRate: number = BALANCE.baseTaxRate;
+  minimumWage: number = BALANCE.defaultMinimumWage;
+  /** Pension paid per senior as a share of the monthly minimum wage. */
+  pensionShare: number = BALANCE.pensionShare;
+  /** Aggregate social state; individual residents are represented by their homes. */
+  society = { sick: 0, prisoners: 0, deaths: 0, recentDeaths: 0, untreatedDeaths: 0, prisonOverflow: 0 };
   /**
    * Fixed sim ticks since founding (SIM_TICK_HZ per sim second). The time of day comes from
    * this integer, never from frame time, so every machine plays a city the same way (D-068).

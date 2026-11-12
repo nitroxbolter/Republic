@@ -38,12 +38,19 @@ Goal: traffic that flows, grade-separated crossings, and a metro that takes peop
 
 | Type | Width | Lanes | Capacity / day | Speed | Frontage | Cost / tile | Notes |
 |---|---|---|---|---|---|---|---|
-| Street | 1 | 2 | 500 | 1× | yes | $10 | footpaths, street trees, lamps (current road) |
-| **Avenue** | 1 | 4 | 1,100 | 1.25× | yes | $35 | tree-lined median, wide footpaths, bus-friendly |
-| **Boulevard** | 2 | 6 | 2,600 | 1.4× | yes | $90 | dual carriageway, planted median, tram-ready |
-| Highway | 1 | 4 | 1,500 | 2.2× | no | $25 | barriers, no buildings fronting it (current) |
-| **Expressway** | 2 | 8 | 4,000 | 2.6× | no | $160 | dual carriageway, central barrier, ramps |
-| **Pedestrian street** | 1 | 0 | walkers | — | yes | $20 | paved plaza street: no cars; boosts walking, shops and land value |
+| Street | 1 | 2 | 500 | 1× | yes | $200 | footpaths, street trees, lamps (current road) |
+| **Avenue** | 1 | 4 | 1,100 | 1.25× | yes | $350 | tree-lined median, wide footpaths, bus-friendly |
+| **Boulevard** | 2 | 6 | 2,600 | 1.4× | yes | $500 | dual carriageway, planted median, tram-ready |
+| Highway | 1 | 4 | 1,500 | 2.2× | no | $650 | barriers, no buildings fronting it (current) |
+| **Expressway** | 2 | 8 | 4,000 | 2.6× | no | $800 | dual carriageway, central barrier, ramps |
+| **Pedestrian street** | 1 | 0 | walkers | — | yes | $200 | paved plaza street: no cars; boosts walking, shops and land value |
+
+Ramp: $400 per tile. Bridges use type-specific construction prices from $250 (street) to
+$800 (expressway) per water tile. Monthly maintenance is charged per tile: $100 street,
+$400 avenue, $800 boulevard, $300 ramp, $1,200 highway, $2,000 expressway, and $100
+pedestrian street. Bridge upkeep (in the same road-type order) is $500, $800, $1,100,
+$900, $1,600, $2,000 and $500 per tile per month. Dual carriageways are charged per tile
+on both sides.
 
 - **Pavement styles** (cosmetic, per road, chosen in the road tool): concrete footpath,
   brick paving, granite setts (old town), tree-lined promenade. Streets and avenues only.

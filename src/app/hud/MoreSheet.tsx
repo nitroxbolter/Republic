@@ -57,6 +57,7 @@ export function MoreSheet({ cityName, onNewCity, onSave, beforeLogout }: MoreShe
 function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSheetProps & { onClose: () => void }) {
   const city = useAtomValue(cityAtom);
   const game = useAtomValue(gameAtom);
+  const budget = useOverlay('budget');
   const muted = useAtomValue(mutedAtom);
   const dayNight = useAtomValue(dayNightAtom);
   const trafficView = useAtomValue(trafficViewAtom);
@@ -90,7 +91,17 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
         <SaveStatus onSave={onSave} />
       </header>
 
+      <button type="button" className="primary-button" onClick={budget.show}>Orçamento, salário mínimo e aposentadorias</button>
+
       <div className="more-stats">
+        <span className="more-stat"><span className="air-dot" style={{ background: '#7b8da4' }} aria-hidden="true" /><span>
+          <strong>População por idade</strong>
+          <small>Crianças {city.society.children.toLocaleString()} · jovens {city.society.youth.toLocaleString()} · adultos {city.society.adults.toLocaleString()} · idosos {city.society.seniors.toLocaleString()}</small>
+        </span></span>
+        <span className="more-stat"><span className="air-dot" style={{ background: '#d23b5a' }} aria-hidden="true" /><span>
+          <strong>Saúde e segurança</strong>
+          <small>Doentes {city.society.sick.toLocaleString()} · presos {city.society.prisoners.toLocaleString()}/{city.society.prisonCapacity.toLocaleString()} · sem vaga {city.society.prisonOverflow.toLocaleString()} · mortes {city.society.deaths.toLocaleString()}</small>
+        </span></span>
         <span className="more-stat">
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             {BRIEFCASE}
@@ -100,6 +111,13 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
               {city.workers.toLocaleString()} / {city.jobs.toLocaleString()}
             </strong>
             <small>trabalhadores / empregos · {city.unemployed.toLocaleString()} desempregados</small>
+          </span>
+        </span>
+        <span className="more-stat">
+          <span className="air-dot" style={{ background: '#d6a84f' }} aria-hidden="true" />
+          <span>
+            <strong>Poder de compra {Math.round(city.economy.purchasingPower * 100)}%</strong>
+            <small>Faturamento estimado do comércio: {money(city.economy.commerceRevenue)}/mês · indústria {Math.round(city.economy.industrialProduction * 100)}%</small>
           </span>
         </span>
         <span className="more-stat">
@@ -209,4 +227,8 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
       </div>
     </div>
   );
+}
+
+function money(value: number): string {
+  return `$${Math.round(value).toLocaleString()}`;
 }

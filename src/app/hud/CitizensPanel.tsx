@@ -20,6 +20,7 @@ const TONE: Readonly<Record<ComplaintKind, string>> = {
   traffic: '#ef6c43',
   air: '#8b9097',
   parks: '#3fa34d',
+  affordability: '#d6a84f',
   workers: '#3b6fd8',
   customers: '#e0a514',
   abandoned: '#6f665c',

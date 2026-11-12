@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import type { UtilityTotals } from '../../sim/systems/utilities';
 import { BALANCE } from '../../shared/balance';
 import type { BudgetReport } from '../../sim/systems/budget';
-import { budgetAtom, gameAtom } from '../atoms';
+import { budgetAtom, cityAtom, gameAtom } from '../atoms';
 import { SLIM_BAR, useMedia } from '../mobile/useMedia';
 import { useDismiss, useOverlay } from '../overlay/overlay';
 import { Sheet } from './Sheet';
@@ -17,6 +17,7 @@ function Lines({ r }: { r: BudgetReport }) {
     ['Serviços', r.breakdown.services],
     ['Infraestrutura', r.breakdown.utilities],
     ['Parques e serviços públicos', r.breakdown.parks],
+    ['Aposentadorias', r.breakdown.pensions],
   ];
   return (
     <div className="budget-lines">
@@ -93,11 +94,12 @@ function WideBudget({ onClose }: { onClose: () => void }) {
 function BudgetBody({ onClose }: { onClose: () => void }) {
   const info = useAtomValue(budgetAtom);
   const game = useAtomValue(gameAtom);
+  const city = useAtomValue(cityAtom);
   if (!info) return null;
   return (
     <>
       <header className="info-header">
-        <h2 className="info-title">Budget</h2>
+        <h2 className="info-title">Orçamento e políticas</h2>
         <button type="button" className="icon-button" aria-label="Close" onClick={onClose}>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -124,7 +126,7 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
 
       <label className="tax">
         <span className="budget-line">
-          <span>Tax rate</span>
+          <span>Impostos</span>
           <strong>{info.taxRate}%</strong>
         </span>
         <input
@@ -135,10 +137,30 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
           value={info.taxRate}
           onChange={(e) => game?.setTaxRate(Number(e.target.value))}
         />
-        <span className="tax-hint">Higher taxes earn more but slow the city's growth.</span>
+        <span className="tax-hint">Impostos mais altos aumentam a arrecadação e reduzem o poder de compra.</span>
       </label>
 
-      <h3 className="budget-heading">Next month (forecast)</h3>
+      <h3 className="budget-heading">Salários e aposentadorias</h3>
+      <div className="budget-line"><span>Idosos na cidade</span><strong>{(city?.society.seniors ?? 0).toLocaleString()}</strong></div>
+
+      <label className="tax">
+        <span className="budget-line">
+          <span>Salário mínimo mensal</span>
+          <strong>{money(info.minimumWage)}</strong>
+        </span>
+        <input type="range" min={BALANCE.minMinimumWage} max={BALANCE.maxMinimumWage} step={10}
+          value={info.minimumWage} onChange={(e) => game?.setMinimumWage(Number(e.target.value))} />
+        <span className="tax-hint">Salários maiores aumentam o poder de compra e as aposentadorias, mas podem reduzir as contratações.</span>
+      </label>
+
+      <label className="tax">
+        <span className="budget-line"><span>Aposentadoria por idoso</span><strong>{Math.round(info.pensionShare * 100)}% · {money(Math.round(info.minimumWage * info.pensionShare))}/mês</strong></span>
+        <input type="range" min={BALANCE.minPensionShare * 100} max={BALANCE.maxPensionShare * 100} step={1}
+          value={Math.round(info.pensionShare * 100)} onChange={(e) => game?.setPensionShare(Number(e.target.value))} />
+        <span className="tax-hint">Percentual do salário mínimo pago mensalmente a cada idoso. Total previsto: {money(info.forecast.breakdown.pensions)}/mês.</span>
+      </label>
+
+      <h3 className="budget-heading">Próximo mês (previsão)</h3>
       <Lines r={info.forecast} />
       <p className="tax-hint">A manutenção cresce com a população atendida. Por mil moradores: hospital 100% do custo-base; polícia e bombeiros 25%; parques recreativos 10%.</p>
       {info.last && (

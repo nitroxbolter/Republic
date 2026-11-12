@@ -6,6 +6,9 @@ import { Stage } from '../src/sim/stages';
 import { collectBudget, monthlyBudget } from '../src/sim/systems/budget';
 import { garbageDay } from '../src/sim/systems/garbage';
 import { zoneDemand } from '../src/sim/systems/growth';
+import { economyReport, householdPurchasingPower } from '../src/sim/systems/economy';
+import { cityStats, simulateDay } from '../src/sim/systems/population';
+import { NeedsSystem } from '../src/sim/systems/needs';
 import { deserialize, parseSave, serialize } from '../src/sim/save';
 import { presetSettings } from '../src/sim/terrain/presets';
 import { street } from './support/street';
@@ -70,6 +73,97 @@ describe('budget', () => {
     expect(r.ok).toBe(false);
     t.sim.runDays(30);
     expect(Number.isFinite(t.city.funds)).toBe(true);
+  });
+});
+
+describe('taxes and the private economy', () => {
+  function tradingTown() {
+    const t = street();
+    const homes = Array.from({ length: 30 }, (_, i) => t.place('family_house', 4 + i, 11));
+    const cafe = t.place('cafe', 35, 11);
+    const shop = t.place('corner_shop', 37, 11);
+    const workshop = t.place('workshop', 39, 11);
+    t.place('power_plant', 50, 8);
+    t.place('water_tower', 46, 9);
+    t.refresh();
+    for (const home of homes) home.occupants = 5;
+    t.city.stage = Stage.Hamlet;
+    return { t, homes, cafe, shop, workshop };
+  }
+
+  it('very low taxes preserve or slightly raise household spending and commerce', () => {
+    const { t } = tradingTown();
+    const low = economyReport(t.world, BALANCE.minTaxRate);
+    const normal = economyReport(t.world, BALANCE.baseTaxRate);
+    const moderate = economyReport(t.world, 15);
+    expect(low.purchasingPower).toBeGreaterThan(normal.purchasingPower);
+    expect(low.commerceRevenue).toBeGreaterThan(normal.commerceRevenue);
+    expect(low.commerceActivity).toBeGreaterThanOrEqual(normal.commerceActivity);
+    expect(low.industrialProduction).toBeGreaterThanOrEqual(normal.industrialProduction);
+    expect(moderate.purchasingPower).toBeCloseTo(0.934, 2);
+    expect(moderate.commerceRevenue).toBeLessThan(normal.commerceRevenue);
+    expect(moderate.commerceRevenue).toBeGreaterThan(economyReport(t.world, BALANCE.maxTaxRate).commerceRevenue);
+  });
+
+  it('very high taxes reduce commerce, production and jobs, raise unemployment and lower happiness', () => {
+    const { t, homes } = tradingTown();
+    const needs = new NeedsSystem(t.world, null, () => Stage.Hamlet, null, () => t.city.taxRate);
+
+    t.city.taxRate = BALANCE.minTaxRate;
+    simulateDay(t.world, t.city.taxRate);
+    for (const home of homes) home.occupants = 5;
+    needs.score();
+    const lowEconomy = economyReport(t.world, t.city.taxRate);
+    const lowStats = cityStats(t.world, t.city.taxRate);
+    const lowHappiness = needs.report.happiness;
+
+    t.city.taxRate = BALANCE.maxTaxRate;
+    simulateDay(t.world, t.city.taxRate);
+    for (const home of homes) home.occupants = 5;
+    needs.score();
+    const highEconomy = economyReport(t.world, t.city.taxRate);
+    const highStats = cityStats(t.world, t.city.taxRate);
+    const highHappiness = needs.report.happiness;
+
+    expect(householdPurchasingPower(BALANCE.maxTaxRate)).toBe(0.1);
+    expect(highEconomy.householdSpending).toBeLessThan(lowEconomy.householdSpending);
+    expect(highEconomy.commerceRevenue).toBeLessThan(lowEconomy.commerceRevenue);
+    expect(highEconomy.commerceActivity).toBeLessThan(lowEconomy.commerceActivity);
+    expect(highEconomy.industrialProduction).toBeLessThan(lowEconomy.industrialProduction);
+    expect(highStats.jobs).toBeLessThan(lowStats.jobs);
+    expect(highStats.workers).toBeLessThan(lowStats.workers);
+    const lowUnemploymentRate = lowStats.unemployed / Math.floor((lowStats.population * BALANCE.workforceShare));
+    const highUnemploymentRate = highStats.unemployed / Math.floor((highStats.population * BALANCE.workforceShare));
+    expect(highUnemploymentRate).toBeGreaterThan(lowUnemploymentRate);
+    expect(highHappiness).toBeLessThan(lowHappiness);
+  });
+
+  it('lowering taxes restores purchasing power, business activity, employment and satisfaction', () => {
+    const { t, homes } = tradingTown();
+    const needs = new NeedsSystem(t.world, null, () => Stage.Hamlet, null, () => t.city.taxRate);
+
+    t.city.taxRate = BALANCE.maxTaxRate;
+    simulateDay(t.world, t.city.taxRate);
+    for (const home of homes) home.occupants = 5;
+    needs.score();
+    const crisis = cityStats(t.world, t.city.taxRate);
+    const crisisHappiness = needs.report.happiness;
+
+    t.city.taxRate = BALANCE.minTaxRate;
+    for (let day = 0; day < 30; day++) {
+      needs.score();
+      simulateDay(t.world, t.city.taxRate);
+      for (const home of homes) home.occupants = 5;
+    }
+    needs.score();
+    const recovered = cityStats(t.world, t.city.taxRate);
+
+    expect(recovered.jobs).toBeGreaterThan(crisis.jobs);
+    expect(recovered.workers).toBeGreaterThan(crisis.workers);
+    expect(recovered.unemployed / Math.floor(recovered.population * BALANCE.workforceShare)).toBeLessThan(
+      crisis.unemployed / Math.floor(crisis.population * BALANCE.workforceShare),
+    );
+    expect(needs.report.happiness).toBeGreaterThan(crisisHappiness);
   });
 });
 
