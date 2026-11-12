@@ -300,7 +300,7 @@ export class IncidentSystem implements SimSystem {
       if (b.robbed > 0) b.robbed--;
       if (b.sick > 0) b.sick--;
     }
-    const stats = cityStats(world, this.city.taxRate, this.city.society, this.city.minimumWage);
+    const stats = cityStats(world, this.city.taxRate, this.city.society);
     if (stats.population < INCIDENTS.minPopulation) return;
     const workforce = stats.workers + stats.unemployed;
     const ctx: HazardContext = { jobless: workforce > 0 ? Math.min(1, stats.unemployed / workforce) : 0, prisonOverflow: this.city.society.prisonOverflow, aqi: this.aqi };

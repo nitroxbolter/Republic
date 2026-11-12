@@ -38,7 +38,7 @@ export function societyReport(city: City) {
     prisonCapacity: cells,
     prisonOverflow: city.society.prisonOverflow,
     deaths: city.society.deaths,
-    pensionPerSenior: Math.round(city.minimumWage * city.pensionShare),
+    pensionPerSenior: city.pensionPerSenior,
   };
 }
 

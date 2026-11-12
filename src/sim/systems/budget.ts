@@ -66,7 +66,7 @@ export function monthlyUpkeep(world: World, building: BuildingInstance): number 
 }
 
 /** Taxes scale with the rate: the base rate gives the BALANCE per-resident and per-worker amounts. */
-export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRate, minimumWage: number = BALANCE.defaultMinimumWage, pensionShare: number = BALANCE.pensionShare): BudgetReport {
+export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRate, pensionPerSenior: number = BALANCE.defaultPensionPerSenior): BudgetReport {
   const s = cityStats(world);
   const rate = taxRate / BALANCE.baseTaxRate;
   // Better-off residents pay more (docs/specs/evolution.md); cityStats' population is the same homes.
@@ -101,7 +101,7 @@ export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRat
     else if (d.group === 'utilities') utilities += upkeep;
     else parks += upkeep;
   }
-  const pensions = demographics(s.population).seniors * Math.round(minimumWage * pensionShare);
+  const pensions = demographics(s.population).seniors * pensionPerSenior;
   const expenses = Math.round(roads + services + utilities + parks + pensions);
   return {
     income,
@@ -125,7 +125,7 @@ export interface HeldTaxes {
 
 /** Apply a month's budget to the city: upkeep from the funds, taxes to the funds or the Town Hall's chest. */
 export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | null } {
-  const r = monthlyBudget(city.world, city.taxRate, city.minimumWage, city.pensionShare);
+  const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior);
   if (!city.collectsTaxes) {
     city.funds += r.net;
     return { ...r, held: null };
@@ -177,6 +177,6 @@ export class BudgetSystem implements SimSystem {
   }
   /** Next month at today's numbers. */
   forecast(): BudgetReport {
-    return monthlyBudget(this.city.world, this.city.taxRate, this.city.minimumWage, this.city.pensionShare);
+    return monthlyBudget(this.city.world, this.city.taxRate, this.city.pensionPerSenior);
   }
 }

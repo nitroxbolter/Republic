@@ -13,8 +13,8 @@ export class City {
   /** Tax rate in percent (BALANCE.minTaxRate … BALANCE.maxTaxRate). */
   taxRate: number = BALANCE.baseTaxRate;
   minimumWage: number = BALANCE.defaultMinimumWage;
-  /** Pension paid per senior as a share of the monthly minimum wage. */
-  pensionShare: number = BALANCE.pensionShare;
+  /** Monthly government payment per senior, independent of the minimum wage. */
+  pensionPerSenior: number = BALANCE.defaultPensionPerSenior;
   /** Aggregate social state; individual residents are represented by their homes. */
   society = { sick: 0, prisoners: 0, deaths: 0, recentDeaths: 0, untreatedDeaths: 0, prisonOverflow: 0 };
   /**

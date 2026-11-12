@@ -101,7 +101,7 @@ export interface BudgetInfo {
   /** Percent. */
   taxRate: number;
   minimumWage: number;
-  pensionShare: number;
+  pensionPerSenior: number;
   /** Last month's collected budget (null before the first month ends). */
   last: BudgetReport | null;
   /** Next month at today's numbers. */

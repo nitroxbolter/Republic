@@ -150,14 +150,14 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
         </span>
         <input type="range" min={BALANCE.minMinimumWage} max={BALANCE.maxMinimumWage} step={10}
           value={info.minimumWage} onChange={(e) => game?.setMinimumWage(Number(e.target.value))} />
-        <span className="tax-hint">Salários maiores aumentam o poder de compra e as aposentadorias, mas podem reduzir as contratações.</span>
+        <span className="tax-hint">Valor de referência salvo para futuras regras salariais. Ainda não altera custos, empregos ou felicidade.</span>
       </label>
 
       <label className="tax">
-        <span className="budget-line"><span>Aposentadoria por idoso</span><strong>{Math.round(info.pensionShare * 100)}% · {money(Math.round(info.minimumWage * info.pensionShare))}/mês</strong></span>
-        <input type="range" min={BALANCE.minPensionShare * 100} max={BALANCE.maxPensionShare * 100} step={1}
-          value={Math.round(info.pensionShare * 100)} onChange={(e) => game?.setPensionShare(Number(e.target.value))} />
-        <span className="tax-hint">Percentual do salário mínimo pago mensalmente a cada idoso. Total previsto: {money(info.forecast.breakdown.pensions)}/mês.</span>
+        <span className="budget-line"><span>Aposentadoria por idoso</span><strong>{money(info.pensionPerSenior)}/mês</strong></span>
+        <input type="range" min={BALANCE.minPensionPerSenior} max={BALANCE.maxPensionPerSenior} step={1}
+          value={info.pensionPerSenior} onChange={(e) => game?.setPensionPerSenior(Number(e.target.value))} />
+        <span className="tax-hint">Valor pago pela cidade por idoso, separado do salário mínimo. Total previsto: {money(info.forecast.breakdown.pensions)}/mês.</span>
       </label>
 
       <h3 className="budget-heading">Próximo mês (previsão)</h3>

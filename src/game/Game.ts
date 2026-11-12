@@ -835,13 +835,11 @@ export class Game {
   setMinimumWage(amount: number) {
     this.city.minimumWage = Math.max(BALANCE.minMinimumWage, Math.min(BALANCE.maxMinimumWage, Math.round(amount)));
     this.edits++;
-    this.sim.needs.score();
     this.emitBudget();
-    this.emitCity();
   }
 
-  setPensionShare(percent: number) {
-    this.city.pensionShare = Math.max(BALANCE.minPensionShare, Math.min(BALANCE.maxPensionShare, Math.round(percent) / 100));
+  setPensionPerSenior(amount: number) {
+    this.city.pensionPerSenior = Math.max(BALANCE.minPensionPerSenior, Math.min(BALANCE.maxPensionPerSenior, Math.round(amount)));
     this.edits++;
     this.emitBudget();
     this.emitCity();
@@ -853,7 +851,7 @@ export class Game {
     this.events.emit('budget', {
       taxRate: this.city.taxRate,
       minimumWage: this.city.minimumWage,
-      pensionShare: this.city.pensionShare,
+      pensionPerSenior: this.city.pensionPerSenior,
       last: this.sim.budget.last,
       forecast: this.sim.budget.forecast(),
       power: u.power,
@@ -912,12 +910,12 @@ export class Game {
 
   /** Push current city stats to listeners (also used by the UI bridge on connect). */
   emitCity() {
-    const s = cityStats(this.world, this.city.taxRate, this.city.society, this.city.minimumWage);
+    const s = cityStats(this.world, this.city.taxRate, this.city.society);
     let cars = 0;
     for (const a of this.traffic.agents) if (a.kind !== 'person') cars++;
     this.events.emit('city', {
       ...s,
-      economy: economyReport(this.world, this.city.taxRate, this.city.minimumWage),
+      economy: economyReport(this.world, this.city.taxRate),
       society: societyReport(this.city),
       demand: this.sim.growth.demand(),
       demandWhy: this.sim.growth.explain(),

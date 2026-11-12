@@ -60,6 +60,8 @@ export interface SavedCity {
   readonly clock: number;
   readonly taxRate: number;
   readonly minimumWage?: number;
+  readonly pensionPerSenior?: number;
+  /** Older saves used a fraction of minimum wage; loaded once as a fixed amount. */
   readonly pensionShare?: number;
   readonly society?: { readonly sick: number; readonly prisoners: number; readonly deaths: number; readonly recentDeaths: number; readonly untreatedDeaths: number; readonly prisonOverflow: number };
   /** Highest stage reached and whether stages lock buildings (D-086); absent in older saves. */
@@ -193,7 +195,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, minimumWage: city.minimumWage, pensionShare: city.pensionShare, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -283,7 +285,7 @@ export function deserialize(data: SaveData): City {
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
   city.minimumWage = data.city.minimumWage ?? BALANCE.defaultMinimumWage;
-  city.pensionShare = data.city.pensionShare ?? BALANCE.pensionShare;
+  city.pensionPerSenior = data.city.pensionPerSenior ?? (data.city.pensionShare !== undefined ? Math.round(city.minimumWage * data.city.pensionShare) : BALANCE.defaultPensionPerSenior);
   if (data.city.society) city.society = { ...data.city.society };
   // Cities saved before stages existed keep everything they could build (user call, D-086).
   city.locked = data.city.locked ?? false;
@@ -501,7 +503,8 @@ export function parseSave(json: unknown): SaveData {
       clock: num(c, 'clock', 0),
       taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
       ...(isFiniteNumber(c.minimumWage) && c.minimumWage >= BALANCE.minMinimumWage && c.minimumWage <= BALANCE.maxMinimumWage && { minimumWage: c.minimumWage }),
-      ...(isFiniteNumber(c.pensionShare) && c.pensionShare >= BALANCE.minPensionShare && c.pensionShare <= BALANCE.maxPensionShare && { pensionShare: c.pensionShare }),
+      ...(isFiniteNumber(c.pensionPerSenior) && c.pensionPerSenior >= BALANCE.minPensionPerSenior && c.pensionPerSenior <= BALANCE.maxPensionPerSenior && { pensionPerSenior: c.pensionPerSenior }),
+      ...(isFiniteNumber(c.pensionShare) && c.pensionShare >= 0.05 && c.pensionShare <= 0.3 && { pensionShare: c.pensionShare }),
       ...(social && ['sick', 'prisoners', 'deaths', 'untreatedDeaths', 'prisonOverflow'].every((key) => isFiniteNumber(social[key]) && social[key] >= 0) && { society: {
         sick: social.sick as number, prisoners: social.prisoners as number, deaths: social.deaths as number,
         recentDeaths: isFiniteNumber(social.recentDeaths) && social.recentDeaths >= 0 ? social.recentDeaths : 0,

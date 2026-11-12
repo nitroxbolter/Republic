@@ -253,7 +253,7 @@ export class NeedsSystem implements SimSystem {
     const all = [...w.buildings.values()];
     const taxRate = this.taxRate();
     const city = this.policy();
-    const stats = cityStats(w, taxRate, city?.society, city?.minimumWage);
+    const stats = cityStats(w, taxRate, city?.society);
     const workforce = workingAge(stats.population, city?.society.sick, city?.society.prisoners);
     const jobCover = workforce === 0 ? 1 : Math.min(1, stats.jobs / workforce);
     const workerShare = stats.jobs === 0 ? 1 : Math.min(1, stats.workers / stats.jobs);
@@ -298,7 +298,7 @@ export class NeedsSystem implements SimSystem {
         scores[kind] = this.needScore(kind, b, {
           jobCover,
           workerShare,
-          purchasingPower: householdPurchasingPower(taxRate, city?.minimumWage),
+          purchasingPower: householdPurchasingPower(taxRate),
           // A theft nobody stopped, or a patient nobody reached, halves the need for a month (E3).
           safety: ((b.services & police ? 0.6 : 0) + (b.services & fire ? 0.4 : 0)) * (b.robbed > 0 ? 0.5 : 1) * Math.max(0.35, 1 - Math.max(0, (city?.society.prisonOverflow ?? 0) - 2) / Math.max(5, stats.population * 0.02)),
           health: (b.services & health ? 1 : 0) * (b.sick > 0 ? 0.5 : 1) * Math.max(0.5, 1 - ((city?.society.sick ?? 0) + 5 * (city?.society.recentDeaths ?? 0)) / Math.max(1, stats.population)),

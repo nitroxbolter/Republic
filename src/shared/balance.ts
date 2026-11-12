@@ -46,13 +46,13 @@ export const BALANCE = {
   moveInRate: 0.12,
   /** Share of residents who work. */
   workforceShare: 0.6,
-  /** Monthly wage policy, in game dollars. Pensions follow this floor. */
+  /** Stored policy value; no economic effect until wages are modelled. */
   defaultMinimumWage: 100,
   minMinimumWage: 20,
   maxMinimumWage: 500,
-  pensionShare: 0.1,
-  minPensionShare: 0.05,
-  maxPensionShare: 0.3,
+  defaultPensionPerSenior: 10,
+  minPensionPerSenior: 0,
+  maxPensionPerSenior: 150,
   policeCells: 8,
   /** Homes only fill to this share of capacity while there are no jobs; jobs lift it to 100%. */
   minHousingFill: 0.45,

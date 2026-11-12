@@ -22,11 +22,10 @@ const MIN_PURCHASING_POWER = 0.1;
 const MIN_COMMERCE_ACTIVITY = 0.1;
 
 /** Household spending follows disposable income, with a small floor for essential purchases. */
-export function householdPurchasingPower(taxRate: number, minimumWage: number = BALANCE.defaultMinimumWage): number {
+export function householdPurchasingPower(taxRate: number): number {
   const afterTaxAtRate = 1 - taxRate / 100;
   const afterTaxAtBase = 1 - BALANCE.baseTaxRate / 100;
-  const wageEffect = Math.max(0.75, Math.min(1.3, minimumWage / BALANCE.defaultMinimumWage));
-  return Math.max(MIN_PURCHASING_POWER, Math.min(1.3, (afterTaxAtRate / afterTaxAtBase) * wageEffect));
+  return Math.max(MIN_PURCHASING_POWER, Math.min(1.05, afterTaxAtRate / afterTaxAtBase));
 }
 
 /**
@@ -34,7 +33,7 @@ export function householdPurchasingPower(taxRate: number, minimumWage: number = 
  * for shops and offices; the resulting sales support commercial jobs and downstream industry.
  * This is not municipal income and is deliberately separate from the tax-demand adjustment.
  */
-export function economyReport(world: World, taxRate: number = BALANCE.baseTaxRate, minimumWage: number = BALANCE.defaultMinimumWage): EconomyReport {
+export function economyReport(world: World, taxRate: number = BALANCE.baseTaxRate): EconomyReport {
   let residents = 0;
   let commerceCapacity = 0;
   for (const b of world.buildings.values()) {
@@ -44,15 +43,14 @@ export function economyReport(world: World, taxRate: number = BALANCE.baseTaxRat
     else if (d.category === 'commercial') commerceCapacity += d.capacity;
   }
 
-  const purchasingPower = householdPurchasingPower(taxRate, minimumWage);
+  const purchasingPower = householdPurchasingPower(taxRate);
   const targetShopJobs = residents * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs;
   const marketCoverage = commerceCapacity <= 0 ? 0 : Math.min(1, commerceCapacity / Math.max(1, targetShopJobs));
   const householdSpending = Math.round(residents * BALANCE.monthlyShopSpendPerResident * purchasingPower);
   const commerceRevenue = Math.round(householdSpending * marketCoverage);
   // Sales follow household spending; a small market-coverage component also affects hiring.
   // Its 5% weight keeps a new town from spiralling before its first shops have appeared.
-  const wageHiring = Math.max(0.6, 1 - Math.max(0, minimumWage / BALANCE.defaultMinimumWage - 1) * 0.08);
-  const commerceActivity = Math.max(MIN_COMMERCE_ACTIVITY, Math.min(1, purchasingPower * (0.95 + 0.05 * marketCoverage) * wageHiring));
+  const commerceActivity = Math.max(MIN_COMMERCE_ACTIVITY, Math.min(1, purchasingPower * (0.95 + 0.05 * marketCoverage)));
   const industrialProduction = 0.25 + 0.75 * commerceActivity;
 
   return { purchasingPower, householdSpending, commerceRevenue, commerceActivity, industrialProduction };

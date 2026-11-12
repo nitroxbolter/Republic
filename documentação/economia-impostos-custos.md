@@ -63,7 +63,7 @@ Na cidade de jogador, os impostos mensais ficam no cofre da Prefeitura, em vez d
 
 ## Orçamento e outras despesas
 
-Os idosos recebem aposentadoria mensal paga pela cidade: inicialmente **10% do salário mínimo por idoso**. Com salário mínimo inicial de $ 100, são $ 10 por idoso a cada mês. No painel **Orçamento e políticas**, acessível pelo saldo no topo ou pelo menu **Mais**, é possível ajustar o salário mínimo e o percentual da aposentadoria entre 5% e 30%. O painel mostra quantos idosos há e a despesa prevista em **Aposentadorias**. Salários maiores elevam o poder de compra, mas acima de certo ponto pressionam as contratações.
+Os idosos recebem aposentadoria mensal paga pela cidade: inicialmente **$ 10 por idoso**. No painel **Orçamento e políticas**, acessível pelo saldo no topo ou pelo menu **Mais**, é possível ajustar esse benefício de $ 0 a $ 150 por idoso. O painel mostra quantos idosos há e a despesa prevista em **Aposentadorias**. O salário mínimo é um valor de referência salvo com a cidade para uso futuro; por enquanto, não entra no orçamento nem altera consumo, empregos ou satisfação.
 
 O resultado mensal é a receita de impostos e reciclagem menos manutenção. Um resultado negativo reduz o caixa. Na cidade de jogador, quando a arrecadação está guardada na Prefeitura, o custo mensal ainda é debitado imediatamente.
 
