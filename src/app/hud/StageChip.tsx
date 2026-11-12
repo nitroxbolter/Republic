@@ -51,7 +51,7 @@ export function StageChip() {
         className={`stage-chip ${open ? 'is-open' : ''}`}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title={p.next ? `${p.stageName} · next: ${p.next.name}` : p.stageName}
+        title={p.next ? `${p.stageName} · próximo: ${p.next.name}` : p.stageName}
         onClick={toggle}
       >
         <StageRing progress={stageProgress(p)} />
@@ -78,7 +78,7 @@ export function StageDetails({ progress: p }: { progress: CityInfo['progress'] }
       {p.next ? (
         <>
           <span className="stage-menu-sub">
-            {p.locked ? `To become a ${p.next.name}, the city needs:` : `Next: ${p.next.name} (this city has every building unlocked)`}
+            {p.locked ? `Para chegar ao estágio ${p.next.name}, a cidade precisa de:` : `Próximo: ${p.next.name} (todos os edifícios já estão desbloqueados)`}
           </span>
           <ul className="stage-reqs">
             {(p.locked ? reqs : reqs.slice(0, 1)).map((q) => (
@@ -119,7 +119,7 @@ export function StageDetails({ progress: p }: { progress: CityInfo['progress'] }
       {residents > 0 && (
         <span className="stage-life">
           <span>Lifestyle</span>
-          <span className="stage-life-bar" aria-label={`Basic ${share(basic)}%, Comfortable ${share(comfortable)}%, Prosperous ${share(prosperous)}%`}>
+          <span className="stage-life-bar" aria-label={`Básico ${share(basic)}%, Confortável ${share(comfortable)}%, Próspero ${share(prosperous)}%`}>
             <i className="tier-0" style={{ width: `${share(basic)}%` }} />
             <i className="tier-1" style={{ width: `${share(comfortable)}%` }} />
             <i className="tier-2" style={{ width: `${share(prosperous)}%` }} />

@@ -1,7 +1,7 @@
 {
-  "name": "Openpolis",
-  "short_name": "Openpolis",
-  "description": "An open-world city simulation you play in your browser.",
+  "name": "Republica",
+  "short_name": "Republica",
+  "description": "Uma simulação de cidade em mundo aberto para jogar no navegador.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0e1820",

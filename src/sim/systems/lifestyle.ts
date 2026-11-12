@@ -16,14 +16,14 @@ import { hasUtilities } from './utilities';
 
 /** What a home still needs before it can move up a tier, or null when it can (or is at the top). */
 export function riseBlocker(b: BuildingInstance, stage: Stage): string | null {
-  if (b.lifestyle === Lifestyle.Basic) return stage >= Stage.Town ? null : 'the city to become a Town (2,500 people)';
+  if (b.lifestyle === Lifestyle.Basic) return stage >= Stage.Town ? null : 'a cidade chegar a Cidade pequena (2.500 moradores)';
   if (b.lifestyle === Lifestyle.Comfortable) {
-    if (stage < Stage.City) return 'the city to become a City (10,000 people)';
-    if (!(b.services & serviceBit('hospital'))) return 'a hospital in reach';
-    if (!(b.services & serviceBit('education'))) return 'a school in reach';
+    if (stage < Stage.City) return 'a cidade chegar a Cidade (10.000 moradores)';
+    if (!(b.services & serviceBit('hospital'))) return 'um hospital na área';
+    if (!(b.services & serviceBit('education'))) return 'uma escola na área';
     return null;
   }
-  return 'nothing: this is the top tier';
+  return 'nada: este é o nível máximo';
 }
 
 function canRise(b: BuildingInstance, stage: Stage): boolean {

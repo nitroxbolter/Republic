@@ -381,7 +381,7 @@ export function planPlace(world: World, id: BuildingId, cx: number, cy: number):
   const def2: BuildingDef = def;
   const needsTrack = def2.railStation === true && !trackAround(world, origin.x, origin.y, def.size.w, def.size.h);
   if (needsTrack) ok = false;
-  return { tiles, cost: def.cost + clearing, count: ok ? 1 : 0, building: id, origin, ok, ...(needsTrack && { note: 'A station needs rail track right beside it' }) };
+  return { tiles, cost: def.cost + clearing, count: ok ? 1 : 0, building: id, origin, ok, ...(needsTrack && { note: 'A estação precisa de trilhos ao lado' }) };
 }
 
 /** Any track in the ring of tiles around a footprint. */

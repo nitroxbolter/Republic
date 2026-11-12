@@ -3,6 +3,7 @@ import { BUILDINGS, buildingDef, Lifestyle, LIFESTYLE_NAMES, SERVICE_KINDS, type
 import type { Simulation } from '../sim/core/Simulation';
 import { Stage } from '../sim/stages';
 import { serviceBit } from '../sim/systems/coverage';
+import { monthlyUpkeep } from '../sim/systems/budget';
 import { riseBlocker } from '../sim/systems/lifestyle';
 import { COMPLAINT_TEXT, NEED_KINDS } from '../sim/systems/needs';
 import { isWorking, needsUtilities } from '../sim/systems/utilities';
@@ -25,7 +26,7 @@ export function inspectInfo(sim: Simulation, b: BuildingInstance): InspectInfo {
     description: d.description,
     occupants: b.occupants,
     capacity: d.capacity,
-    occupantLabel: d.category === 'residential' ? 'Residents' : 'Workers',
+    occupantLabel: d.category === 'residential' ? 'Moradores' : 'Trabalhadores',
     hasRoad: b.entrance !== -1,
     size: d.size,
     grown: b.grown,
@@ -49,7 +50,7 @@ export function inspectInfo(sim: Simulation, b: BuildingInstance): InspectInfo {
     condition: d.energy && d.energy.source !== 'battery' ? b.condition : null,
     repairDays: b.repairDays,
     repairCost: d.energy?.repairCost ?? 0,
-    upkeep: d.upkeep ?? 0,
+    upkeep: monthlyUpkeep(sim.world, b),
     commuteMinutes: d.category === 'residential' ? (sim.commute.commuteMinutes.get(b.id) ?? null) : null,
     needs: needsInfo(sim, b.id),
     abandoned: b.abandoned,
@@ -75,7 +76,7 @@ export function inspectInfo(sim: Simulation, b: BuildingInstance): InspectInfo {
     taxesWaiting: b.def === 'town_hall' && sim.city.collectsTaxes ? Math.round(sim.city.uncollected) : null,
     station: d.railStation
       ? {
-          name: `${stationName(b.id)} Station`,
+          name: `Estação ${stationName(b.id)}`,
           riders: Math.round(sim.commute.stationRiders.get(b.id) ?? 0),
           onTrack: platformOf(sim.world, b) !== -1,
           lines: sim.trains.linesAt(b.id).map((l) => ({
@@ -91,12 +92,12 @@ export function inspectInfo(sim: Simulation, b: BuildingInstance): InspectInfo {
 function lifestyleInfo(b: BuildingInstance, stage: Stage): InspectInfo['lifestyle'] {
   const tier = LIFESTYLE_NAMES[b.lifestyle];
   const days = BALANCE.lifeDays;
-  if (b.lifeDays > 0) return { tier, note: `Moving up: ${b.lifeDays} / ${days} good days` };
-  if (b.lifeDays < 0) return { tier, note: `Slipping: ${-b.lifeDays} / ${days} unhappy days` };
-  if (b.lifestyle === Lifestyle.Prosperous) return { tier, note: 'The best lifestyle in the city' };
+  if (b.lifeDays > 0) return { tier, note: `Melhorando: ${b.lifeDays} / ${days} dias felizes` };
+  if (b.lifeDays < 0) return { tier, note: `Piorando: ${-b.lifeDays} / ${days} dias infelizes` };
+  if (b.lifestyle === Lifestyle.Prosperous) return { tier, note: 'O melhor padrão de vida da cidade' };
   const blocker = riseBlocker(b, stage);
-  if (blocker) return { tier, note: `To move up it needs ${blocker}` };
-  return { tier, note: `Moves up after ${days} days at ${Math.round(BALANCE.lifeUpLine * 100)}% happiness or more` };
+  if (blocker) return { tier, note: `Para melhorar, precisa de ${blocker}` };
+  return { tier, note: `Melhora após ${days} dias com felicidade de ${Math.round(BALANCE.lifeUpLine * 100)}% ou mais` };
 }
 
 function needsInfo(sim: Simulation, id: number): InspectInfo['needs'] {
@@ -116,7 +117,7 @@ function needsInfo(sim: Simulation, id: number): InspectInfo['needs'] {
 function powerIssue(sim: Simulation, b: BuildingInstance): InspectInfo['powerIssue'] {
   const d: BuildingDef = buildingDef(b.def);
   if (d.category === 'civic' || b.powered) return null;
-  if (b.entrance === -1) return { reason: 'No road access', stats: [{ label: 'Required', value: 'A connected road within 3 tiles' }] };
+  if (b.entrance === -1) return { reason: 'Sem acesso viário', stats: [{ label: 'Necessário', value: 'Uma via conectada a até 3 quadrados' }] };
   const report = sim.utilities.report.power;
   const substations = [...sim.world.buildings.values()].filter((s) => buildingDef(s.def).substation && isWorking(s));
   if (substations.length > 0) {
@@ -128,17 +129,17 @@ function powerIssue(sim: Simulation, b: BuildingInstance): InspectInfo['powerIss
     });
     if (!connected) {
       return {
-        reason: 'Outside substation coverage',
-        stats: [{ label: 'Coverage', value: 'Move closer to a connected GRID substation' }],
+        reason: 'Fora da área da subestação',
+        stats: [{ label: 'Cobertura', value: 'Construa perto de uma subestação conectada à rede' }],
       };
     }
   }
   return {
-    reason: report.supply < report.demand ? 'Not enough generation' : 'Power already taken by other buildings',
+    reason: report.supply < report.demand ? 'Geração insuficiente' : 'Energia já usada por outros edifícios',
     stats: [
-      { label: 'Demand', value: report.demand.toLocaleString() },
-      { label: 'Available', value: report.supply.toLocaleString() },
-      { label: 'Short', value: report.short.toLocaleString() },
+      { label: 'Demanda', value: report.demand.toLocaleString() },
+      { label: 'Disponível', value: report.supply.toLocaleString() },
+      { label: 'Falta', value: report.short.toLocaleString() },
     ],
   };
 }

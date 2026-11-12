@@ -1,5 +1,11 @@
 node_modules
 dist
+/Openpolis-Local.exe
+/Jogar-Openpolis.exe
+/Jogar-Openpolis-PT.exe
+/Jogar-Republica.exe
+/Jogar-Republica-PT.exe
+/Jogar-Republica-PT-Atualizado.exe
 .DS_Store
 *.log
 

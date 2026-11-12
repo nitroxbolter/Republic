@@ -36,12 +36,12 @@ export const MAX_AQI = 500;
 
 /** The six AQI bands, worst last. */
 export const AQI_BANDS = [
-  { upTo: 50, label: 'Good', color: 0x22c55e },
-  { upTo: 100, label: 'Moderate', color: 0xfacc15 },
-  { upTo: 150, label: 'Unhealthy for some', color: 0xfb923c },
-  { upTo: 200, label: 'Unhealthy', color: 0xef4444 },
-  { upTo: 300, label: 'Very unhealthy', color: 0xa855f7 },
-  { upTo: Infinity, label: 'Hazardous', color: 0x7f1d1d },
+  { upTo: 50, label: 'Boa', color: 0x22c55e },
+  { upTo: 100, label: 'Moderada', color: 0xfacc15 },
+  { upTo: 150, label: 'Ruim para alguns', color: 0xfb923c },
+  { upTo: 200, label: 'Ruim', color: 0xef4444 },
+  { upTo: 300, label: 'Muito ruim', color: 0xa855f7 },
+  { upTo: Infinity, label: 'Perigosa', color: 0x7f1d1d },
 ] as const;
 
 export function aqiBand(aqi: number): (typeof AQI_BANDS)[number] {

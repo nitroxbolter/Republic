@@ -208,7 +208,7 @@ function TourCard({ index }: { index: number }) {
     return (
       <>
         {ring}
-        <button type="button" className="panel tour-pill" onClick={() => setMinimized(false)} aria-label={`Show tour step: ${step.title}`}>
+        <button type="button" className="panel tour-pill" onClick={() => setMinimized(false)} aria-label={`Mostrar etapa do passeio: ${step.title}`}>
           <span className="tour-count">
             {index}/{total}
           </span>

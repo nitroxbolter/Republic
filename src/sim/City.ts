@@ -10,7 +10,7 @@ export class City {
   funds: number;
   /** Whole in-game days since founding. */
   day = 0;
-  /** Tax rate in percent (0 … BALANCE.maxTaxRate). */
+  /** Tax rate in percent (BALANCE.minTaxRate … BALANCE.maxTaxRate). */
   taxRate: number = BALANCE.baseTaxRate;
   /**
    * Fixed sim ticks since founding (SIM_TICK_HZ per sim second). The time of day comes from

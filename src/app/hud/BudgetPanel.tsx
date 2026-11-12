@@ -13,10 +13,10 @@ const money = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString
 
 function Lines({ r }: { r: BudgetReport }) {
   const rows: [string, number][] = [
-    ['Roads', r.breakdown.roads],
-    ['Services', r.breakdown.services],
-    ['Utilities', r.breakdown.utilities],
-    ['Parks & civic', r.breakdown.parks],
+    ['Vias', r.breakdown.roads],
+    ['Serviços', r.breakdown.services],
+    ['Infraestrutura', r.breakdown.utilities],
+    ['Parques e serviços públicos', r.breakdown.parks],
   ];
   return (
     <div className="budget-lines">
@@ -50,7 +50,7 @@ function Supply({ label, t }: { label: string; t: UtilityTotals }) {
         <span>{label}</span>
         <span className={short ? 'warn' : ''}>
           {t.demand.toLocaleString()} used of {t.supply.toLocaleString()}
-          {t.short > 0 ? ` · ${t.short} without` : ''}
+          {t.short > 0 ? ` · ${t.short} sem abastecimento` : ''}
         </span>
       </div>
       <div className="meter">
@@ -129,7 +129,7 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
         </span>
         <input
           type="range"
-          min={0}
+          min={BALANCE.minTaxRate}
           max={BALANCE.maxTaxRate}
           step={1}
           value={info.taxRate}
@@ -140,6 +140,7 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
 
       <h3 className="budget-heading">Next month (forecast)</h3>
       <Lines r={info.forecast} />
+      <p className="tax-hint">A manutenção cresce com a população atendida. Por mil moradores: hospital 100% do custo-base; polícia e bombeiros 25%; parques recreativos 10%.</p>
       {info.last && (
         <p className="tax-hint">
           Last month: {info.last.net >= 0 ? '+' : ''}

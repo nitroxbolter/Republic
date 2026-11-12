@@ -37,6 +37,7 @@ function initialScreen(): Screen {
  * one, then the game. `/demo` opens a planned, fully grown city straight away.
  */
 export function App() {
+  const localAccount = import.meta.env.VITE_LOCAL_ACCOUNTS === 'on';
   useAuthBootstrap();
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const auth = useAtomValue(authAtom);
@@ -66,7 +67,7 @@ export function App() {
         (err: unknown): Screen => {
           clearUrlOptions();
           const reason = err instanceof Error ? err.message : 'unknown error';
-          return { kind: 'menu', notice: `Couldn't open that city: ${reason}` };
+          return { kind: 'menu', notice: `Não foi possível abrir essa cidade: ${reason}` };
         },
       )
       .then((next) => {
@@ -88,7 +89,7 @@ export function App() {
       (err: unknown) => {
         // The journal stays, so the next visit tries again.
         const reason = err instanceof Error ? err.message : 'unknown error';
-        setScreen({ kind: 'menu', notice: `Couldn't restore your unsaved city yet: ${reason}` });
+        setScreen({ kind: 'menu', notice: `Ainda não foi possível recuperar sua cidade: ${reason}` });
       },
     );
   }, [recovering]);
@@ -116,15 +117,17 @@ export function App() {
   };
   // Visitors who aren't signed in meet the landing page first; signing in or choosing guest moves on.
   const menu = screen.kind === 'menu';
-  const landing = menu && auth.status === 'guest' && !guest;
+  const loginRequired = localAccount && auth.status !== 'user' && !menu && !(screen.kind === 'play' && screen.options.demo);
+  const landing = (menu && auth.status === 'guest' && (localAccount || !guest)) || (loginRequired && auth.status === 'guest');
 
   return (
     <>
       {menu && auth.status === 'checking' && <div className="landing-blank" />}
+      {loginRequired && auth.status === 'checking' && <div className="landing-blank" />}
       {landing && <LandingScreen onPlay={playAsGuest} onDemo={() => start(demoOptions())} />}
       {menu && !landing && auth.status !== 'checking' && <NewGameScreen onStart={start} onOpen={open} notice={screen.notice} />}
-      {(screen.kind === 'loading' || screen.kind === 'recovering') && <LoadingScreen kind="save" current="fetch" />}
-      {screen.kind === 'play' && (
+      {!loginRequired && (screen.kind === 'loading' || screen.kind === 'recovering') && <LoadingScreen kind="save" current="fetch" />}
+      {!loginRequired && screen.kind === 'play' && (
         <GameScreen
           options={screen.options}
           cityRef={screen.ref}

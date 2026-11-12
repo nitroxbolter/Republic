@@ -60,7 +60,7 @@ export function AccountButton({ beforeLogout, compact = false, inline = false }:
         type="button"
         className={`account-trigger ${compact ? 'is-compact' : ''}`}
         title={email}
-        aria-label={`Account: ${email}`}
+        aria-label={`Conta: ${email}`}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={menu.toggle}

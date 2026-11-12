@@ -152,7 +152,7 @@ function GuestGate({ cityName, minutes, offline, onRetry }: GuestGateProps) {
           <section className="gate-pitch">
             <h2 id="gate-title">Reconnecting…</h2>
             <p className="gate-lead">
-              Guest play needs a connection to Openpolis. Your city is safe on this device and carries on the moment we're back.
+              Guest play needs a connection to Republica. Your city is safe on this device and carries on the moment we're back.
             </p>
             <div className="gate-buttons">
               <button type="button" className="auth-submit" autoFocus onClick={onRetry}>

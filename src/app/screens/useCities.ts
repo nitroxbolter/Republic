@@ -21,12 +21,13 @@ export interface Cities {
 async function fetchCities(
   loggedIn: boolean,
 ): Promise<{ entries: CityEntry[]; error: string | null }> {
+  const accountOnly = import.meta.env.VITE_LOCAL_ACCOUNTS === 'on';
   const [local, cloud] = await Promise.allSettled([
-    storeFor('local').list(),
+    accountOnly ? Promise.resolve([]) : storeFor('local').list(),
     loggedIn ? storeFor('cloud').list() : Promise.resolve([]),
   ]);
   const entries: CityEntry[] = [];
-  if (local.status === 'fulfilled')
+  if (!accountOnly && local.status === 'fulfilled')
     entries.push(...local.value.map((meta) => ({ store: 'local' as const, meta })));
   if (cloud.status === 'fulfilled')
     entries.push(...cloud.value.map((meta) => ({ store: 'cloud' as const, meta })));

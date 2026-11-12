@@ -12,7 +12,7 @@ import { Sheet } from './Sheet';
 import { StageDetails, StageRing, stageProgress } from './StageChip';
 import { BRIEFCASE, CAR, CITIES, DAY_NIGHT_OPTIONS, DemandList, HELP, ROTATE_LEFT, ROTATE_RIGHT, faceGlyph, speakerGlyph, useClockText } from './TopBar';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] as const;
 
 const MAP_GLYPH = (
   <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
@@ -71,7 +71,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
 
   const aqi = Math.round(city.air.cityAqi);
   const band = aqiBand(aqi);
-  const date = `${MONTHS[city.date.month]} ${city.date.dayOfMonth}, Y${city.date.year}`;
+  const date = `${city.date.dayOfMonth} ${MONTHS[city.date.month]}, ano ${city.date.year}`;
   // A view toggle closes the sheet so the player sees the map it changed.
   const view = (fn: () => void) => () => {
     fn();
@@ -99,7 +99,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
             <strong>
               {city.workers.toLocaleString()} / {city.jobs.toLocaleString()}
             </strong>
-            <small>workers / jobs · {city.unemployed.toLocaleString()} out of work</small>
+            <small>trabalhadores / empregos · {city.unemployed.toLocaleString()} desempregados</small>
           </span>
         </span>
         <span className="more-stat">
@@ -107,22 +107,22 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
             {faceGlyph(city.needs.happiness)}
           </svg>
           <span>
-            <strong>{Math.round(city.needs.happiness * 100)}% happy</strong>
-            <small>{city.needs.abandoned ? `${city.needs.abandoned} abandoned` : 'Nobody has left'}</small>
+            <strong>{Math.round(city.needs.happiness * 100)}% felizes</strong>
+            <small>{city.needs.abandoned ? `${city.needs.abandoned} abandonados` : 'Ninguém foi embora'}</small>
           </span>
         </span>
         <span className="more-stat">
           <span className="air-dot" style={{ background: `#${band.color.toString(16).padStart(6, '0')}` }} aria-hidden="true" />
           <span>
-            <strong>AQI {aqi}</strong>
-            <small>{band.label} air where people live</small>
+            <strong>IQA {aqi}</strong>
+            <small>Qualidade do ar onde as pessoas moram: {band.label.toLowerCase()}</small>
           </span>
         </span>
         <span className="more-stat">
           <StageRing progress={stageProgress(city.progress)} />
           <span>
             <strong>{city.progress.stageName}</strong>
-            <small>{city.progress.next ? `Next: ${city.progress.next.name}` : 'The highest stage'}</small>
+            <small>{city.progress.next ? `Próximo: ${city.progress.next.name}` : 'Estágio máximo'}</small>
           </span>
         </span>
       </div>

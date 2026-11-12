@@ -104,6 +104,7 @@ export function NewGameScreen({ onStart, onOpen, notice }: NewGameScreenProps) {
   const [genMs, setGenMs] = useState(0);
   const cities = useCities();
   const hasCities = (cities.entries?.length ?? 0) > 0;
+  const oneCityPerAccount = import.meta.env.VITE_LOCAL_ACCOUNTS === 'on';
   /** With saved cities, the new-city form stays folded until asked for, so "Continue" leads. */
   const [founding, setFounding] = useState(false);
   const showForm = !hasCities || founding;
@@ -153,7 +154,7 @@ export function NewGameScreen({ onStart, onOpen, notice }: NewGameScreenProps) {
           </p>
         )}
         <CityList cities={cities} onOpen={onOpen} />
-        {!showForm && (
+        {!showForm && !oneCityPerAccount && (
           <button type="button" className="panel ng-found" onClick={() => setFounding(true)}>
             <span className="ng-found-plus" aria-hidden="true">
               +
@@ -312,7 +313,7 @@ export function NewGameScreen({ onStart, onOpen, notice }: NewGameScreenProps) {
                     max={4}
                     step={1}
                     format={(v) =>
-                      v === 0 ? 'None' : v === 4 ? 'Island' : `${v} side${v === 1 ? '' : 's'}`
+                      v === 0 ? 'Nenhum' : v === 4 ? 'Ilha' : `${v} lado${v === 1 ? '' : 's'}`
                     }
                     onChange={(coastSides) => set({ coastSides })}
                   />

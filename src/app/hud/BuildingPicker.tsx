@@ -31,43 +31,43 @@ function BuildingThumb({ id, size = CARD_THUMB }: { id: BuildingId; size?: numbe
 }
 
 const GROUPS: readonly { id: CivicGroup; label: string; hint: string }[] = [
-  { id: 'services', label: 'Services', hint: 'Each covers the area around it. Covered homes are happier, and police, fire, clinic and school together let towers grow.' },
-  { id: 'transport', label: 'Transport', hint: 'Stations beside rail track (Roads → Rail, Z). Homes and jobs near stations take the train when it beats driving.' },
-  { id: 'utilities', label: 'Utilities', hint: 'Power, water and garbage trucks reach every building on the same connected roads, up to their capacity.' },
-  { id: 'parks', label: 'Parks & Places', hint: 'Beautiful parks, markets, shopping and the town hall.' },
+  { id: 'services', label: 'Serviços', hint: 'Cada serviço atende a área ao redor. Casas atendidas são mais felizes; polícia, bombeiros, clínica e escola permitem o crescimento de torres.' },
+  { id: 'transport', label: 'Transporte', hint: 'Estações ao lado dos trilhos (Vias → Trilhos, Z). Moradias e empregos próximos usam o trem quando ele é mais rápido que dirigir.' },
+  { id: 'utilities', label: 'Infraestrutura', hint: 'Energia, água e coleta de lixo atendem os edifícios nas vias conectadas, até o limite de capacidade.' },
+  { id: 'parks', label: 'Parques e atrações', hint: 'Parques, mercados, comércio e Prefeitura.' },
 ];
 
 const ZONE_LINKS: readonly { tool: ZoneToolId; label: string; key: string; tone: string }[] = [
-  { tool: 'zone-r', label: 'Homes', key: '1', tone: 'tone-r' },
-  { tool: 'zone-rh', label: 'Apartments', key: '2', tone: 'tone-rh' },
-  { tool: 'zone-c', label: 'Shops', key: '3', tone: 'tone-c' },
-  { tool: 'zone-ch', label: 'Offices', key: '4', tone: 'tone-ch' },
-  { tool: 'zone-i', label: 'Industry', key: '5', tone: 'tone-i' },
+  { tool: 'zone-r', label: 'Moradias', key: '1', tone: 'tone-r' },
+  { tool: 'zone-rh', label: 'Apartamentos', key: '2', tone: 'tone-rh' },
+  { tool: 'zone-c', label: 'Lojas', key: '3', tone: 'tone-c' },
+  { tool: 'zone-ch', label: 'Escritórios', key: '4', tone: 'tone-ch' },
+  { tool: 'zone-i', label: 'Indústria', key: '5', tone: 'tone-i' },
 ];
 
 /** Sections within a tab (others show as one grid). */
 const SECTIONS: Readonly<Partial<Record<CivicGroup, readonly { label: string; ids: readonly BuildingId[] }[]>>> = {
   services: [
-    { label: 'Safety', ids: ['police_station', 'fire_station'] },
-    { label: 'Health', ids: ['clinic', 'hospital'] },
-    { label: 'Education & research', ids: ['school', 'university', 'research_centre'] },
+    { label: 'Segurança', ids: ['police_station', 'fire_station'] },
+    { label: 'Saúde', ids: ['clinic', 'hospital'] },
+    { label: 'Educação e pesquisa', ids: ['school', 'university', 'research_centre'] },
   ],
   utilities: [
-    { label: 'Power', ids: ['power_plant', 'gas_plant', 'wind_turbine', 'solar_farm', 'battery_bank', 'substation'] },
-    { label: 'Water', ids: ['water_tower'] },
-    { label: 'Garbage', ids: ['landfill', 'recycling_centre', 'incinerator'] },
+    { label: 'Energia', ids: ['power_plant', 'gas_plant', 'wind_turbine', 'solar_farm', 'battery_bank', 'substation'] },
+    { label: 'Água', ids: ['water_tower'] },
+    { label: 'Lixo', ids: ['landfill', 'recycling_centre', 'incinerator'] },
   ],
 };
 
 /** The key number on a card: coverage radius, utility capacity, or footprint. */
 function cardStat(d: BuildingDef): string {
-  if (d.radius) return `${d.radius}-tile reach`;
-  if (d.garbage) return `${d.garbage.trucks} t/day`;
-  if (d.railStation) return 'by track';
-  if (d.energy?.coverage) return `${d.energy.coverage}-tile reach`;
-  if (d.substation) return `${d.substation.radius}-tile reach`;
+  if (d.radius) return `alcance de ${d.radius} quadrados`;
+  if (d.garbage) return `${d.garbage.trucks} t/dia`;
+  if (d.railStation) return 'junto aos trilhos';
+  if (d.energy?.coverage) return `alcance de ${d.energy.coverage} quadrados`;
+  if (d.substation) return `alcance de ${d.substation.radius} quadrados`;
   if (d.supplies?.power) return `${d.supplies.power} ⚡`;
-  if (d.supplies?.water) return `${d.radius ?? 0}-tile reach`;
+  if (d.supplies?.water) return `alcance de ${d.radius ?? 0} quadrados`;
   return `${d.size.w}×${d.size.h}`;
 }
 
@@ -124,8 +124,8 @@ function BuildingPickerPanel() {
         title={
           locked
             ? unlockTech(id) && progress && unlockStage(id) <= progress.stage
-              ? `Needs the ${lockLabel(id)} research`
-              : `Unlocks when the city becomes a ${stage.name} (${stage.population.toLocaleString()} people and its basics)`
+              ? `Exige a pesquisa ${lockLabel(id)}`
+              : `Desbloqueia no estágio ${stage.name} (${stage.population.toLocaleString()} moradores e serviços básicos)`
             : d.description
         }
         aria-disabled={locked}

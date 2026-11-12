@@ -15,13 +15,17 @@ export type FieldErrors = Partial<Record<keyof AuthFields, string>>;
 /** The same rule the server applies (name@domain.tld, no spaces). */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export function validate(mode: AuthMode, f: AuthFields): FieldErrors {
+export function validate(mode: AuthMode, f: AuthFields, localAccount = false): FieldErrors {
   const errors: FieldErrors = {};
   const email = f.email.trim();
-  if (!email) errors.email = 'Enter your email address';
-  else if (!EMAIL.test(email)) errors.email = 'That doesn’t look like an email address';
+  if (localAccount) {
+    if (!/^[a-zA-Z0-9_]{3,24}$/.test(email)) errors.email = 'Use de 3 a 24 letras, números ou _ no login';
+  } else {
+    if (!email) errors.email = 'Enter your email address';
+    else if (!EMAIL.test(email)) errors.email = 'That doesn’t look like an email address';
+  }
   if (!f.password) errors.password = mode === 'signup' ? 'Choose a password' : 'Enter your password';
-  else if (mode === 'signup' && f.password.length < API_LIMITS.passwordMin) errors.password = `Use at least ${API_LIMITS.passwordMin} characters`;
+  else if (mode === 'signup' && f.password.length < API_LIMITS.passwordMin) errors.password = `Use pelo menos ${API_LIMITS.passwordMin} caracteres`;
   else if (f.password.length > API_LIMITS.passwordMax) errors.password = 'That password is too long';
   if (mode === 'signup') {
     if (!f.confirm) errors.confirm = 'Type your password again';

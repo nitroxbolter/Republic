@@ -27,8 +27,8 @@ export function AlertsButton() {
       <button
         type="button"
         className={`icon-button alerts-button ${open ? 'is-open' : ''}`}
-        title={unread > 0 ? `${unread} new alert${unread === 1 ? '' : 's'}` : 'Alerts'}
-        aria-label={unread > 0 ? `Alerts, ${unread} new` : 'Alerts'}
+        title={unread > 0 ? `${unread} novo${unread === 1 ? '' : 's'} aviso${unread === 1 ? '' : 's'}` : 'Avisos'}
+        aria-label={unread > 0 ? `Avisos, ${unread} novo${unread === 1 ? '' : 's'}` : 'Avisos'}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={toggle}

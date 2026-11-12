@@ -60,22 +60,22 @@ export function CitizensPanel() {
       return !o;
     });
   return (
-    <aside className={`panel citizens ${open ? 'is-open' : ''}`} aria-label="Citizens say">
+    <aside className={`panel citizens ${open ? 'is-open' : ''}`} aria-label="Os moradores dizem">
       <button type="button" className="citizens-header" aria-expanded={open} onClick={toggle}>
-        <span className="citizens-title">Citizens say</span>
+        <span className="citizens-title">Os moradores dizem</span>
         {total > 0 && (
-          <span className="citizens-badge" aria-label={`${total} buildings complaining`}>
+          <span className="citizens-badge" aria-label={`${total} edifícios com reclamações`}>
             {total > 999 ? '999+' : total}
           </span>
         )}
-        <span className="citizens-mood">{Math.round(city.needs.happiness * 100)}% happy</span>
+        <span className="citizens-mood">{Math.round(city.needs.happiness * 100)}% felizes</span>
         <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" style={{ transform: open ? 'none' : 'rotate(-90deg)' }}>
           <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
         </svg>
       </button>
       {open &&
         (complaints.length === 0 ? (
-          <p className="citizens-empty">Nobody is complaining right now.</p>
+          <p className="citizens-empty">Ninguém está reclamando agora.</p>
         ) : (
           <ul className="citizens-list">
             {complaints.map((c) => (

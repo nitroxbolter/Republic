@@ -93,15 +93,15 @@ function readDayNight(): DayNightMode {
 
 /** Cursor-label names for the zone tools. */
 const TOOL_LABEL = {
-  'zone-r': 'Homes',
-  'zone-rh': 'Apartments',
-  'zone-c': 'Shops',
-  'zone-ch': 'Offices',
-  'zone-i': 'Industry',
+  'zone-r': 'Moradias',
+  'zone-rh': 'Apartamentos',
+  'zone-c': 'Lojas',
+  'zone-ch': 'Escritórios',
+  'zone-i': 'Indústria',
 } as const;
 /** Toast ids, unique across game instances (dev mode mounts a game twice, sharing one HUD store). */
 let noticeSeq = 0;
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] as const;
 
 /** Owns City + Renderer + input + loop. The React layer only talks to it via `events` and public methods. */
 export class Game {
@@ -201,7 +201,8 @@ export class Game {
     } else {
       const terrain = generateTerrain(opts.terrain);
       await stage('simulation');
-      const city = new City(terrain, opts.funds);
+      // The showcase is assembled before play and costs far more than a new town.
+      const city = new City(terrain, opts.demo ? 1_000_000_000 : opts.funds);
       // Player cities unlock buildings stage by stage (D-086); the /demo showcase has everything.
       city.locked = !opts.demo;
       // ... and collect their taxes by hand at the Town Hall (docs/specs/evolution.md, E5).
@@ -210,6 +211,7 @@ export class Game {
       city.needsMaterials = !opts.demo;
       city.materials = BALANCE.materialsStarting;
       demo = opts.demo ? buildDemoCity(city, opts.terrain.seed) : null;
+      if (demo) city.funds = opts.funds ?? BALANCE.startingFunds;
       sim = new Simulation(city);
       if (demo) sim.worldChanged({ roads: true });
     }
@@ -312,12 +314,12 @@ export class Game {
       if (!b) return;
       if (b.construction > 0) {
         this.sound.play('error');
-        this.notify('error', 'That one is still being built: move it once it\'s finished');
+        this.notify('error', 'Esta construção ainda não terminou. Mova-a depois de pronta.');
         return;
       }
       this.carrying = b.id;
       this.sound.play('tool');
-      this.notify('info', `Moving the ${BUILDINGS[b.def].name}: click where it should go (Esc to cancel)`);
+      this.notify('info', `Movendo ${BUILDINGS[b.def].name}: clique no novo local (Esc para cancelar)`);
       this.updatePreview();
       return;
     }
@@ -451,10 +453,10 @@ export class Game {
 
     if (p.kind === 'move' && !p.plan.ok) {
       this.sound.play('error');
-      this.notify('error', "Can't move it there: needs clear land, no roads, water or other buildings");
+      this.notify('error', 'Não é possível mover para lá: o terreno deve estar livre de vias, água e outros edifícios');
     } else if (p.kind === 'place' && !p.plan.ok) {
       this.sound.play('error');
-      this.notify('error', p.plan.note ?? "Can't build there: needs clear land, no roads or water");
+      this.notify('error', p.plan.note ?? 'Não é possível construir lá: o terreno deve estar livre de vias e água');
     } else if (result.ok && result.changed) {
       this.edits++;
       const c = result.changed;
@@ -469,10 +471,10 @@ export class Game {
       this.afterWorldChange(p.kind === 'road' || p.kind === 'clear' || p.kind === 'rail');
     } else if (result.reason === 'insufficient-funds') {
       this.sound.play('error');
-      this.notify('error', `Not enough money: needs $${p.plan.cost.toLocaleString()}`);
+      this.notify('error', `Dinheiro insuficiente: precisa de $${p.plan.cost.toLocaleString()}`);
     } else if (result.reason === 'locked' && p.kind === 'rail') {
       this.sound.play('error');
-      this.notify('error', 'Rail track needs the Rapid transit research (Research Centre, Metropolis stage)');
+      this.notify('error', 'Os trilhos exigem a pesquisa Transporte rápido (Centro de pesquisa, estágio Metrópole)');
     } else if (result.reason === 'locked' && p.kind === 'place') {
       const stage = STAGES[unlockStage(p.plan.building)];
       const tech = unlockTech(p.plan.building);
@@ -481,8 +483,8 @@ export class Game {
       this.notify(
         'error',
         this.city.stage >= unlockStage(p.plan.building) && tech
-          ? `${name} needs the ${TECHS.find((t) => t.id === tech)?.name ?? tech} research`
-          : `${name} unlocks at ${stage.name} (${stage.population.toLocaleString()} people)`,
+          ? `${name} exige a pesquisa ${TECHS.find((t) => t.id === tech)?.name ?? tech}`
+          : `${name} é desbloqueado no estágio ${stage.name} (${stage.population.toLocaleString()} moradores)`,
       );
     }
   }
@@ -495,8 +497,8 @@ export class Game {
     this.notify(
       'info',
       all
-        ? `No road nearby: zones grow only within ${BALANCE.roadAccessRange} tiles of a road (R)`
-        : `${far} of ${tiles.length} zoned tiles are over ${BALANCE.roadAccessRange} tiles from a road and won't grow`,
+        ? `Sem via por perto: zonas só crescem a até ${BALANCE.roadAccessRange} quadrados de uma via (R)`
+        : `${far} de ${tiles.length} quadrados da zona estão a mais de ${BALANCE.roadAccessRange} quadrados de uma via e não vão crescer`,
     );
   }
 
@@ -558,17 +560,17 @@ export class Game {
       const held = this.sim.budget.held;
       if (held) {
         // Taxes wait at the Town Hall (docs/specs/evolution.md, E5).
-        const where = townHall(this.world) ? 'Collect them at the Town Hall' : 'Build a Town Hall to collect them';
-        const lost = held.lost > 0 ? ` The chest is full: $${Math.round(held.lost).toLocaleString()} was lost.` : '';
+        const where = townHall(this.world) ? 'Recolha-os na Prefeitura' : 'Construa uma Prefeitura para recolhê-los';
+        const lost = held.lost > 0 ? ` O cofre está cheio: $${Math.round(held.lost).toLocaleString()} foram perdidos.` : '';
         this.notify(
           held.filling || held.lost > 0 ? 'error' : 'info',
-          `${month}: upkeep $${r.expenses.toLocaleString()} paid. $${Math.round(held.waiting).toLocaleString()} in taxes waiting. ${where}.${lost}`,
+          `${month}: manutenção de $${r.expenses.toLocaleString()} paga. $${Math.round(held.waiting).toLocaleString()} em impostos aguardando. ${where}.${lost}`,
           'taxes',
         );
       } else {
         this.notify(
           r.net >= 0 ? 'info' : 'error',
-          `${month} budget: ${sign}$${Math.abs(r.net).toLocaleString()} (taxes $${r.income.toLocaleString()}, upkeep $${r.expenses.toLocaleString()})`,
+          `Orçamento de ${month}: ${sign}$${Math.abs(r.net).toLocaleString()} (impostos $${r.income.toLocaleString()}, manutenção $${r.expenses.toLocaleString()})`,
           'budget',
         );
       }
@@ -585,16 +587,16 @@ export class Game {
       const def = STAGES[out.stage];
       const unlocked = this.city.locked ? unlockedAt(out.stage).map((id) => buildingDef(id).name) : [];
       this.sound.play('build');
-      this.notify('milestone', `Your city is now a ${def.name}!${unlocked.length ? ` New: ${unlocked.join(', ')}.` : ''} ${def.news}`.trim(), `stage-${out.stage}`);
+      this.notify('milestone', `Sua cidade agora é ${def.name}!${unlocked.length ? ` Novidades: ${unlocked.join(', ')}.` : ''} ${def.news}`.trim(), `stage-${out.stage}`);
     }
     if (out.research) {
       this.sound.play('coin');
-      this.notify('milestone', `Research finished: ${out.research.name}. ${out.research.effect}.`, `research-${out.research.id}`);
+      this.notify('milestone', `Pesquisa concluída: ${out.research.name}. ${out.research.effect}.`, `research-${out.research.id}`);
     }
     if (out.lifestyle === Lifestyle.Comfortable) {
-      this.notify('milestone', 'Residents are moving up: the first homes are Comfortable. They pay more tax, and they want a hospital nearby.', 'lifestyle-1');
+      this.notify('milestone', 'Os moradores estão prosperando: as primeiras moradias alcançaram o nível Confortável. Pagam mais impostos e querem um hospital por perto.', 'lifestyle-1');
     } else if (out.lifestyle === Lifestyle.Prosperous) {
-      this.notify('milestone', 'The first homes are Prosperous! They pay the most tax, and they want a university.', 'lifestyle-2');
+      this.notify('milestone', 'As primeiras moradias alcançaram o nível Próspero! Pagam mais impostos e querem uma universidade.', 'lifestyle-2');
     }
   }
 
@@ -618,12 +620,12 @@ export class Game {
     }
     if (out.abandoned.length > 0) {
       const first = this.world.buildings.get(out.abandoned[0]);
-      const name = first ? BUILDINGS[first.def].name : 'building';
+      const name = first ? BUILDINGS[first.def].name : 'edifício';
       this.notify(
         'error',
         out.abandoned.length === 1
-          ? `A ${name} was abandoned: its people were unhappy. See "Citizens say".`
-          : `${out.abandoned.length} buildings were abandoned. See "Citizens say".`,
+          ? `${name} foi abandonado: os moradores estavam infelizes. Veja "Os moradores dizem".`
+          : `${out.abandoned.length} edifícios foram abandonados. Veja "Os moradores dizem".`,
         'abandoned',
       );
     }
@@ -647,7 +649,7 @@ export class Game {
     const name = BUILDINGS[burned[0].def].name;
     this.notify(
       'error',
-      burned.length === 1 ? `A fire destroyed a ${name}. Build a Fire Station nearby.` : `${burned.length} buildings burned down. Build Fire Stations to cover the city.`,
+      burned.length === 1 ? `Um incêndio destruiu ${name}. Construa um quartel dos bombeiros por perto.` : `${burned.length} edifícios foram destruídos pelo fogo. Construa quartéis dos bombeiros para proteger a cidade.`,
       'fire',
     );
   }
@@ -808,8 +810,8 @@ export class Game {
       this.notify(
         'info',
         kind === 'power'
-          ? 'Buildings need power: build a power plant (Civic → Utilities) on the same roads. Coal and gas run day and night; wind and solar are clean but vary'
-          : 'Buildings need water: build a Water Tower (Civic → Utilities) within 14 tiles of them',
+          ? 'Os edifícios precisam de energia: construa uma usina (Serviços → Infraestrutura) na mesma rede viária. Carvão e gás funcionam dia e noite; vento e sol são limpos, mas variam.'
+          : 'Os edifícios precisam de água: construa uma torre de água (Serviços → Infraestrutura) a até 14 quadrados deles',
         `needs-${kind}`,
       );
     }
@@ -822,7 +824,7 @@ export class Game {
   }
 
   setTaxRate(rate: number) {
-    this.city.taxRate = Math.max(0, Math.min(BALANCE.maxTaxRate, Math.round(rate)));
+    this.city.taxRate = Math.max(BALANCE.minTaxRate, Math.min(BALANCE.maxTaxRate, Math.round(rate)));
     this.edits++;
     this.emitBudget();
     this.emitCity();
@@ -849,7 +851,7 @@ export class Game {
     if (r.waiting === 0 && this.city.needsMaterials) this.resolve('materials');
     if (r.waiting === 0 || this.city.day - this.materialsNoticeDay < BALANCE.daysPerMonth) return;
     this.materialsNoticeDay = this.city.day;
-    this.notify('error', 'Construction is waiting for materials: zone industry to make them (imports only cover a little each day)', 'materials');
+    this.notify('error', 'As obras aguardam materiais: crie zonas industriais para produzi-los (as importações fornecem só um pouco por dia)', 'materials');
   }
 
   /**
@@ -863,8 +865,8 @@ export class Game {
       if (waiting[k] === 0) this.resolve(`zones-${k}`);
       if (this.waitingDays[k] < WAIT_NOTICE_DAYS || this.city.day - this.waitNoticeDay[k] < BALANCE.daysPerMonth) continue;
       this.waitNoticeDay[k] = this.city.day;
-      const what = { r: 'home', c: 'shop', o: 'office', i: 'industry' }[k];
-      this.notify('info', `${waiting[k]} empty ${what} lots aren't growing: ${this.sim.growth.explain()[k]}`, `zones-${k}`);
+      const what = { r: 'residenciais', c: 'comerciais', o: 'de escritórios', i: 'industriais' }[k];
+      this.notify('info', `${waiting[k]} terrenos ${what} vazios não estão crescendo: ${this.sim.growth.explain()[k]}`, `zones-${k}`);
     }
   }
 
@@ -880,10 +882,10 @@ export class Game {
     if (p.short === 0 || this.brownoutDay === clockDay) return;
     this.brownoutDay = clockDay;
     const hour = String(Math.floor(this.city.hour)).padStart(2, '0');
-    const cause = p.sources.solar === 0 && p.sources.wind < 1 && p.storage === 0 ? ' Solar makes nothing at night;' : '';
+    const cause = p.sources.solar === 0 && p.sources.wind < 1 && p.storage === 0 ? ' A energia solar não funciona à noite;' : '';
     this.notify(
       'error',
-      `Brownout at ${hour}:00: ${p.short} building${p.short === 1 ? '' : 's'} without power.${cause} add Battery Banks or a steady Coal or Gas plant.`,
+      `Falta de energia às ${hour}:00: ${p.short} edifício${p.short === 1 ? '' : 's'} sem eletricidade.${cause} adicione bancos de baterias ou uma usina a carvão ou gás.`,
       'brownout',
     );
     this.emitCity();
@@ -965,15 +967,15 @@ export class Game {
     if (!r.ok) {
       this.sound.play('error');
       const why = {
-        'no-town-hall': 'Build a Town Hall to collect taxes',
-        'town-hall-off-road': 'Connect the Town Hall to a road to collect taxes',
-        'nothing-waiting': 'No taxes waiting yet: they arrive at the end of each month',
+        'no-town-hall': 'Construa uma Prefeitura para recolher os impostos',
+        'town-hall-off-road': 'Conecte a Prefeitura a uma via para recolher os impostos',
+        'nothing-waiting': 'Ainda não há impostos a recolher: eles chegam no fim de cada mês',
       } as const;
       this.notify('error', why[r.reason]);
       return;
     }
     this.sound.play('coin');
-    this.notify('info', `Collected $${r.amount.toLocaleString()} in taxes`);
+    this.notify('info', `$${r.amount.toLocaleString()} recolhidos em impostos`);
     this.resolve('taxes');
     this.events.emit('funds', this.city.funds);
     this.renderer.indicators.setTaxesWaiting(false, this.world);
@@ -1000,7 +1002,7 @@ export class Game {
     const cost = energy?.repairCost;
     if (!energy || energy.source === 'battery' || !cost || b.condition >= 1) return;
     if (this.city.funds < cost) {
-      this.notify('error', `Repairing the ${BUILDINGS[b.def].name} costs $${cost.toLocaleString()}`);
+      this.notify('error', `Reparar ${BUILDINGS[b.def].name} custa $${cost.toLocaleString()}`);
       return;
     }
     this.city.funds -= cost;
@@ -1012,7 +1014,7 @@ export class Game {
     this.emitInspect();
     this.emitBudget();
     this.emitCity();
-    this.notify('info', `${BUILDINGS[b.def].name} repaired and back at full output`);
+    this.notify('info', `${BUILDINGS[b.def].name} reparado e funcionando plenamente`);
   }
 
   private debrisOf(tiles: readonly PlannedTile[]): Map<number, BurstKind> {
@@ -1162,7 +1164,7 @@ export class Game {
     this.events.emit('toolPreview', {
       tool: this.toolId,
       label:
-        p.kind === 'move' ? `Move ${BUILDINGS[p.plan.building].name}` : p.kind === 'place' ? BUILDINGS[p.plan.building].name : p.kind === 'zone' ? TOOL_LABEL[p.tool] : null,
+        p.kind === 'move' ? `Mover ${BUILDINGS[p.plan.building].name}` : p.kind === 'place' ? BUILDINGS[p.plan.building].name : p.kind === 'zone' ? TOOL_LABEL[p.tool] : null,
       blocked: (p.kind === 'place' || p.kind === 'move') && !p.plan.ok,
       screen: this.lastPointer,
       cost: p.plan.cost,
@@ -1175,16 +1177,16 @@ export class Game {
 
   private previewNote(p: ToolPlan): string | null {
     const stranded = strandedZoneTiles(this.world, p);
-    if (stranded > 0) return stranded === p.plan.count ? 'needs a road nearby to grow' : `${stranded} tile${stranded === 1 ? '' : 's'} need a road nearby`;
+    if (stranded > 0) return stranded === p.plan.count ? 'precisa de uma via próxima para crescer' : `${stranded} quadrado${stranded === 1 ? '' : 's'} precisa${stranded === 1 ? '' : 'm'} de uma via próxima`;
     // Zoning where nobody wants to build yet is fine, but say so, or the empty lots look broken.
-    if (p.kind === 'zone' && demandFor(this.sim.growth.demand(), p.zone) <= 0) return 'no demand yet: grows once its bar rises';
+    if (p.kind === 'zone' && demandFor(this.sim.growth.demand(), p.zone) <= 0) return 'sem demanda ainda: crescerá quando a barra subir';
     return null;
   }
 
   /** A toast; with a `key` it is also kept in the alerts inbox until resolved or dismissed. */
   private notify(kind: Notice['kind'], message: string, key?: string) {
     const { year, month, dayOfMonth } = this.city.date;
-    const date = `${MONTH_NAMES[month]} ${dayOfMonth}, Y${year}`;
+    const date = `${MONTH_NAMES[month]} ${dayOfMonth}, ano ${year}`;
     this.events.emit('notice', { id: ++noticeSeq, kind, message, ...(key && { key, date }) });
   }
 

@@ -19,11 +19,11 @@ export interface StageDef {
 }
 
 export const STAGES: Readonly<Record<Stage, StageDef>> = {
-  [Stage.Hamlet]: { name: 'Hamlet', population: 0, news: '' },
-  [Stage.Village]: { name: 'Village', population: 150, news: 'Garbage now needs collecting: build a landfill.' },
-  [Stage.Town]: { name: 'Town', population: 2500, news: 'Residents can become Comfortable now, and they will want a hospital.' },
-  [Stage.City]: { name: 'City', population: 10000, news: 'Residents can become Prosperous now, and they will want a university.' },
-  [Stage.Metropolis]: { name: 'Metropolis', population: 30000, news: 'Your city is a metropolis.' },
+  [Stage.Hamlet]: { name: 'Povoado', population: 0, news: '' },
+  [Stage.Village]: { name: 'Vila', population: 150, news: 'Agora é preciso recolher o lixo: construa um aterro sanitário.' },
+  [Stage.Town]: { name: 'Cidade pequena', population: 2500, news: 'Os moradores podem alcançar um padrão de vida confortável e vão querer um hospital.' },
+  [Stage.City]: { name: 'Cidade', population: 10000, news: 'Os moradores podem se tornar prósperos e vão querer uma universidade.' },
+  [Stage.Metropolis]: { name: 'Metrópole', population: 30000, news: 'Sua cidade se tornou uma metrópole.' },
 };
 
 export const STAGE_ORDER: readonly Stage[] = [Stage.Hamlet, Stage.Village, Stage.Town, Stage.City, Stage.Metropolis];

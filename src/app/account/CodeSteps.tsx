@@ -70,7 +70,7 @@ export function CodeStep({ purpose, email, onDone, onBack }: CodeStepProps) {
   const [resendIn, startResend] = useCountdown(RESEND_SECONDS);
 
   const digits = code.replace(/\s+/g, '');
-  const codeError = CODE.test(digits) ? undefined : `Enter the ${API_LIMITS.codeLength}-digit code from the email`;
+  const codeError = CODE.test(digits) ? undefined : `Digite o código de ${API_LIMITS.codeLength} dígitos enviado por e-mail`;
   const pwErrors = isReset ? validate('signup', { email, password, confirm }) : {};
   const invalid = !!codeError || !!pwErrors.password || !!pwErrors.confirm;
 
@@ -177,7 +177,7 @@ export function CodeStep({ purpose, email, onDone, onBack }: CodeStepProps) {
           {isReset ? 'Back to log in' : 'Use a different email'}
         </button>
         <button type="button" className="auth-link" disabled={resendIn > 0} onClick={() => void resend()}>
-          {resendIn > 0 ? `Send a new code in ${clock(resendIn)}` : 'Send a new code'}
+          {resendIn > 0 ? `Enviar novo código em ${clock(resendIn)}` : 'Enviar novo código'}
         </button>
       </div>
     </form>

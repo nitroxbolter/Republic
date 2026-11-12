@@ -7,7 +7,7 @@ export const API_LIMITS = {
   passwordMin: 8,
   passwordMax: 200,
   cityNameMax: 64,
-  savesPerUser: 30,
+  savesPerUser: 1,
   /** Digits in an emailed sign-up or reset code. */
   codeLength: 6,
   /** Request body limit; a huge 256×256 city is well under 2 MB. */
@@ -53,6 +53,8 @@ export type SignupResponse = { readonly kind: 'user'; readonly user: ApiUser } |
 
 /** Bot defences sent with forms that email a code (D-084). */
 export interface HumanProof {
+  /** The local username/password server requires confirmation on sign-up. */
+  readonly confirmPassword?: string;
   /** Turnstile token. */
   readonly captcha?: string;
   /** Honeypot: a hidden field people never fill in. */

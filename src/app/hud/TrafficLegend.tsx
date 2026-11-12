@@ -2,10 +2,10 @@ import { useAtomValue } from 'jotai';
 import { cityAtom, trafficViewAtom } from '../atoms';
 
 const STEPS: readonly [string, string][] = [
-  ['#4ade80', 'Free'],
-  ['#facc15', 'Busy'],
-  ['#fb923c', 'Jammed'],
-  ['#ef4444', 'Gridlock'],
+  ['#4ade80', 'Livre'],
+  ['#facc15', 'Movimentado'],
+  ['#fb923c', 'Congestionado'],
+  ['#ef4444', 'Parado'],
 ];
 
 /** Legend and commute summary while the traffic overlay is on. */
@@ -15,8 +15,8 @@ export function TrafficLegend() {
   if (!on) return null;
   const t = city?.traffic;
   return (
-    <div className="panel traffic-legend" aria-label="Traffic legend">
-      <strong className="traffic-title">Traffic</strong>
+    <div className="panel traffic-legend" aria-label="Legenda do trânsito">
+      <strong className="traffic-title">Trânsito</strong>
       <div className="traffic-steps">
         {STEPS.map(([color, label]) => (
           <span key={label} className="traffic-step">
@@ -27,11 +27,11 @@ export function TrafficLegend() {
       </div>
       {t && (
         <p className="traffic-summary">
-          {t.commuters.toLocaleString()} commuters · avg {Math.round(t.avgMinutes)} min
-          {t.jammedTiles > 0 ? ` · ${t.jammedTiles} jammed road tiles` : ' · no jams'}
+          {t.commuters.toLocaleString()} passageiros · média de {Math.round(t.avgMinutes)} min
+          {t.jammedTiles > 0 ? ` · ${t.jammedTiles} trechos congestionados` : ' · sem congestionamentos'}
         </p>
       )}
-      <p className="traffic-hint">Add a second route or a highway where roads turn orange or red.</p>
+      <p className="traffic-hint">Crie outra rota ou uma rodovia onde as vias ficarem laranjas ou vermelhas.</p>
     </div>
   );
 }

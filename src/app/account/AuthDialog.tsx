@@ -57,6 +57,7 @@ export function signInWithGithub() {
  * codes on, sign-up continues to a code step, and log in offers "Forgot password?".
  */
 export function AuthDialog() {
+  const localAccount = import.meta.env.VITE_LOCAL_ACCOUNTS === 'on';
   const [mode, setMode] = useAtom(authDialogAtom);
   const providers = useAtomValue(authProvidersAtom);
   /** A message from outside the dialog (a failed GitHub sign-in); cleared on any change. */
@@ -118,7 +119,7 @@ export function AuthDialog() {
 
   if (!mode) return null;
   const isSignup = mode === 'signup';
-  const errors = validate(mode, fields);
+  const errors = validate(mode, fields, localAccount);
   const shown = (k: keyof AuthFields) => (touched[k] ? errors[k] : undefined);
   const strength = passwordStrength(fields.password);
   const set = (k: keyof AuthFields) => (v: string) => {
@@ -140,6 +141,7 @@ export function AuthDialog() {
       const email = fields.email.trim();
       if (isSignup) {
         const result = await signup(email, fields.password, {
+          ...(localAccount && { confirmPassword: fields.confirm }),
           captcha: captcha ?? undefined,
           website: website || undefined,
         });
@@ -174,10 +176,14 @@ export function AuthDialog() {
   };
 
   const titles: Record<Step['kind'], [string, string]> = {
-    form: isSignup ? ['Join Openpolis', 'Keep your cities safe and play them from any browser.'] : ['Welcome back, mayor', 'Log in to open the cities in your account.'],
-    verify: ['Check your email', `We sent a ${API_LIMITS.codeLength}-digit code to ${step.kind === 'verify' ? step.email : ''}.`],
+    form: localAccount
+      ? isSignup
+        ? ['Criar conta', 'Escolha um login e digite a senha duas vezes. Suas cidades serão salvas no MySQL do XAMPP.']
+        : ['Entrar no Republica', 'Use seu login e senha para abrir suas cidades.']
+      : isSignup ? ['Join Republica', 'Keep your cities safe and play them from any browser.'] : ['Welcome back, mayor', 'Log in to open the cities in your account.'],
+    verify: ['Verifique seu e-mail', `Enviamos um código de ${API_LIMITS.codeLength} dígitos para ${step.kind === 'verify' ? step.email : ''}.`],
     forgot: ['Reset your password', 'Enter your account’s email and we’ll send you a code.'],
-    reset: ['Check your email', `If ${step.kind === 'reset' ? step.email : 'that email'} has an account, a code is on its way.`],
+    reset: ['Verifique seu e-mail', `Se ${step.kind === 'reset' ? step.email : 'esse e-mail'} tiver uma conta, um código está a caminho.`],
   };
   const [title, lead] = titles[step.kind];
   const backToLogin = () => switchTo('login');
@@ -186,7 +192,7 @@ export function AuthDialog() {
     close();
   };
 
-  const label = waiting ? `Try again in ${clock((waitUntil - now) / 1000)}` : busy ? (isSignup ? 'Creating your account…' : 'Logging in…') : isSignup ? 'Create account' : 'Log in';
+  const label = waiting ? `Tente novamente em ${clock((waitUntil - now) / 1000)}` : busy ? (isSignup ? 'Criando sua conta…' : 'Entrando…') : isSignup ? 'Criar conta' : 'Entrar';
 
   return (
     <div className="modal-backdrop auth-backdrop" onPointerDown={(e) => e.target === e.currentTarget && close()}>
@@ -231,7 +237,7 @@ export function AuthDialog() {
               ))}
             </div>
 
-            {providers.github && (
+            {!localAccount && providers.github && (
               <>
                 <button
                   type="button"
@@ -253,16 +259,16 @@ export function AuthDialog() {
 
             <div className={`auth-field ${shown('email') ? 'has-error' : ''}`}>
               <label className="auth-label" htmlFor="auth-email">
-                Email
+                {localAccount ? 'Login' : 'Email'}
               </label>
               <input
                 ref={emailRef}
                 id="auth-email"
                 className="auth-input"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@example.com"
+                type={localAccount ? 'text' : 'email'}
+                inputMode={localAccount ? 'text' : 'email'}
+                autoComplete={localAccount ? 'username' : 'email'}
+                placeholder={localAccount ? 'seu_login' : 'you@example.com'}
                 value={fields.email}
                 aria-invalid={!!shown('email')}
                 onChange={(e) => set('email')(e.target.value)}
@@ -284,7 +290,7 @@ export function AuthDialog() {
               autoComplete={isSignup ? 'new-password' : 'current-password'}
               error={shown('password')}
             />
-            {!isSignup && providers.emailCodes && (
+            {!localAccount && !isSignup && providers.emailCodes && (
               <button type="button" className="auth-link auth-forgot" onClick={() => setStep({ kind: 'forgot' })}>
                 Forgot password?
               </button>
@@ -311,8 +317,8 @@ export function AuthDialog() {
                 valid={!!fields.confirm && fields.confirm === fields.password}
               />
             )}
-            {isSignup && providers.emailCodes && <Honeypot value={website} onChange={setWebsite} />}
-            {isSignup && providers.turnstileSiteKey && <Turnstile key={captchaRound} siteKey={providers.turnstileSiteKey} onToken={setCaptcha} />}
+            {isSignup && !localAccount && providers.emailCodes && <Honeypot value={website} onChange={setWebsite} />}
+            {isSignup && !localAccount && providers.turnstileSiteKey && <Turnstile key={captchaRound} siteKey={providers.turnstileSiteKey} onToken={setCaptcha} />}
 
             {(notice || (serverError && (!serverError.wait || waiting))) && (
               <p className={`auth-banner ${serverError?.wait ? 'is-wait' : ''}`} role="alert">
@@ -329,7 +335,9 @@ export function AuthDialog() {
               {label}
             </button>
 
-            {isSignup ? (
+            {localAccount ? (
+              <p className="auth-foot">Suas cidades ficam vinculadas a esta conta no banco de dados deste computador.</p>
+            ) : isSignup ? (
               <ul className="auth-perks">
                 <li>Your cities on every device</li>
                 <li>Saved to the cloud as you play</li>

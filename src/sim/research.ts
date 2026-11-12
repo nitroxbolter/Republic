@@ -19,12 +19,12 @@ export interface TechDef {
 }
 
 export const TECHS: readonly TechDef[] = [
-  { id: 'cleanCoal', name: 'Cleaner coal', points: 90, effect: 'Coal and gas plants make 40% less smoke' },
-  { id: 'garbageTrucks', name: 'Efficient garbage trucks', points: 120, effect: 'Garbage facilities collect 30% more a day' },
-  { id: 'construction', name: 'Modern construction', points: 150, effect: 'Buildings need 30% fewer materials' },
-  { id: 'wideCare', name: 'Wider care', points: 200, effect: 'Clinics and hospitals reach 25% further' },
-  { id: 'greenIndustry', name: 'Green industry', points: 250, effect: 'Industry makes 40% less smoke' },
-  { id: 'rapidTransit', name: 'Rapid transit', points: 300, effect: 'Unlocks rail track and train stations' },
+  { id: 'cleanCoal', name: 'Carvão mais limpo', points: 90, effect: 'Usinas a carvão e gás produzem 40% menos fumaça' },
+  { id: 'garbageTrucks', name: 'Coleta de lixo eficiente', points: 120, effect: 'Instalações de lixo recolhem 30% mais por dia' },
+  { id: 'construction', name: 'Construção moderna', points: 150, effect: 'Edifícios precisam de 30% menos materiais' },
+  { id: 'wideCare', name: 'Saúde ampliada', points: 200, effect: 'Clínicas e hospitais alcançam 25% mais longe' },
+  { id: 'greenIndustry', name: 'Indústria verde', points: 250, effect: 'A indústria produz 40% menos fumaça' },
+  { id: 'rapidTransit', name: 'Transporte rápido', points: 300, effect: 'Desbloqueia trilhos e estações de trem' },
 ];
 
 /** Research progress: points toward the current project, and how many are finished. */

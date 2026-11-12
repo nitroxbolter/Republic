@@ -12,7 +12,7 @@ import { StageChip } from './StageChip';
 import { AlertsButton } from './AlertsButton';
 import { aqiBand } from '../../sim/systems/air';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] as const;
 
 export const icon = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
 
@@ -110,14 +110,14 @@ function Clock() {
 }
 
 const DEMAND_BARS = [
-  ['r', 'R', 'Homes'],
-  ['c', 'C', 'Shops'],
-  ['o', 'O', 'Offices'],
-  ['i', 'I', 'Industry'],
+  ['r', 'R', 'Moradias'],
+  ['c', 'C', 'Lojas'],
+  ['o', 'O', 'Escritórios'],
+  ['i', 'I', 'Indústria'],
 ] as const;
 
 function demandWord(d: number): string {
-  return d > 0.5 ? 'high' : d > 0.1 ? 'some' : d > -0.1 ? 'balanced' : 'oversupplied';
+  return d > 0.5 ? 'alta' : d > 0.1 ? 'moderada' : d > -0.1 ? 'equilibrada' : 'oferta excessiva';
 }
 
 /** R/C/I demand: bars grow up from the midline when the city wants more, down when it has too much. */
@@ -320,8 +320,8 @@ function Funds({ short }: { short?: boolean }) {
     <button
       type="button"
       className={`funds ${flash ? `flash-${flash === 'down' ? 'spend' : 'gain'}` : ''}`}
-      title={`$${funds.toLocaleString()} · Budget & taxes`}
-      aria-label={`Funds $${funds.toLocaleString()}. Open the budget`}
+      title={`$${funds.toLocaleString()} · Orçamento e impostos`}
+      aria-label={`Saldo de $${funds.toLocaleString()}. Abrir orçamento`}
       aria-expanded={budget.open}
       onClick={budget.toggle}
     >
@@ -336,7 +336,7 @@ function Population({ short }: { short?: boolean }) {
   const pop = city?.population ?? 0;
   const flash = useFlash(pop);
   return (
-    <Stat title={city ? `Population ${pop.toLocaleString()} of ${city.housing.toLocaleString()} homes` : 'Population'} flash={flash} glyph={PEOPLE}>
+    <Stat title={city ? `População: ${pop.toLocaleString()} moradores em ${city.housing.toLocaleString()} moradias` : 'População'} flash={flash} glyph={PEOPLE}>
       <span className="stat-value">{short ? compactNumber(pop) : pop.toLocaleString()}</span>
     </Stat>
   );
@@ -388,7 +388,7 @@ function PhoneTopBar() {
         <button
           type="button"
           className={`speed-button ${paused ? '' : 'is-active'}`}
-          aria-label={paused ? 'Play' : `Speed ${SPEED_LABELS[speed]}, tap for ${SPEED_LABELS[nextSpeed]}`}
+          aria-label={paused ? 'Jogar' : `Velocidade ${SPEED_LABELS[speed]}, toque para ${SPEED_LABELS[nextSpeed]}`}
           onClick={() => game?.setSpeed(nextSpeed)}
         >
           {speedGlyph(paused ? 1 : speed)}
@@ -413,7 +413,7 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
   const band = aqiBand(aqi);
   const happy = city?.needs.happiness ?? 1;
 
-  const date = city ? `${MONTHS[city.date.month]} ${city.date.dayOfMonth}, Y${city.date.year}` : '—';
+  const date = city ? `${city.date.dayOfMonth} ${MONTHS[city.date.month]}, ano ${city.date.year}` : '—';
   // Narrow windows and phones show at most one of these (CSS decides when folding applies);
   // small screens start with both folded so the bar fits.
   const [fold, setFold] = useState<FoldId | null>(() => (window.matchMedia(FOLD_SHUT).matches ? null : 'city'));
@@ -439,7 +439,7 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
       {/* Jobs folds with the date: one toggle, shown in the date's place. */}
       <Fold id="city" open={fold}>
         <Stat
-          title={city ? `${city.workers.toLocaleString()} workers in ${city.jobs.toLocaleString()} jobs · ${city.unemployed.toLocaleString()} unemployed` : 'Jobs'}
+          title={city ? `${city.workers.toLocaleString()} trabalhadores em ${city.jobs.toLocaleString()} empregos · ${city.unemployed.toLocaleString()} desempregados` : 'Empregos'}
           glyph={BRIEFCASE}
         >
           <span className="stat-value">
@@ -451,7 +451,7 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
       <button
         type="button"
         className={`happy-stat ${happinessView ? 'is-on' : ''}`}
-        title={`City happiness · click for the happiness view (Y)${city?.needs.abandoned ? ` · ${city.needs.abandoned} abandoned` : ''}`}
+        title={`Felicidade da cidade · clique para ver a felicidade (Y)${city?.needs.abandoned ? ` · ${city.needs.abandoned} abandonados` : ''}`}
         aria-pressed={happinessView}
         onClick={() => game?.setHappinessView(!happinessView)}
       >
@@ -463,12 +463,12 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
       <button
         type="button"
         className={`happy-stat air-stat ${airView ? 'is-on' : ''}`}
-        title={`Air quality where people live: AQI ${aqi} (${band.label}) · click for the air view (O)`}
+        title={`Qualidade do ar nas áreas residenciais: IQA ${aqi} (${band.label}) · clique para ver o ar (O)`}
         aria-pressed={airView}
         onClick={() => game?.setAirView(!airView)}
       >
         <span className="air-dot" style={{ background: `#${band.color.toString(16).padStart(6, '0')}` }} aria-hidden="true" />
-        <span className="stat-dim">AQI</span>
+        <span className="stat-dim">IQA</span>
         <span className="stat-value">{aqi}</span>
       </button>
       <DemandMeter demand={city?.demand} why={city?.demandWhy} />
@@ -481,8 +481,8 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
             type="button"
             className={`speed-button ${city?.speed === i ? 'is-active' : ''}`}
             aria-pressed={city?.speed === i}
-            aria-label={i === 0 ? 'Pause' : `${label} speed`}
-            title={i === 0 ? 'Pause (Space)' : `${label} speed ([ / ])`}
+            aria-label={i === 0 ? 'Pausar' : `Velocidade ${label}`}
+            title={i === 0 ? 'Pausar (Espaço)' : `Velocidade ${label} ([ / ])`}
             onClick={() => game?.setSpeed(i)}
           >
             {speedGlyph(i)}

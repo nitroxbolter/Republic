@@ -11,26 +11,26 @@ const LABEL_ROOM_X = 220;
 const LABEL_ROOM_Y = 60;
 
 function verbFor(p: ToolPreviewInfo): string {
-  return p.label ?? (p.tool === 'clear' ? 'Clear' : isRoadTool(p.tool) ? ROAD_SPECS[ROAD_TOOLS[p.tool]].name : 'Build');
+  return p.label ?? (p.tool === 'clear' ? 'Limpar' : isRoadTool(p.tool) ? ROAD_SPECS[ROAD_TOOLS[p.tool]].name : 'Construir');
 }
 
 /** A finished touch drag (D-080): what it is and costs, with Build and Cancel. */
 function ConfirmBar({ p }: { p: ToolPreviewInfo }) {
   const game = useAtomValue(gameAtom);
   const blocked = p.blocked || p.count === 0;
-  const action = p.tool === 'clear' ? 'Clear' : isZoneTool(p.tool) ? 'Zone' : 'Build';
+  const action = p.tool === 'clear' ? 'Limpar' : isZoneTool(p.tool) ? 'Criar zona' : 'Construir';
   return (
     <div className={`panel draft-confirm ${p.affordable && !blocked ? '' : 'is-unaffordable'}`} role="dialog" aria-label="Confirm">
       <span className="draft-what">
         <span className="cost-verb">{verbFor(p)}</span>
         {blocked ? (
-          <span className="cost-dim">{p.blocked ? "can't build here" : 'nothing to change'}</span>
+          <span className="cost-dim">{p.blocked ? 'não é possível construir aqui' : 'nada para alterar'}</span>
         ) : (
           <>
             <span className="cost-value">{p.cost === 0 ? 'Free' : `$${p.cost.toLocaleString()}`}</span>
             {p.tool !== 'build' && (
               <span className="cost-dim">
-                {p.count} tile{p.count === 1 ? '' : 's'}
+                {p.count} quadrado{p.count === 1 ? '' : 's'}
               </span>
             )}
           </>
@@ -68,16 +68,16 @@ export function CostLabel() {
       <span className="cost-verb">{verb}</span>
       {p.note && <span className="cost-note">{p.note}</span>}
       {p.blocked ? (
-        <span className="cost-dim">can't build here</span>
+        <span className="cost-dim">não é possível construir aqui</span>
       ) : empty ? (
-        <span className="cost-dim">nothing to {p.tool === 'clear' ? 'clear' : isZoneTool(p.tool) ? 'zone' : 'build'}</span>
+        <span className="cost-dim">nada para {p.tool === 'clear' ? 'limpar' : isZoneTool(p.tool) ? 'marcar' : 'construir'}</span>
       ) : p.tool === 'build' ? (
         <span className="cost-value">${p.cost.toLocaleString()}</span>
       ) : (
         <>
           <span className="cost-value">{p.cost === 0 ? 'Free' : `$${p.cost.toLocaleString()}`}</span>
           <span className="cost-dim">
-            {p.count} tile{p.count === 1 ? '' : 's'}
+            {p.count} quadrado{p.count === 1 ? '' : 's'}
           </span>
         </>
       )}

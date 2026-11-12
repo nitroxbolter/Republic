@@ -48,7 +48,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   {
     id: 'welcome',
     modal: true,
-    title: 'Welcome to Openpolis',
+    title: 'Welcome to Republica',
     body: same('This valley is yours to build. A two-minute tour shows the first steps: roads, homes and power. You can skip it and replay it any time from the ? button.'),
   },
   {

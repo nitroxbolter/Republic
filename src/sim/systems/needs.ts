@@ -61,23 +61,23 @@ export const NEED_KINDS: readonly NeedKind[] = [
 export type ComplaintKind = NeedKind | 'abandoned';
 
 export const COMPLAINT_TEXT: Readonly<Record<ComplaintKind, string>> = {
-  jobs: 'There are no jobs for us',
-  shopping: 'Nowhere to shop around here',
-  safety: "We don't feel safe: build police and fire stations",
-  health: 'We need a clinic nearby',
-  education: 'We need a school nearby',
-  hospital: 'Our families need a proper hospital',
-  university: 'Our kids want to go to university',
-  garbage: 'Garbage is piling up on our street',
-  transit: 'We need a bus or train station nearby',
-  research: 'Our graduates need a research centre to work in',
-  commute: 'The commute is terrible',
-  traffic: 'Traffic is making it hard to reach customers',
-  air: 'Too much smoke and noise',
-  parks: 'No parks to enjoy',
-  workers: "We can't find workers",
-  customers: 'Not enough customers',
-  abandoned: 'This place is abandoned',
+  jobs: 'Não há empregos para nós',
+  shopping: 'Não há lojas por perto',
+  safety: 'Não nos sentimos seguros: construa delegacias e quartéis dos bombeiros',
+  health: 'Precisamos de uma clínica por perto',
+  education: 'Precisamos de uma escola por perto',
+  hospital: 'Nossas famílias precisam de um hospital',
+  university: 'Nossos filhos querem estudar na universidade',
+  garbage: 'O lixo está se acumulando na nossa rua',
+  transit: 'Precisamos de um terminal de ônibus ou estação de trem por perto',
+  research: 'Nossos formados precisam trabalhar em um centro de pesquisa',
+  commute: 'O deslocamento está terrível',
+  traffic: 'O trânsito dificulta o acesso dos clientes',
+  air: 'Fumaça e ruído demais',
+  parks: 'Não há parques para aproveitar',
+  workers: 'Não encontramos trabalhadores',
+  customers: 'Não há clientes suficientes',
+  abandoned: 'Este lugar está abandonado',
 };
 
 type Weights = Readonly<Partial<Record<NeedKind, number>>>;
@@ -164,9 +164,9 @@ function needWeights(def: BuildingDef, b: BuildingInstance, stage: Stage): Weigh
 
 /** A complaint in the words of the building that makes it: incidents and bad air have their own. */
 function complaintText(kind: ComplaintKind, b: BuildingInstance, air: AirSystem | null): string {
-  if (kind === 'air' && air && air.aqiOf(b) > 150) return 'The air is making us sick';
-  if (kind === 'safety' && b.robbed > 0) return 'We were robbed and no police came';
-  if (kind === 'health' && b.sick > 0) return 'Nobody came when we were sick';
+  if (kind === 'air' && air && air.aqiOf(b) > 150) return 'O ar está nos deixando doentes';
+  if (kind === 'safety' && b.robbed > 0) return 'Fomos assaltados e a polícia não veio';
+  if (kind === 'health' && b.sick > 0) return 'Ninguém veio quando estávamos doentes';
   return COMPLAINT_TEXT[kind];
 }
 

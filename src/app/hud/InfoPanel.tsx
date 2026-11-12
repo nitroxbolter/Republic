@@ -66,14 +66,14 @@ const pct = (n: number) => Math.round(n * 100);
 /** The one thing to know first, with what to do about it (or that all is well). */
 function alertFor(info: InspectInfo): { tone: 'ok' | 'warn' | 'building'; title: string; body?: string } {
   if (info.constructionDays > 0) {
-    return { tone: 'building', title: `Under construction · ${info.constructionDays} day${info.constructionDays === 1 ? '' : 's'} left` };
+    return { tone: 'building', title: `Em construção · faltam ${info.constructionDays} dia${info.constructionDays === 1 ? '' : 's'}` };
   }
   if (info.abandoned) return { tone: 'warn', title: 'Abandoned', body: 'Its people left after a long unhappy spell. Fix the needs below and they come back.' };
   if (!info.hasRoad) return { tone: 'warn', title: 'No road access', body: 'Build a road within 3 tiles of it.' };
   if (info.powerIssue) {
     return {
       tone: 'warn',
-      title: `No power: ${info.powerIssue.reason.toLowerCase()}`,
+      title: `Sem energia: ${info.powerIssue.reason.toLowerCase()}`,
       body: 'Power runs along roads: a plant powers the buildings on the same connected road network. Build another plant there, or link the roads.',
     };
   }
@@ -120,11 +120,11 @@ function StationSection({ station }: { station: StationInfo }) {
         <p className="info-note">Not on a line yet: build another station on the same track.</p>
       ) : (
         station.lines.map((line, k) => (
-          <div key={k} className="rail-line" aria-label={`Line ${k + 1}`}>
+          <div key={k} className="rail-line" aria-label={`Linha ${k + 1}`}>
             <div className="rail-line-head">
               <span className="rail-line-badge">{k + 1}</span>
               <span>
-                {line.stops.length} stops · {line.trains} train{line.trains === 1 ? '' : 's'} each way
+                {line.stops.length} paradas · {line.trains} trem{line.trains === 1 ? '' : 's'} em cada sentido
               </span>
             </div>
             <ol className="rail-stops">
@@ -154,12 +154,12 @@ export function InfoPanel() {
   const canRepair = info.condition !== null && (info.repairDays > 0 || info.condition < 1);
 
   return (
-    <aside className="panel info-panel" aria-label={`${info.name} details`}>
+    <aside className="panel info-panel" aria-label={`Detalhes de ${info.name}`}>
       <header className="info-header">
         <div>
           <h2 className="info-title">{info.name}</h2>
           <span className={`info-chip chip-${info.category}`}>{CATEGORY_LABEL[info.category] ?? info.category}</span>
-          {info.level > 0 && <span className="info-level" title={`Level ${info.level}`}>{'★'.repeat(info.level)}</span>}
+          {info.level > 0 && <span className="info-level" title={`Nível ${info.level}`}>{'★'.repeat(info.level)}</span>}
         </div>
         <button type="button" className="icon-button" aria-label="Close" onClick={() => game?.inspect(null)}>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -189,12 +189,12 @@ export function InfoPanel() {
             disabled={info.taxesWaiting <= 0}
             title="Taxes arrive at the end of each month"
           >
-            Collect ${info.taxesWaiting.toLocaleString()}
+            Recolher ${info.taxesWaiting.toLocaleString()}
           </button>
         )}
         {canRepair && (
           <button type="button" className="secondary-button" onClick={() => game?.repairBuilding(info.id)} disabled={info.repairCost <= 0}>
-            Repair · ${info.repairCost.toLocaleString()}
+            Reparar · ${info.repairCost.toLocaleString()}
           </button>
         )}
         <button type="button" className="danger-button" onClick={() => game?.demolish(info.id)}>
@@ -231,7 +231,7 @@ export function InfoPanel() {
         {info.lifestyle && <Stat label="Lifestyle" value={info.lifestyle.tier} />}
         {info.commuteMinutes !== null && <Stat label="Commute" value={`${Math.round(info.commuteMinutes)} min`} />}
         {info.garbage !== null && <Stat label="Garbage waiting" value={`${info.garbage.toFixed(1)} t`} />}
-        <Stat label="Air quality" value={`AQI ${info.aqi} · ${aqiBand(info.aqi).label}`} />
+        <Stat label="Air quality" value={`IQA ${info.aqi} · ${aqiBand(info.aqi).label}`} />
       </div>
       {info.lifestyle && <p className="info-note">{info.lifestyle.note}</p>}
 
@@ -273,12 +273,12 @@ export function InfoPanel() {
           <h3 className="info-section-title">Buses</h3>
           <div className="info-stats">
             <Stat label="Riders a day" value={info.busStation.riders.toLocaleString()} />
-            <Stat label="Buses out" value={`${info.busStation.out} of ${info.busStation.fleet}`} />
+            <Stat label="Buses out" value={`${info.busStation.out} de ${info.busStation.fleet}`} />
           </div>
           <p className="info-note">
             {info.hasRoad
-              ? `Buses leave from its bays for stops across town and come back. Homes within ${info.busStation.reach} tiles send some commuters by bus instead of driving.`
-              : 'Build it against a street: its driveway turns off there.'}
+              ? `Ônibus saem do terminal, percorrem a cidade e retornam. Moradias a até ${info.busStation.reach} quadrados enviam parte dos trabalhadores de ônibus.`
+              : 'Construa ao lado de uma rua para conectar a entrada.'}
           </p>
         </section>
       )}
@@ -287,15 +287,15 @@ export function InfoPanel() {
           <h3 className="info-section-title">Provides</h3>
           {info.provides?.kind === 'service' && (
             <div className="info-row">
-              <span>{SERVICE_LABEL[info.provides.service]} for buildings within</span>
-              <strong>{info.provides.radius} tiles</strong>
+              <span>{SERVICE_LABEL[info.provides.service]} para edifícios a até</span>
+              <strong>{info.provides.radius} quadrados</strong>
             </div>
           )}
           {info.provides?.kind === 'utility' && (info.provides.power || info.provides.water) ? (
             <div className="info-row">
-              <span>{info.provides.water && info.provides.coverage ? `Supplies buildings within ${info.provides.coverage} tiles with` : 'Supplies its road network with'}</span>
+              <span>{info.provides.water && info.provides.coverage ? `Abastece edifícios a até ${info.provides.coverage} quadrados com` : 'Abastece sua rede viária com'}</span>
               <strong>
-                {[info.provides.power && `${info.provides.power.toLocaleString()} power`, info.provides.water && `${info.provides.water.toLocaleString()} water`]
+                {[info.provides.power && `${info.provides.power.toLocaleString()} de energia`, info.provides.water && `${info.provides.water.toLocaleString()} de água`]
                   .filter(Boolean)
                   .join(' · ')}
               </strong>
@@ -317,7 +317,7 @@ export function InfoPanel() {
             </>
           )}
           {info.condition !== null && (
-            <Stat label="Plant condition" value={info.repairDays > 0 ? `Failed · repair in ${info.repairDays}d` : `${pct(info.condition)}%`}>
+            <Stat label="Plant condition" value={info.repairDays > 0 ? `Parada · reparo em ${info.repairDays} dias` : `${pct(info.condition)}%`}>
               <Meter value={info.condition} warn={info.condition < 0.4} />
             </Stat>
           )}
@@ -336,7 +336,7 @@ export function InfoPanel() {
         {info.upkeep > 0 && (
           <div className="info-row dim">
             <span>Upkeep</span>
-            <span>${info.upkeep.toLocaleString()}/month</span>
+            <span title="Custo-base mais uma parcela por mil moradores atendidos, ajustada ao tipo de prédio">${info.upkeep.toLocaleString()}/mês</span>
           </div>
         )}
         <div className="info-row dim">

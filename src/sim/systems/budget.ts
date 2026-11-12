@@ -1,5 +1,5 @@
 import { BALANCE } from '../../shared/balance';
-import { BUILDINGS, upkeepOf, type BuildingDef, type BuildingInstance } from '../buildings/catalog';
+import { BUILDINGS, upkeepOf, type BuildingDef, type BuildingId, type BuildingInstance, type ServiceKind } from '../buildings/catalog';
 import { isWorking } from './utilities';
 import type { City } from '../City';
 import { BridgeAxis, RoadType } from '../roads';
@@ -19,6 +19,49 @@ export interface BudgetReport {
   breakdown: { roads: number; services: number; utilities: number; parks: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
+}
+
+const SERVICE_UPKEEP_SHARE: Readonly<Partial<Record<ServiceKind, number>>> = {
+  police: 0.25,
+  fire: 0.25,
+  health: 0.5,
+  education: 0.5,
+  hospital: 1,
+  university: 0.75,
+};
+
+const RECREATION_BUILDINGS: ReadonlySet<BuildingId> = new Set([
+  'park',
+  'central_park',
+  'botanical_garden',
+  'observation_wheel',
+  'theme_park',
+]);
+
+/** Monthly operating cost: a fixed base plus a type-specific share per 1,000 residents served. */
+export function monthlyUpkeep(world: World, building: BuildingInstance): number {
+  const d: BuildingDef = BUILDINGS[building.def];
+  const base = upkeepOf(building.def);
+  if (base <= 0) return 0;
+
+  let servedResidents = 0;
+  if (d.service && d.radius) {
+    const cx = building.x + d.size.w / 2;
+    const cy = building.y + d.size.h / 2;
+    const radiusSquared = d.radius * d.radius;
+    for (const home of world.buildings.values()) {
+      if (home.construction > 0 || home.abandoned || BUILDINGS[home.def].category !== 'residential') continue;
+      const homeDef = BUILDINGS[home.def];
+      const hx = home.x + homeDef.size.w / 2;
+      const hy = home.y + homeDef.size.h / 2;
+      if ((cx - hx) ** 2 + (cy - hy) ** 2 <= radiusSquared) servedResidents += home.occupants;
+    }
+  } else {
+    servedResidents = cityStats(world).population;
+  }
+
+  const share = d.service ? (SERVICE_UPKEEP_SHARE[d.service] ?? 0.5) : RECREATION_BUILDINGS.has(building.def) ? 0.1 : 1;
+  return Math.round(base * (1 + (servedResidents / BALANCE.upkeepResidentsPerBase) * share));
 }
 
 /** Taxes scale with the rate: the base rate gives the BALANCE per-resident and per-worker amounts. */
@@ -51,7 +94,7 @@ export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRat
   let parks = 0;
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
-    const upkeep = upkeepOf(b.def);
+    const upkeep = monthlyUpkeep(world, b);
     if (d.group === 'services') services += upkeep;
     else if (d.group === 'utilities') utilities += upkeep;
     else parks += upkeep;

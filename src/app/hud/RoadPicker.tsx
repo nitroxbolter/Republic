@@ -14,20 +14,20 @@ import { PickerChip, usePickerFold } from './pickerFold';
 
 /** One line under each road's name (docs/specs/transport.md). */
 const BLURB: Readonly<Record<RoadToolId, string>> = {
-  pedestrian: 'Car-free paving · walkers and shops',
-  road: '2 lanes · footpaths and street trees',
-  avenue: '4 lanes · planted median',
-  boulevard: '6 lanes on 2 tiles · tree-lined',
-  ramp: 'Slip road · joins expressways',
-  highway: '4 lanes · fast, no footpaths',
-  expressway: '8 lanes on 2 tiles · ramps only',
+  pedestrian: 'Calçadão sem carros · pedestres e lojas',
+  road: '2 faixas · calçadas e árvores',
+  avenue: '4 faixas · canteiro central arborizado',
+  boulevard: '6 faixas em 2 quadrados · arborizada',
+  ramp: 'Alça de acesso · conecta vias expressas',
+  highway: '4 faixas · rápida, sem calçadas',
+  expressway: '8 faixas em 2 quadrados · apenas alças de acesso',
 };
 
 const PAVEMENT_LABEL: Readonly<Record<PavementStyle, string>> = {
-  concrete: 'Concrete',
-  brick: 'Brick',
-  setts: 'Setts',
-  promenade: 'Promenade',
+  concrete: 'Concreto',
+  brick: 'Tijolos',
+  setts: 'Paralelepípedos',
+  promenade: 'Calçadão',
 };
 
 /** Swatch colours for the pavement chips (match render/atlas/roads/paving.ts). */
@@ -182,7 +182,7 @@ function RoadPickerPanel() {
           </svg>
         }
         name={spec.name}
-        cost={`$${(spec.cost * spec.width).toLocaleString()}/tile`}
+        cost={`$${(spec.cost * spec.width).toLocaleString()}/quadrado`}
         onChange={fold.unfold}
       />
     );
@@ -203,7 +203,7 @@ function RoadPickerPanel() {
                 game?.setTool(id);
                 fold.chosen();
               }}
-              title={`${s.name}: ${BLURB[id]} · carries ${s.cars ? `${(s.capacity * s.width).toLocaleString()} cars a day` : 'walkers only'}`}
+              title={`${s.name}: ${BLURB[id]} · suporta ${s.cars ? `${(s.capacity * s.width).toLocaleString()} carros por dia` : 'apenas pedestres'}`}
             >
               <svg
                 viewBox="0 0 40 24"
@@ -260,7 +260,7 @@ function RoadPickerPanel() {
             aria-checked={flyover}
             className={`pavement-chip ${flyover ? 'is-active' : ''}`}
             onClick={() => game?.setFlyover(true)}
-            title={`Carry this road over the roads it crosses at right angles: no lights, no waiting. +$${BALANCE.flyoverCost} a crossing`}
+            title={`Passe esta via sobre outras em cruzamentos retos: sem semáforos nem espera. +$${BALANCE.flyoverCost} por cruzamento`}
           >
             Flyover
           </button>

@@ -175,22 +175,22 @@ export type DemandWhy = Readonly<Record<keyof ZoneDemand, string>>;
 export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRate): DemandWhy {
   const x = demandInputs(world, taxRate);
   const n = (v: number) => Math.round(Math.abs(v)).toLocaleString();
-  const taxNote = x.tax > 0.005 ? ` Taxes above ${BALANCE.baseTaxRate}% are holding it down.` : '';
-  const tooManyJobs = `The city already has ${n(x.openJobs)} more jobs than workers. Homes bring workers.`;
+  const taxNote = x.tax > 0.005 ? ` Impostos acima de ${BALANCE.baseTaxRate}% reduzem a demanda.` : '';
+  const tooManyJobs = `A cidade já tem ${n(x.openJobs)} empregos a mais que trabalhadores. Moradias atraem trabalhadores.`;
   return {
     r:
       (x.wantR > x.housing
-        ? `Jobs need workers: room for about ${n(x.wantR - x.housing)} more residents.`
-        : 'More homes than jobs: shops, offices and industry bring residents.') + taxNote,
+        ? `Há empregos precisando de trabalhadores: espaço para cerca de ${n(x.wantR - x.housing)} novos moradores.`
+        : 'Há mais moradias que empregos: lojas, escritórios e indústrias atraem moradores.') + taxNote,
     c:
       (x.wantShops > x.shops
-        ? `Residents want about ${n(x.wantShops - x.shops)} more shop jobs nearby.`
-        : `There are enough shops (${n(x.shops)} jobs) for your residents. More homes raise this.`) + taxNote,
+        ? `Os moradores querem cerca de ${n(x.wantShops - x.shops)} novos empregos em lojas próximas.`
+        : `Já há lojas suficientes (${n(x.shops)} empregos) para os moradores. Mais moradias aumentam a demanda.`) + taxNote,
     o:
-      (x.openJobs > 0 ? `Workers could fill about ${n(x.openJobs * BALANCE.officeJobShare)} more office jobs.` : tooManyJobs) +
-      (x.graduates >= 1 ? ` Graduates want about ${n(x.graduates * BALANCE.graduateOfficeJobs)} office jobs.` : '') +
+      (x.openJobs > 0 ? `Os trabalhadores poderiam ocupar cerca de ${n(x.openJobs * BALANCE.officeJobShare)} novos empregos em escritórios.` : tooManyJobs) +
+      (x.graduates >= 1 ? ` Formados querem cerca de ${n(x.graduates * BALANCE.graduateOfficeJobs)} empregos em escritórios.` : '') +
       taxNote,
-    i: (x.openJobs > 0 ? `Workers could fill about ${n(x.openJobs * (1 - BALANCE.officeJobShare))} more industry jobs.` : tooManyJobs) + taxNote,
+    i: (x.openJobs > 0 ? `Os trabalhadores poderiam ocupar cerca de ${n(x.openJobs * (1 - BALANCE.officeJobShare))} novos empregos industriais.` : tooManyJobs) + taxNote,
   };
 }
 

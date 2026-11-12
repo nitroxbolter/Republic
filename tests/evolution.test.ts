@@ -70,8 +70,8 @@ describe('city stages (docs/specs/evolution.md, E0)', () => {
     sim.worldChanged({ roads: true });
     for (const b of w.buildings.values()) if (b.def === 'condo_tower') b.occupants = 260;
     const gate = stageRequirements(w, Stage.Town);
-    expect(gate.find((r) => r.label === 'Residents')?.met).toBe(true);
-    expect(gate.find((r) => r.label === 'Police')?.met).toBe(false);
+    expect(gate.find((r) => r.label === 'Moradores')?.met).toBe(true);
+    expect(gate.find((r) => r.label === 'Polícia')?.met).toBe(false);
     sim.day();
     expect(city.stage).toBe(Stage.Village);
   });
@@ -217,9 +217,9 @@ describe('saving evolution state', () => {
 
 describe('air quality (E4)', () => {
   it('bands and the clean-air score follow the AQI scale', () => {
-    expect(aqiBand(30).label).toBe('Good');
-    expect(aqiBand(120).label).toBe('Unhealthy for some');
-    expect(aqiBand(420).label).toBe('Hazardous');
+    expect(aqiBand(30).label).toBe('Boa');
+    expect(aqiBand(120).label).toBe('Ruim para alguns');
+    expect(aqiBand(420).label).toBe('Perigosa');
     expect(airScore(40)).toBe(1);
     expect(airScore(125)).toBeCloseTo(0.5);
     expect(airScore(260)).toBe(0);

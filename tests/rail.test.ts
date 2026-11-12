@@ -43,7 +43,7 @@ describe('rail track', () => {
     const { w, city } = flat();
     road(city, { x: 2, y: 10 }, { x: 37, y: 10 });
     expect(planPlace(w, 'train_station', 5, 13).ok).toBe(false);
-    expect(planPlace(w, 'train_station', 5, 13).note).toMatch(/track/);
+    expect(planPlace(w, 'train_station', 5, 13).note).toMatch(/trilhos/);
     rail(city, { x: 2, y: 15 }, { x: 37, y: 15 });
     expect(applyPlace(city, planPlace(w, 'train_station', 5, 13), 0).ok).toBe(true);
     expect(applyPlace(city, planPlace(w, 'train_station', 33, 13), 0).ok).toBe(true);

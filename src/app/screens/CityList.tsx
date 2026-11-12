@@ -42,6 +42,7 @@ interface CityListProps {
  * map, then the rest. Device cities can move to the account; delete asks first.
  */
 export function CityList({ cities, onOpen }: CityListProps) {
+  const oneCityPerAccount = import.meta.env.VITE_LOCAL_ACCOUNTS === 'on';
   const loggedIn = useAtomValue(authAtom).status === 'user';
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -82,10 +83,10 @@ export function CityList({ cities, onOpen }: CityListProps) {
     return (
       <>
         <span className="city-tile-stats">
-          {m.population.toLocaleString()} people · {cityDate(m.day)}
+          {m.population.toLocaleString()} moradores · {cityDate(m.day)}
         </span>
         <span className="city-tile-meta">
-          {preset ? PRESETS[preset].name : m.preset} · {m.size}² · saved {timeAgo(m.updatedAt)}
+          {preset ? PRESETS[preset].name : m.preset} · {m.size}² · salva {timeAgo(m.updatedAt)}
         </span>
         <span className={`city-badge is-${e.store}`}>
           {e.store === 'cloud' ? 'Account' : 'This device'}
@@ -135,9 +136,9 @@ export function CityList({ cities, onOpen }: CityListProps) {
   };
 
   return (
-    <section className="panel cities-card" aria-label="Your cities">
+    <section className="panel cities-card" aria-label={oneCityPerAccount ? 'Sua cidade' : 'Your cities'}>
       <header className="cities-header">
-        <h2>Your cities</h2>
+        <h2>{oneCityPerAccount ? 'Sua cidade' : 'Your cities'}</h2>
         {error && <span className="cities-error">{error}</span>}
       </header>
       {latest && (
@@ -145,7 +146,7 @@ export function CityList({ cities, onOpen }: CityListProps) {
           <button
             type="button"
             className="city-hero-map"
-            aria-label={`Continue ${latest.meta.name}`}
+            aria-label={`Continuar ${latest.meta.name}`}
             onClick={() => onOpen(refOf(latest))}
           >
             <CityThumb entry={latest} className="is-hero" />

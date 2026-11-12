@@ -37,17 +37,17 @@ const TOOLS: readonly ToolDef[] = [
   {
     id: 'select',
     group: 'edit',
-    label: 'Select',
+    label: 'Selecionar',
     key: 'Q',
-    hint: 'Inspect and pan',
+    hint: 'Inspecionar e mover o mapa',
     icon: <path {...stroke} d="M6 3l12 7-5.5 1.5L10 17z" />,
   },
   {
     id: 'clear',
     group: 'edit',
-    label: 'Clear',
+    label: 'Limpar',
     key: 'B',
-    hint: `Drag an area to remove trees, rocks, roads, buildings and zones · $${BALANCE.treeClearCost}/tree`,
+    hint: `Arraste para remover árvores, rochas, vias, edifícios e zonas · $${BALANCE.treeClearCost}/árvore`,
     icon: (
       <g {...stroke}>
         <path d="M3 17h11v-5H8l-2 3H3z" />
@@ -60,9 +60,9 @@ const TOOLS: readonly ToolDef[] = [
   {
     id: 'build',
     group: 'edit',
-    label: 'Civic',
+    label: 'Serviços',
     key: 'E',
-    hint: 'Police, fire, clinics, schools, power, water, parks and shopping',
+    hint: 'Polícia, bombeiros, clínicas, escolas, energia, água, parques e comércio',
     icon: (
       <g {...stroke}>
         <path d="M3 11l7-6 7 6" />
@@ -76,54 +76,54 @@ const TOOLS: readonly ToolDef[] = [
   {
     id: 'zone-r',
     group: 'zone',
-    label: 'Homes',
+    label: 'Moradias',
     key: '1',
-    hint: `Drag to zone houses · $${BALANCE.zoneCost}/tile · grows within ${BALANCE.roadAccessRange} tiles of a road`,
+    hint: `Arraste para criar zona de casas · $${BALANCE.zoneCost}/quadrado · cresce a até ${BALANCE.roadAccessRange} quadrados de uma via`,
     icon: zoneIcon('R'),
     tone: 'tone-r',
   },
   {
     id: 'zone-rh',
     group: 'zone',
-    label: 'Apartments',
+    label: 'Apartamentos',
     key: '2',
-    hint: `Drag to zone apartments: walk-ups, then blocks and towers · $${BALANCE.zoneCost}/tile`,
+    hint: `Arraste para criar zona de apartamentos: prédios baixos, blocos e torres · $${BALANCE.zoneCost}/quadrado`,
     icon: zoneIcon('R+'),
     tone: 'tone-rh',
   },
   {
     id: 'zone-c',
     group: 'zone',
-    label: 'Shops',
+    label: 'Lojas',
     key: '3',
-    hint: `Drag to zone shops and cafés · $${BALANCE.zoneCost}/tile · grows within ${BALANCE.roadAccessRange} tiles of a road`,
+    hint: `Arraste para criar zona de lojas e cafés · $${BALANCE.zoneCost}/quadrado · cresce a até ${BALANCE.roadAccessRange} quadrados de uma via`,
     icon: zoneIcon('C'),
     tone: 'tone-c',
   },
   {
     id: 'zone-ch',
     group: 'zone',
-    label: 'Offices',
+    label: 'Escritórios',
     key: '4',
-    hint: `Drag to zone offices: small offices, then hotels and towers · $${BALANCE.zoneCost}/tile`,
+    hint: `Arraste para criar zona de escritórios: pequenos prédios, hotéis e torres · $${BALANCE.zoneCost}/quadrado`,
     icon: zoneIcon('C+'),
     tone: 'tone-ch',
   },
   {
     id: 'zone-i',
     group: 'zone',
-    label: 'Industry',
+    label: 'Indústria',
     key: '5',
-    hint: `Drag to zone industry · $${BALANCE.zoneCost}/tile · grows within ${BALANCE.roadAccessRange} tiles of a road`,
+    hint: `Arraste para criar zona industrial · $${BALANCE.zoneCost}/quadrado · cresce a até ${BALANCE.roadAccessRange} quadrados de uma via`,
     icon: zoneIcon('I'),
     tone: 'tone-i',
   },
   {
     id: 'road',
     group: 'road',
-    label: 'Roads',
+    label: 'Vias',
     key: 'R',
-    hint: 'Streets, avenues, boulevards, expressways and more · pick a type above',
+    hint: 'Ruas, avenidas, bulevares, vias expressas e mais · escolha um tipo acima',
     icon: (
       <g {...stroke}>
         <path d="M8 3L5 21M16 3l3 18" />

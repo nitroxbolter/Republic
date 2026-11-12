@@ -46,7 +46,7 @@ interface PickerChipProps {
 /** The folded picker: what's chosen, its price, and a button to choose again. */
 export function PickerChip({ kind, picture, name, cost, onChange }: PickerChipProps) {
   return (
-    <div className={`panel ${kind} is-chip`} role="status" aria-label={`Placing ${name}`}>
+    <div className={`panel ${kind} is-chip`} role="status" aria-label={`Posicionando ${name}`}>
       <span className="chip-picture" aria-hidden="true">
         {picture}
       </span>

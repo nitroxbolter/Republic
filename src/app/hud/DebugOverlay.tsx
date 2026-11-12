@@ -47,7 +47,7 @@ export function DebugOverlay() {
         </dd>
         <dt>Boot</dt>
         <dd>
-          atlas {Math.round(stats.bootAtlasMs)} · map {Math.round(stats.bootChunksMs)} ms
+          atlas {Math.round(stats.bootAtlasMs)} · mapa {Math.round(stats.bootChunksMs)} ms
         </dd>
         <dt>Zoom</dt>
         <dd>{stats.zoom.toFixed(2)}×</dd>
@@ -74,7 +74,7 @@ export function DebugOverlay() {
               return (
                 <div key={t.name} className="debug-row">
                   <dt>{t.name}</dt>
-                  <dd className={cls} title={budget === undefined ? undefined : `budget ${budget} ms`}>
+                  <dd className={cls} title={budget === undefined ? undefined : `limite ${budget} ms`}>
                     {t.avgMs.toFixed(1)} / {t.maxMs.toFixed(0)}
                   </dd>
                 </div>

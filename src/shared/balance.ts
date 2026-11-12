@@ -1,10 +1,7 @@
 /** Tunable game-economy numbers. See docs/specs/roads.md. */
 export const BALANCE = {
-  /**
-   * DEVELOPMENT VALUE: 700 million so building and testing never runs out of money.
-   * Set back to a real starting budget (e.g. 20_000) before release.
-   */
-  startingFunds: 700_000_000,
+  /** Enough for starter services, utilities, roads and several residential zones. */
+  startingFunds: 40_000,
   /** Cost per tile, by road type. */
   roadCost: 10,
   highwayCost: 40,
@@ -54,6 +51,8 @@ export const BALANCE = {
   /** Monthly tax per resident and per worker. */
   taxPerResident: 3,
   taxPerWorker: 2,
+  /** Public-service upkeep adds one base cost per this many residents served. */
+  upkeepResidentsPerBase: 1_000,
   /** Monthly upkeep. */
   roadUpkeep: 0.4,
   highwayUpkeep: 1.2,
@@ -71,7 +70,8 @@ export const BALANCE = {
   // Fires, thefts and illness: sim/systems/incidents.ts (INCIDENTS).
   /** Default tax rate in percent; income scales with rate ÷ this. Each point away shifts demand by taxDemandStep. */
   baseTaxRate: 9,
-  maxTaxRate: 20,
+  minTaxRate: 5,
+  maxTaxRate: 100,
   taxDemandStep: 0.04,
   // --- Needs & happiness (sim/systems/needs.ts, docs/specs/needs.md) ---
   /** Occupancy multiplier = happinessBase + happinessRange × happiness. */

@@ -137,10 +137,10 @@ describe('lifestyle', () => {
   it('a Basic home waits for the Town stage; a Comfortable one needs a City, a hospital and a school', () => {
     const t = street();
     const home = t.place('cottage', 20, 11);
-    expect(riseBlocker(home, Stage.Village)).toMatch(/Town/);
+    expect(riseBlocker(home, Stage.Village)).toMatch(/Cidade pequena/);
     expect(riseBlocker(home, Stage.Town)).toBeNull();
     home.lifestyle = Lifestyle.Comfortable;
-    expect(riseBlocker(home, Stage.Town)).toMatch(/City/);
+    expect(riseBlocker(home, Stage.Town)).toMatch(/Cidade/);
     expect(riseBlocker(home, Stage.City)).toMatch(/hospital/);
   });
 
@@ -185,13 +185,13 @@ describe('stages', () => {
     t.refresh();
     for (const b of t.world.buildings.values()) b.occupants = 20;
     const req = stageRequirements(t.world, Stage.Town);
-    expect(req.map((r) => r.label)).toEqual(['Residents', 'Power and water', 'Police', 'Fire station', 'Clinic', 'School', 'Garbage collected']);
-    expect(req.find((r) => r.label === 'Police')?.met).toBe(false);
+    expect(req.map((r) => r.label)).toEqual(['Moradores', 'Energia e água', 'Polícia', 'Bombeiros', 'Clínica', 'Escola', 'Coleta de lixo']);
+    expect(req.find((r) => r.label === 'Polícia')?.met).toBe(false);
   });
 
   it('with no homes at all, no service share counts as met', () => {
     const t = street();
     const req = stageRequirements(t.world, Stage.Town);
-    expect(req.filter((r) => r.label !== 'Residents').every((r) => !r.met)).toBe(true);
+    expect(req.filter((r) => r.label !== 'Moradores').every((r) => !r.met)).toBe(true);
   });
 });

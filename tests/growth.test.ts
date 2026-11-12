@@ -220,7 +220,7 @@ describe('demand explanations (master plan §6.4)', () => {
     // Four offices (160 jobs) for four cottages (12 residents): far more jobs than workers.
     expect(zoneDemand(w).o).toBeLessThan(0);
     expect(zoneDemand(w).i).toBeLessThan(0); // industry doesn't build jobs nobody can staff either
-    expect(explainDemand(w).o).toMatch(/more jobs than workers\. Homes bring workers/);
+    expect(explainDemand(w).o).toMatch(/empregos a mais que trabalhadores\. Moradias atraem trabalhadores/);
     expect(zoneDemand(w).r).toBeGreaterThan(0); // and homes are wanted
     const g = growDay(w, mulberry32(1));
     expect(g.waiting.o).toBe(4); // the four office lots wait, and growth says so

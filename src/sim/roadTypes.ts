@@ -41,7 +41,7 @@ export type PavementStyle = (typeof PAVEMENTS)[number];
 
 export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
   [RoadType.Road]: {
-    name: 'Street',
+    name: 'Rua',
     capacity: 500,
     minutes: 1,
     carSpeed: 1,
@@ -90,7 +90,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     pavement: 'promenade',
   },
   [RoadType.Highway]: {
-    name: 'Highway',
+    name: 'Rodovia',
     capacity: 1500,
     minutes: 0.45,
     carSpeed: 1.9,
@@ -106,7 +106,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     pavement: null,
   },
   [RoadType.Expressway]: {
-    name: 'Expressway',
+    name: 'Via expressa',
     capacity: 2000,
     minutes: 0.38,
     carSpeed: 2.3,
@@ -123,7 +123,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     pavement: null,
   },
   [RoadType.Ramp]: {
-    name: 'Ramp',
+    name: 'Alça de acesso',
     capacity: 800,
     minutes: 0.6,
     carSpeed: 1.4,
@@ -139,7 +139,7 @@ export const ROAD_SPECS: Readonly<Record<BuildableRoad, RoadSpec>> = {
     pavement: null,
   },
   [RoadType.Pedestrian]: {
-    name: 'Pedestrian street',
+    name: 'Rua de pedestres',
     // Walkers only: slow on foot, never jammed.
     capacity: 100_000,
     minutes: 2.5,

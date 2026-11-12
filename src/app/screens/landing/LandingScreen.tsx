@@ -19,8 +19,8 @@ const PINS: readonly { label: string; x: number; y: number; z: number; side: 'le
 
 /** Questions people actually ask before playing; also what search engines read. */
 const FAQ: readonly { q: string; a: string }[] = [
-  { q: 'Is Openpolis free?', a: 'Yes. The whole game is free to play, with no ads in the game and nothing to buy.' },
-  { q: 'Do I need to download anything?', a: 'No. Openpolis is a city building game that runs in your web browser. Open the page and start building; there is nothing to install.' },
+  { q: 'Is Republica free?', a: 'Yes. The whole game is free to play, with no ads in the game and nothing to buy.' },
+  { q: 'Do I need to download anything?', a: 'No. Republica is a city building game that runs in your web browser. Open the page and start building; there is nothing to install.' },
   { q: 'What kind of game is it?', a: 'An open-world city simulation. You build and govern a city, but its people, businesses and government will make their own decisions, so the world can surprise you. Today it plays as a classic city builder: roads, zones, power, water, services, budgets and traffic.' },
   { q: 'Are the AI citizens and governments in the game yet?', a: 'Not yet. The city builder is the foundation and is playable now. Citizens, workers, governments, trade and politics with minds of their own are being built in the open and arrive in updates, one system at a time.' },
   { q: 'Are my cities saved?', a: 'Always. As a guest your cities save on your device as you play. With a free account they save to the cloud, so you can carry on from any browser.' },
@@ -46,14 +46,15 @@ const WORLD: readonly { title: string; text: string }[] = [
  * like a planning map, and three ways in: sign up, log in, or play straight away as a guest.
  */
 export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
+  const localAccount = import.meta.env.VITE_LOCAL_ACCOUNTS === 'on';
   const auth = useAtomValue(authAtom);
   const openDialog = useSetAtom(authDialogAtom);
-  const online = auth.status !== 'guest' || auth.online;
+  const online = localAccount || auth.status !== 'guest' || auth.online;
 
   return (
     <div className="landing">
       <header className="landing-nav">
-        <span className="landing-wordmark">Openpolis</span>
+        <span className="landing-wordmark">Republica</span>
         {online && (
           <nav className="landing-nav-actions" aria-label="Account">
             <button type="button" className="landing-text-button" onClick={() => openDialog('login')}>
@@ -80,7 +81,12 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
               its choices have consequences.
             </p>
             <div className="landing-ctas">
-              {online ? (
+              {localAccount ? (
+                <>
+                  <button type="button" className="landing-button" onClick={() => openDialog('signup')}>Criar conta</button>
+                  <button type="button" className="landing-button is-ghost" onClick={() => openDialog('login')}>Entrar</button>
+                </>
+              ) : online ? (
                 <>
                   <button type="button" className="landing-button" onClick={() => openDialog('signup')}>
                     Create an account
@@ -96,7 +102,7 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
               )}
             </div>
             <p className="landing-aside">
-              {online && (
+              {online && !localAccount && (
                 <>
                   Have an account?{' '}
                   <button type="button" className="landing-link" onClick={() => openDialog('login')}>
@@ -107,9 +113,8 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
                   </span>
                 </>
               )}
-              <button type="button" className="landing-link" onClick={onDemo}>
-                Walk around a finished city
-              </button>
+              {!localAccount && <button type="button" className="landing-link" onClick={onDemo}>Walk around a finished city</button>}
+              {localAccount && auth.status === 'guest' && !auth.online && <span>Inicie o MySQL no painel do XAMPP para entrar.</span>}
             </p>
           </div>
 
@@ -131,7 +136,7 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
             Not just a city. A living world.
           </h2>
           <p className="landing-section-lead">
-            Most city builders follow fixed rules. Openpolis is growing into a world run by AI-driven citizens, workers, governments and markets, each deciding for itself. You don't just
+            Most city builders follow fixed rules. Republica is growing into a world run by AI-driven citizens, workers, governments and markets, each deciding for itself. You don't just
             build the city, you become part of it.
           </p>
           <ol>
@@ -168,7 +173,7 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
             {FAQ.map((f) => (
               <details key={f.q}>
                 <summary>{f.q}</summary>
-                <p>{f.a}</p>
+                <p>{localAccount && f.q === 'Are my cities saved?' ? 'Sim. Entre com sua conta e o jogo salva automaticamente suas cidades no MySQL do XAMPP.' : f.a}</p>
               </details>
             ))}
           </div>
@@ -177,9 +182,9 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
         <section className="landing-saves">
           <div>
             <h2 className="landing-section-title">Your cities stay yours</h2>
-            <p>Start without signing up: your cities save on this device as you play. Make an account whenever you like and move them across, then open them from any browser.</p>
+            <p>{localAccount ? 'Crie uma conta com login e senha. Suas cidades serão salvas automaticamente no banco de dados do XAMPP.' : 'Start without signing up: your cities save on this device as you play. Make an account whenever you like and move them across, then open them from any browser.'}</p>
           </div>
-          <dl className="landing-compare">
+          {!localAccount && <dl className="landing-compare">
             <div>
               <dt>As a guest</dt>
               <dd>Saved on this device</dd>
@@ -188,12 +193,12 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
               <dt>With an account</dt>
               <dd>Saved to the cloud, open anywhere</dd>
             </div>
-          </dl>
+          </dl>}
         </section>
       </main>
 
       <footer className="landing-footer">
-        <span className="landing-wordmark is-small">Openpolis</span>
+        <span className="landing-wordmark is-small">Republica</span>
         <span>An open-world city simulation. Free to play in any modern browser, nothing to install.</span>
       </footer>
     </div>

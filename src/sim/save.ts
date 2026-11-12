@@ -492,7 +492,7 @@ export function parseSave(json: unknown): SaveData {
       funds: num(c, 'funds'),
       day: num(c, 'day', 0),
       clock: num(c, 'clock', 0),
-      taxRate: num(c, 'taxRate', 0, 100),
+      taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
       ...(isFiniteNumber(c.stage) && isStage(c.stage) && { stage: c.stage }),
       ...(typeof c.locked === 'boolean' && { locked: c.locked }),
       ...(typeof c.collectsTaxes === 'boolean' && { collectsTaxes: c.collectsTaxes }),

@@ -3,9 +3,9 @@ import type { EnergySource } from '../../sim/buildings/catalog';
 
 /** Display order, label and colour per source (colours match the meter segments in app.css). */
 const SOURCES: readonly { readonly id: Exclude<EnergySource, 'battery'>; readonly label: string }[] = [
-  { id: 'coal', label: 'Coal' },
-  { id: 'gas', label: 'Gas' },
-  { id: 'wind', label: 'Wind' },
+  { id: 'coal', label: 'Carvão' },
+  { id: 'gas', label: 'Gás' },
+  { id: 'wind', label: 'Vento' },
   { id: 'solar', label: 'Solar' },
 ];
 
@@ -28,11 +28,11 @@ export function EnergyMix({ power, hour }: { power: PowerReport; hour: number })
         <span>⚡ Power at {time}</span>
         <span className={short ? 'warn' : ''}>
           {power.demand.toLocaleString()} needed · {total.toLocaleString()} made
-          {short ? ` · ${power.short} without` : ''}
-          {power.repair > 0 ? ` · ${power.repair} plant${power.repair === 1 ? '' : 's'} need repair` : ''}
+          {short ? ` · ${power.short} sem energia` : ''}
+          {power.repair > 0 ? ` · ${power.repair} usina${power.repair === 1 ? '' : 's'} precisa${power.repair === 1 ? '' : 'm'} de reparo` : ''}
         </span>
       </div>
-      <div className="energy-meter" role="img" aria-label={`Power at ${time}: ${total} made, ${power.demand} needed`}>
+      <div className="energy-meter" role="img" aria-label={`Energia às ${time}: ${total} produzidos, ${power.demand} necessários`}>
         {SOURCES.map((s) =>
           power.sources[s.id] > 0 ? <span key={s.id} className={`energy-seg is-${s.id}`} style={{ width: pct(power.sources[s.id]) }} /> : null,
         )}
@@ -49,7 +49,7 @@ export function EnergyMix({ power, hour }: { power: PowerReport; hour: number })
         {power.storage > 0 && (
           <li>
             <i className="energy-dot is-battery" />
-            Batteries {Math.round((power.stored / power.storage) * 100)}%{fromBattery > 0 ? ` · giving ${fromBattery}` : charging > 0 ? ` · charging` : ''}
+            Baterias {Math.round((power.stored / power.storage) * 100)}%{fromBattery > 0 ? ` · fornecendo ${fromBattery}` : charging > 0 ? ` · carregando` : ''}
           </li>
         )}
       </ul>

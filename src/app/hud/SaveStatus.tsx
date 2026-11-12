@@ -19,19 +19,19 @@ export function SaveStatus({ onSave }: { onSave: () => void }) {
   switch (status.kind) {
     case 'new':
       label = 'Not saved yet';
-      title = 'Saves automatically once you start building · click to save now (Ctrl/⌘ S)';
+      title = 'Salva automaticamente quando você começa a construir · clique para salvar agora (Ctrl/⌘ S)';
       break;
     case 'saving':
       label = 'Saving…';
       title = 'Saving your city';
       break;
     case 'saved':
-      label = `Saved ${timeAgo(status.at, now)}`;
-      title = `${status.store === 'cloud' ? 'Saved to your account' : 'Saved on this device · log in to keep it in an account'} · autosaves as you play (Ctrl/⌘ S)`;
+      label = `Salva ${timeAgo(status.at, now)}`;
+      title = `${status.store === 'cloud' ? 'Salva na sua conta' : 'Salva neste dispositivo · entre para guardá-la numa conta'} · salvamento automático durante o jogo (Ctrl/⌘ S)`;
       break;
     case 'error':
       label = 'Save failed';
-      title = `${status.message} · retrying automatically · click to try now`;
+      title = `${status.message} · tentando novamente automaticamente · clique para tentar agora`;
       break;
   }
 

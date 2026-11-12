@@ -75,7 +75,7 @@ export function LoadingScreen({ kind, name, current, error, leaving, onGone, onR
             <h2>{error.stage === 'graphics' ? "Your browser can't draw the city" : "The city couldn't open"}</h2>
             {error.stage === 'graphics' ? (
               <p>
-                Openpolis needs WebGL. Turn on hardware acceleration in your browser settings (Chrome: Settings → System → Use graphics acceleration),
+                Republica needs WebGL. Turn on hardware acceleration in your browser settings (Chrome: Settings → System → Use graphics acceleration),
                 then try again. If it's already on, try an up-to-date Chrome, Edge, Firefox or Safari.
               </p>
             ) : (
