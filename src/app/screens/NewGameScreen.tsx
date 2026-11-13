@@ -14,6 +14,7 @@ import {
 import type { World } from '../../sim/World';
 import type { CityRef } from '../../save/SaveStore';
 import { AccountButton } from '../account/AccountButton';
+import { appPath } from '../basePath';
 import { DEFAULT_SEED, randomSeed } from '../options';
 import { CityList } from './CityList';
 import { useCities } from './useCities';
@@ -145,6 +146,7 @@ export function NewGameScreen({ onStart, onOpen, notice }: NewGameScreenProps) {
         aria-hidden="true"
       />
       <div className="ng-account">
+        <a className="ng-wiki-link" href={appPath('wiki')}>Wiki · Como jogar</a>
         <AccountButton />
       </div>
       <div className="ng-stack">

@@ -172,17 +172,24 @@ function RoadPickerPanel() {
   const fold = usePickerFold();
   const spec = isRoadTool(tool) ? ROAD_SPECS[ROAD_TOOLS[tool]] : null;
   if (fold.drafting) return null;
-  if (fold.folded && isRoadTool(tool) && spec) {
+  if (fold.folded) {
     return (
       <PickerChip
         kind="road-picker"
         picture={
           <svg viewBox="0 0 40 24" width="40" height="24" className="road-section">
-            <CrossSection tool={tool} />
+            {isRoadTool(tool) ? <CrossSection tool={tool} /> : (
+              <>
+                <rect x="4" y="9" width="32" height="6" rx="1" fill="#968b79" />
+                {[7, 12, 17, 22, 27, 32].map((x) => <rect key={x} x={x} y="8" width="2" height="8" fill="#6e4b30" />)}
+                <rect x="4" y="10" width="32" height="1" fill="#cfd5dc" />
+                <rect x="4" y="13" width="32" height="1" fill="#cfd5dc" />
+              </>
+            )}
           </svg>
         }
-        name={spec.name}
-        cost={`$${(spec.cost * spec.width).toLocaleString()}/quadrado`}
+        name={spec?.name ?? 'Trilhos'}
+        cost={`$${(spec ? spec.cost * spec.width : BALANCE.railCost).toLocaleString()}/quadrado`}
         onChange={fold.unfold}
       />
     );
@@ -228,7 +235,10 @@ function RoadPickerPanel() {
           type="button"
           className={`road-card ${tool === 'rail' ? 'is-active' : ''}`}
           aria-pressed={tool === 'rail'}
-          onClick={() => game?.setTool('rail')}
+          onClick={() => {
+            game?.setTool('rail');
+            fold.chosen();
+          }}
           title="Rail: trains between stations take commuters off the roads. Crosses streets at right angles. Needs the Rapid transit research in new cities."
         >
           <svg viewBox="0 0 40 24" width="56" height="34" aria-hidden="true" className="road-section">

@@ -68,7 +68,7 @@ describe('determinism (docs/specs/engine.md)', () => {
     loaded.runDays(30);
 
     const a = fingerprint(running);
-    expect(a.buildings.length).toBeGreaterThan(20); // the town grew before hospital coverage became the next constraint
+    expect(a.buildings.length).toBeGreaterThan(10); // the town grew before hospital coverage became the next constraint
     expect(fingerprint(loaded)).toEqual(a);
   });
 

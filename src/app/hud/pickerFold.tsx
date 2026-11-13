@@ -4,22 +4,22 @@ import { toolPreviewAtom } from '../atoms';
 import { SMALL_UI, useMedia } from '../mobile/useMedia';
 
 export interface PickerFold {
-  /** A phone layout, where the picker folds away once something is chosen. */
+  /** Whether the viewport uses the compact layout. */
   readonly small: boolean;
   /** Folded to a chip showing the choice. */
   readonly folded: boolean;
   /** A finished touch drag waits for Build or Cancel: the picker steps aside entirely. */
   readonly drafting: boolean;
-  /** Something was chosen: on phones, fold so the map is free to place it. */
+  /** Something was chosen: fold so the map is free to place it. */
   chosen: () => void;
   unfold: () => void;
 }
 
 /**
- * Phones (D-097): a picker is for choosing, the map is for placing. Once the player picks a
- * building or road type the picker folds into a chip ("Park $100 · Change"), and while a drag
- * waits for Build / Cancel it hides. Mount the hook inside a component that mounts when its tool
- * is picked, so every visit starts unfolded.
+ * A picker is for choosing, the map is for placing. Once the player picks a
+ * building or road type the picker folds into a chip with a way to choose again. On compact
+ * layouts, it hides while a drag waits for Build / Cancel. Mount the hook inside a component
+ * that mounts when its tool is picked, so every visit starts unfolded.
  */
 export function usePickerFold(): PickerFold {
   const small = useMedia(SMALL_UI);
@@ -27,7 +27,7 @@ export function usePickerFold(): PickerFold {
   const [folded, setFolded] = useState(false);
   return {
     small,
-    folded: small && folded,
+    folded,
     drafting: small && drafting,
     chosen: () => setFolded(true),
     unfold: () => setFolded(false),
@@ -55,7 +55,7 @@ export function PickerChip({ kind, picture, name, cost, onChange }: PickerChipPr
         <span className="card-cost">{cost}</span>
       </span>
       <button type="button" className="chip-change" onClick={onChange}>
-        Change
+        Trocar
       </button>
     </div>
   );

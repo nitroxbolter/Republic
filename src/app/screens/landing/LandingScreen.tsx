@@ -1,5 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 import { authAtom, authDialogAtom } from '../../atoms';
+import { appPath } from '../../basePath';
 import { heroAnchor, HeroCity } from './HeroCity';
 
 interface LandingScreenProps {
@@ -55,6 +56,7 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
     <div className="landing">
       <header className="landing-nav">
         <span className="landing-wordmark">Republica</span>
+        <a className="landing-wiki-link" href={appPath('wiki')}>Wiki · Como jogar</a>
         {online && (
           <nav className="landing-nav-actions" aria-label="Account">
             <button type="button" className="landing-text-button" onClick={() => openDialog('login')}>
@@ -101,6 +103,7 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
                 </button>
               )}
             </div>
+            <a className="landing-wiki-cta" href={appPath('wiki')}>Explorar a Wiki: construções, impostos e moradores →</a>
             <p className="landing-aside">
               {online && !localAccount && (
                 <>

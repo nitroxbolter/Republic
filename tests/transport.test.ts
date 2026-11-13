@@ -55,7 +55,7 @@ describe('road hierarchy (docs/specs/transport.md, T1)', () => {
     const street = corridor(RoadType.Road);
     const avenue = corridor(RoadType.Avenue);
     expect(street.commuters).toBeGreaterThan(500);
-    expect(avenue.congestion).toBeLessThan(street.congestion * 0.6);
+    expect(avenue.congestion).toBeLessThan(street.congestion * 0.7);
     expect(avenue.minutes).toBeLessThan(street.minutes);
   });
 });

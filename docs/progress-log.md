@@ -561,4 +561,8 @@ Integração de aluguel, água e energia por edifício, balanço do proprietári
 
 ## 2026-11-13 — Crescimento sem empregos
 
-Casas vagas agora atraem moradores mesmo sem vagas de trabalho; empregos contribuem com até 10% da ocupação e da demanda residencial. Impostos extremos param novas chegadas e falta de hospitais após seu desbloqueio causa estagnação e mais mortes. O saldo fracionário da mortalidade é salvo para manter a continuidade da cidade.
+Casas vagas agora atraem moradores mesmo sem vagas de trabalho; empregos contribuem com até 10% da ocupação residencial. Impostos extremos param novas chegadas e falta de hospitais após seu desbloqueio causa estagnação e mais mortes. O saldo fracionário da mortalidade é salvo para manter a continuidade da cidade.
+
+## 2026-11-13 — Capacidades e Wiki do jogador
+
+Casas, apartamentos e escritórios podem iniciar obras sem exigir trabalhadores prévios. A demanda por obras residenciais considera moradores e capacidade já construída; a demanda por escritórios usa moradias, mercado e formados. Prédio de apartamentos, conjunto e torre residencial comportam respectivamente 35, 200 e 380 pessoas. O orçamento mostra médias de aluguel e imposto por classe. Adicionados guia do jogador, rota `/wiki`, acesso nas duas telas iniciais, catálogo pesquisável com miniaturas reais, simulador de contas e cenários interativos.

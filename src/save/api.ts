@@ -17,6 +17,7 @@ import type {
   TourResponse,
   TrackRequest,
 } from '../shared/api';
+import { appPath } from '../app/basePath';
 
 /** Typed client for the save server (docs/specs/saving.md, "Server"). */
 
@@ -55,7 +56,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const text = body === undefined ? undefined : JSON.stringify(body);
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(appPath(`api${path}`), {
       method,
       headers: text === undefined ? undefined : { 'content-type': 'application/json' },
       body: text,

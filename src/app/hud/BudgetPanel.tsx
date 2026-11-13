@@ -2,6 +2,7 @@ import { useAtomValue } from 'jotai';
 import { useRef } from 'react';
 import type { UtilityTotals } from '../../sim/systems/utilities';
 import { BALANCE } from '../../shared/balance';
+import { Lifestyle } from '../../sim/buildings/catalog';
 import type { BudgetReport } from '../../sim/systems/budget';
 import { BASE_COSTS, COST_KINDS, livingCosts, type CostKind } from '../../sim/systems/livingCosts';
 import { budgetAtom, gameAtom } from '../atoms';
@@ -111,8 +112,14 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
   const demography = useOverlay('demography');
   if (!info) return null;
   const incomeTaxPerWorker = info.minimumWage * info.incomeTaxRate / 100;
-  const worker = livingCosts(info.minimumWage - incomeTaxPerWorker, info.costTaxRates);
-  const senior = livingCosts(info.pensionPerSenior, info.costTaxRates);
+  const averageBills = {
+    ...BASE_COSTS,
+    housing: info.forecast.costBalances.housing.billPerResident,
+    energy: info.forecast.costBalances.energy.billPerResident,
+    water: info.forecast.costBalances.water.billPerResident,
+  };
+  const worker = livingCosts(info.minimumWage - incomeTaxPerWorker, info.costTaxRates, undefined, averageBills);
+  const senior = livingCosts(info.pensionPerSenior, info.costTaxRates, undefined, averageBills);
   const pensionGap = info.forecast.incomeTaxRevenue - info.forecast.breakdown.pensions;
   return (
     <>
@@ -198,8 +205,30 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
             <span className={`tax-hint ${balance.net < 0 ? 'warn-text' : ''}`}>Governo: arrecada {money(balance.revenue)}, custa {money(balance.upkeep)}, saldo {money(balance.net)}/mês.</span>
           </label>;
         })}
-        <div className="budget-line total"><span>Cesta de referência por pessoa</span><strong>{money(worker.base)}/mês</strong></div>
-        <div className="budget-line"><span>Impostos das contas por pessoa</span><strong>{money(worker.categoryTax)}/mês</strong></div>
+        <div className="budget-line total"><span>Custo médio por pessoa</span><strong>{money(worker.base)}/mês</strong></div>
+        <div className="budget-line"><span>Impostos médios das contas por pessoa</span><strong>{money(worker.categoryTax)}/mês</strong></div>
+      </div>
+
+      <h3 className="budget-heading">Aluguel médio por classe</h3>
+      <div className="budget-card budget-lines">
+        {([
+          [Lifestyle.Basic, 'Baixa'],
+          [Lifestyle.Comfortable, 'Média'],
+          [Lifestyle.Prosperous, 'Alta'],
+        ] as const).map(([tier, label]) => {
+          const row = info.forecast.housingByClass[tier];
+          return <div className="budget-category-balance" key={tier}>
+            <div className="budget-line"><strong>Classe {label}</strong><span>{row.residents.toLocaleString('pt-BR')} moradores</span></div>
+            {row.residents > 0 ? <>
+              <div className="budget-line dim"><span>Aluguel médio</span><strong>{money(row.rentPerResident)}/mês</strong></div>
+              <div className="budget-line dim"><span>Imposto médio de moradia</span><strong>{money(row.taxPerResident)}/mês</strong></div>
+              <div className="budget-line total"><span>Desconto previsto por pessoa</span><strong>{money(row.rentPerResident + row.taxPerResident)}/mês</strong></div>
+              {row.paidPerResident < row.rentPerResident + row.taxPerResident - 1 &&
+                <div className="budget-line warn-text"><span>Efetivamente pago, limitado pela renda</span><strong>{money(row.paidPerResident)}/mês</strong></div>}
+            </> : <p className="tax-hint">Sem moradores nesta classe.</p>}
+          </div>;
+        })}
+        <p className="tax-hint">A média considera os moradores de cada classe. O aluguel real depende do edifício e é dividido entre seus ocupantes; subsídios reduzem a conta. Aluguel e imposto de moradia saem mensalmente do salário ou da aposentadoria.</p>
       </div>
 
       <h3 className="budget-heading">Resultado mensal de cada conta</h3>
@@ -229,8 +258,8 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="budget-card budget-income-cards">
-        <div><span>Após descontos do salário</span><strong>{money(worker.disposable)}/mês</strong></div>
-        <div><span>Após descontos da aposentadoria</span><strong>{money(senior.disposable)}/mês</strong></div>
+        <div><span>Após descontos do salário mínimo (média)</span><strong>{money(worker.disposable)}/mês</strong></div>
+        <div><span>Após descontos da aposentadoria (média)</span><strong>{money(senior.disposable)}/mês</strong></div>
         {(worker.shortfall > 0 || senior.shortfall > 0) && <p className="tax-hint warn-text">Renda insuficiente: faltam {money(worker.shortfall)} por trabalhador e {money(senior.shortfall)} por idoso. A arrecadação é limitada ao valor que podem pagar.</p>}
       </div>
 

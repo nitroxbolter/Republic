@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../save/api';
 import { API_LIMITS } from '../../shared/api';
 import { authDialogAtom, authNoticeAtom, authProvidersAtom } from '../atoms';
+import { appPath } from '../basePath';
 import { useAuth } from '../auth';
 import { clock, passwordStrength, validate, type AuthFields, type AuthMode } from './authForm';
 import { CodeStep, ForgotStep } from './CodeSteps';
@@ -47,7 +48,7 @@ export function GithubMark() {
 /** Leave for GitHub's sign-in page; the server sends the player back to where they were. */
 export function signInWithGithub() {
   const returnTo = location.pathname + location.search;
-  location.href = `/api/auth/github?returnTo=${encodeURIComponent(returnTo)}`;
+  location.href = `${appPath('api/auth/github')}?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
 /**

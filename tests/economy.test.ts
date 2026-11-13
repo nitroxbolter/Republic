@@ -146,7 +146,7 @@ describe('budget', () => {
 
     homes[0].watered = false;
     expect(monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates).costBalances.water.residents).toBe(60);
-    const limited = monthlyBudget(t.world, BALANCE.baseTaxRate, 900, 900, rates);
+    const limited = monthlyBudget(t.world, BALANCE.baseTaxRate, 0, 900, rates);
     expect(limited.costBalances.water.revenue).toBeGreaterThan(0);
     expect(limited.costBalances.water.revenue).toBeLessThan(limited.costBalances.water.nominalBase + limited.costBalances.water.nominalTax);
     const poor = monthlyBudget(t.world, BALANCE.baseTaxRate, 0, 500, rates);
@@ -383,7 +383,7 @@ describe('garbage', () => {
 });
 
 describe('shops and demand', () => {
-  it('shop demand rises with homes; a high tax rate holds every zone back', () => {
+  it('shop demand rises with homes; high company tax does not directly block housing or office construction', () => {
     const t = street();
     const before = zoneDemand(t.world).c;
     for (let x = 4; x < 20; x++) t.place('walkup', x, 11);
@@ -391,10 +391,9 @@ describe('shops and demand', () => {
     expect(zoneDemand(t.world).c).toBeGreaterThan(before);
     const low = zoneDemand(t.world, BALANCE.baseTaxRate);
     const high = zoneDemand(t.world, BALANCE.maxTaxRate);
-    // Bars already pinned at −1 can't fall further; the rest must.
-    for (const k of ['r', 'c', 'o', 'i'] as const) expect(high[k], k).toBeLessThanOrEqual(low[k]);
-    const sum = (d: typeof low) => d.r + d.c + d.o + d.i;
-    expect(sum(high)).toBeLessThan(sum(low));
+    expect(high.r).toBeLessThanOrEqual(low.r);
+    expect(high.o).toBeLessThanOrEqual(low.o);
+    for (const k of ['c', 'i'] as const) expect(high[k], k).toBeLessThanOrEqual(low[k]);
   });
 
   it('demand never leaves −1..1, even in extreme cities', () => {

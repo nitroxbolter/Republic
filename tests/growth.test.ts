@@ -235,8 +235,7 @@ describe('growth', () => {
 });
 
 describe('demand explanations (master plan §6.4)', () => {
-  it('offices and industry wait while jobs outnumber workers, and say homes fix it', () => {
-    // A few homes and already plenty of offices: commercial demand is negative.
+  it('office oversupply can pause construction independently of available workers', () => {
     const w = new World(24, 12, 3);
     w.terrain.fill(Terrain.Grass);
     const city = new City(w, 1e9);
@@ -248,11 +247,39 @@ describe('demand explanations (master plan §6.4)', () => {
     // Four offices (160 jobs) for four cottages (12 residents): far more jobs than workers.
     expect(zoneDemand(w).o).toBeLessThan(0);
     expect(zoneDemand(w).i).toBeLessThan(0); // industry doesn't build jobs nobody can staff either
-    expect(explainDemand(w).o).toMatch(/empregos a mais que trabalhadores\. Moradias atraem trabalhadores/);
+    expect(explainDemand(w).o).toMatch(/já atendem à procura atual/);
     expect(zoneDemand(w).r).toBeGreaterThan(0); // and homes are wanted
     const g = growDay(w, mulberry32(1));
-    expect(g.waiting.o).toBe(4); // the four office lots wait, and growth says so
+    expect(g.waiting.o).toBe(4);
     expect(g.started).toHaveLength(0);
+  });
+
+  it('starts houses and apartments without jobs when residents need housing', () => {
+    const { w, city } = town();
+    for (let x = 1; x <= 5; x++) {
+      applyPlace(city, planPlace(w, 'walkup', x, 4), 0);
+      const b = [...w.buildings.values()].at(-1)!;
+      b.occupants = 30;
+    }
+    zone(city, 8, 7, 8, 7, ZoneType.Residential);
+    zone(city, 9, 7, 9, 7, ZoneType.ResidentialHigh);
+    expect(cityStats(w).workers).toBe(0);
+    expect(zoneDemand(w, city.taxRate, city).r).toBeGreaterThan(0);
+    expect(diagnoseLot(city, 8, 7)?.reason).toBe('queued');
+    expect(diagnoseLot(city, 9, 7)?.reason).toBe('queued');
+    const result = growDay(w, mulberry32(2), city.taxRate, undefined, city);
+    expect(result.started).toHaveLength(2);
+    expect(result.started.map((id) => BUILDINGS[w.buildings.get(id)!.def].density).sort()).toEqual(['high', 'low']);
+  });
+
+  it('starts an office with no existing residents or workers', () => {
+    const { w, city } = town();
+    zone(city, 9, 7, 9, 7, ZoneType.CommercialHigh);
+    expect(cityStats(w).workers).toBe(0);
+    expect(diagnoseLot(city, 9, 7)?.reason).toBe('queued');
+    const result = growDay(w, mulberry32(2), city.taxRate, undefined, city);
+    expect(result.started).toHaveLength(1);
+    expect(BUILDINGS[w.buildings.get(result.started[0])!.def].density).toBe('high');
   });
 });
 

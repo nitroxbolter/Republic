@@ -23,7 +23,7 @@ import type { City } from '../City';
 import type { DayOutcome, SimSystem } from '../core/System';
 import { materialsFor, UNLIMITED, type MaterialStock } from './materials';
 import { techEffects } from '../research';
-import { economyReport, effectiveJobs, type HouseholdPolicy } from './economy';
+import { economyReport, type HouseholdPolicy } from './economy';
 import { initialProperty } from './realEstate';
 import { migrationOutlook } from './demography';
 
@@ -121,8 +121,8 @@ function ratio(want: number, have: number, floor: number): number {
 }
 
 /**
- * Homes need jobs and jobs follow homes. Supply counts every building, including sites
- * under construction, so demand drops as soon as a lot starts and growth doesn't overshoot.
+ * Homes and offices can be built without available jobs. Supply counts construction sites,
+ * so demand falls when enough new floor space is already on its way.
  */
 /** Higher taxes than the base rate cool demand, lower ones warm it (docs/specs/core.md). */
 /** What demand is made of: capacities built, capacities wanted, and the tax effect. */
@@ -165,12 +165,7 @@ function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): 
     else civic += d.capacity;
   }
   const structuralJobs = shops + offices + industrial + civic;
-  let jobs = civic;
-  for (const b of world.buildings.values()) {
-    const d = BUILDINGS[b.def];
-    if (d.category === 'commercial' || d.category === 'industrial') jobs += effectiveJobs(b, economy);
-  }
-  // Zone supply uses structural jobs to avoid building duplicate offices/industry just because
+  // Industrial supply uses structural jobs to avoid building duplicates just because
   // a tax shock temporarily lowered current production and staffing.
   const openJobs = housing * BALANCE.workforceShare * BALANCE.jobSlack - structuralJobs;
   const city = policy && 'demography' in policy ? policy as City : undefined;
@@ -182,9 +177,9 @@ function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): 
     offices,
     industrial,
     openJobs,
-    wantR: ((population * BALANCE.housingSlack + BALANCE.seedHousing) + BALANCE.housingJobInfluence * Math.max(0, (jobs / BALANCE.workforceShare) * BALANCE.housingSlack - population * BALANCE.housingSlack)) * outlook,
+    wantR: (population * BALANCE.housingSlack + BALANCE.seedHousing) * outlook,
     wantShops: (housing * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs) * economy.purchasingPower,
-    wantOffices: offices + openJobs * BALANCE.officeJobShare + graduates * BALANCE.graduateOfficeJobs,
+    wantOffices: BALANCE.seedOfficeJobs + housing * BALANCE.officeJobsPerHousingResident * economy.purchasingPower + graduates * BALANCE.graduateOfficeJobs,
     wantI: industrial + openJobs * (1 - BALANCE.officeJobShare) + BALANCE.seedIndustrialJobs,
     graduates,
   };
@@ -220,14 +215,16 @@ export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRat
       (outlook <= 0
         ? 'A imigração está parada: faltam hospitais nas áreas residenciais ou os impostos estão extremos.'
         : x.wantR > x.housing
-          ? `Há procura por cerca de ${n(x.wantR - x.housing)} vagas de moradia, mesmo sem novos empregos.`
-          : 'As moradias disponíveis atendem à demanda atual. Novos moradores podem ocupar as vagas existentes.') + taxNote,
+          ? `Há procura por cerca de ${n(x.wantR - x.housing)} vagas de moradia, mesmo sem novos empregos. A ocupação depende das condições da cidade.`
+          : 'As moradias prontas ou em construção já atendem à procura atual. Novos moradores podem ocupar as vagas existentes.') + taxNote,
     c:
       (x.wantShops > x.shops
         ? `Os moradores querem cerca de ${n(x.wantShops - x.shops)} novos empregos em lojas próximas.`
         : `Já há lojas suficientes (${n(x.shops)} empregos) para os moradores. Mais moradias aumentam a demanda.`) + taxNote,
     o:
-      (x.openJobs > 0 ? `Os trabalhadores poderiam ocupar cerca de ${n(x.openJobs * BALANCE.officeJobShare)} novos empregos em escritórios.` : tooManyJobs) +
+      (x.wantOffices > x.offices
+        ? `Há procura por cerca de ${n(x.wantOffices - x.offices)} vagas em escritórios, sem exigir trabalhadores disponíveis agora. A ocupação depende de trabalhadores e da economia.`
+        : 'Os escritórios prontos ou em construção já atendem à procura atual. Novas moradias e formados podem aumentar a demanda, sem exigir vagas de trabalho prévias.') +
       (x.graduates >= 1 ? ` Formados querem cerca de ${n(x.graduates * BALANCE.graduateOfficeJobs)} empregos em escritórios.` : '') +
       taxNote,
     i: (x.openJobs > 0 ? `Os trabalhadores poderiam ocupar cerca de ${n(x.openJobs * (1 - BALANCE.officeJobShare))} novos empregos industriais.` : tooManyJobs) + taxNote,
@@ -323,7 +320,7 @@ export function diagnoseLot(city: City, x: number, y: number, importsUsed = 0): 
       : reason === 'materials'
         ? `O estoque mais a importação disponível hoje não cobre o primeiro edifício deste terreno. Produza materiais na indústria ou aguarde a reposição diária.`
         : reason === 'noModel'
-          ? 'Ainda não há um edifício elegível para esta densidade. Melhore a ocupação, a satisfação e os empregos da cidade.'
+          ? 'Ainda não há um edifício elegível para esta densidade. Verifique o nível da cidade e a confiança dos investidores.'
           : reason === 'permitLimit'
             ? 'O limite mensal de novas construções desta zona foi atingido. Ajuste as licenças na Política Demográfica ou aguarde o mês seguinte.'
           : `A demanda está positiva. O jogo inicia até ${Math.ceil(demandFor(context.demand, zone) * BALANCE.growthPerDay)} novos terrenos desta zona por dia, escolhidos entre todos os terrenos aptos. Deixe o tempo avançar.`;

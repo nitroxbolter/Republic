@@ -2,6 +2,7 @@ import type { GameOptions } from '../game/Game';
 import { formatCityRef, parseCityRef, type CityRef } from '../save/SaveStore';
 import { DEFAULT_MAP_SIZE, MAP_SIZES } from '../shared/constants';
 import { PRESET_IDS, PRESETS, presetSettings, type PresetId } from '../sim/terrain/presets';
+import { appPath, isAppPath } from './basePath';
 
 /**
  * A new city's options live in the URL until its first save (then `?city=` takes over), so a
@@ -77,7 +78,7 @@ export function writeCityUrl(ref: CityRef) {
 
 /** The /demo route: a planned, fully grown city on River Valley (`/demo?seed=N` for another). */
 export function isDemoRoute(): boolean {
-  return location.pathname.replace(/\/+$/, '') === '/demo';
+  return isAppPath('demo');
 }
 
 export function demoOptions(seed = Number(new URLSearchParams(location.search).get('seed')) || DEFAULT_SEED): GameOptions {
@@ -86,7 +87,7 @@ export function demoOptions(seed = Number(new URLSearchParams(location.search).g
 
 /** Keep the demo's seed in the URL (so a reload shows the same city). */
 export function writeDemoUrl(seed: number) {
-  history.replaceState(null, '', `/demo?seed=${seed}`);
+  history.replaceState(null, '', `${appPath('demo')}?seed=${seed}`);
 }
 
 export function randomSeed(): number {

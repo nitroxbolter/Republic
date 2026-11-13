@@ -7,22 +7,26 @@ import type { CityRef } from '../save/SaveStore';
 import { AuthDialog } from './account/AuthDialog';
 import { track, trackVisit } from './analytics';
 import { authAtom } from './atoms';
+import { appPath, isAppPath } from './basePath';
 import { useAuthBootstrap } from './auth';
 import { clearUrlOptions, demoOptions, isDemoRoute, readCityRef, readUrlOptions, writeCityUrl, writeDemoUrl, writeUrlOptions } from './options';
 import { GameScreen } from './screens/GameScreen';
 import { LoadingScreen } from './screens/LoadingScreen';
 import { NewGameScreen } from './screens/NewGameScreen';
+import { WikiScreen } from './screens/wiki/WikiScreen';
 import { guestAtom, setChoseGuest } from './screens/landing/guest';
 import { LandingScreen } from './screens/landing/LandingScreen';
 
 /** What's on screen. A playing city knows its save (null for a new or demo city). */
 type Screen =
   | { readonly kind: 'menu'; readonly notice?: string }
+  | { readonly kind: 'wiki' }
   | { readonly kind: 'recovering' }
   | { readonly kind: 'loading'; readonly ref: CityRef }
   | { readonly kind: 'play'; readonly options: GameOptions; readonly ref: CityRef | null };
 
 function initialScreen(): Screen {
+  if (isAppPath('wiki')) return { kind: 'wiki' };
   if (isDemoRoute()) return { kind: 'play', options: demoOptions(), ref: null };
   // A new city closed before its first save is in the journal: store it, then reopen it.
   if (hasJournal('new')) return { kind: 'recovering' };
@@ -106,7 +110,7 @@ export function App() {
   };
 
   const toMenu = useCallback(() => {
-    if (isDemoRoute()) history.replaceState(null, '', '/');
+    if (isDemoRoute()) history.replaceState(null, '', appPath());
     else clearUrlOptions();
     setScreen({ kind: 'menu' });
   }, []);
@@ -117,12 +121,13 @@ export function App() {
   };
   // Visitors who aren't signed in meet the landing page first; signing in or choosing guest moves on.
   const menu = screen.kind === 'menu';
-  const loginRequired = localAccount && auth.status !== 'user' && !menu && !(screen.kind === 'play' && screen.options.demo);
+  const loginRequired = localAccount && auth.status !== 'user' && !menu && screen.kind !== 'wiki' && !(screen.kind === 'play' && screen.options.demo);
   const landing = (menu && auth.status === 'guest' && (localAccount || !guest)) || (loginRequired && auth.status === 'guest');
 
   return (
     <>
       {menu && auth.status === 'checking' && <div className="landing-blank" />}
+      {screen.kind === 'wiki' && <WikiScreen />}
       {loginRequired && auth.status === 'checking' && <div className="landing-blank" />}
       {landing && <LandingScreen onPlay={playAsGuest} onDemo={() => start(demoOptions())} />}
       {menu && !landing && auth.status !== 'checking' && <NewGameScreen onStart={start} onOpen={open} notice={screen.notice} />}

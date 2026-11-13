@@ -91,10 +91,10 @@ describe('water', () => {
   it('a tower serves only up to its capacity; the next tower in reach takes over', () => {
     const t = street();
     t.place('water_tower', 20, 9); // 2,500
-    // Ten condo towers (260 each), all within 14 tiles of the tower.
+    // Ten condo towers (380 each), all within 14 tiles of the tower.
     const condos = [8, 10, 12, 14, 16, 18, 22, 24, 26, 28].map((x) => t.place('condo_tower', x, 11));
     t.refresh();
-    expect(condos.filter((c) => c.watered)).toHaveLength(9);
+    expect(condos.filter((c) => c.watered)).toHaveLength(6);
     t.place('water_tower', 21, 9);
     t.refresh();
     expect(condos.every((c) => c.watered)).toBe(true);

@@ -130,7 +130,7 @@ export const BUILDINGS = {
     level: 2,
     size: { w: 1, h: 1 },
     cost: 700,
-    capacity: 24,
+    capacity: 35,
     description: 'Quatro andares de apartamentos de tijolos com sacadas.',
   },
   apartment_block: {
@@ -141,7 +141,7 @@ export const BUILDINGS = {
     level: 3,
     size: { w: 2, h: 2 },
     cost: 2400,
-    capacity: 120,
+    capacity: 200,
     description: 'Um prédio de altura média com sacadas e caixa-d’água no terraço.',
   },
   condo_tower: {
@@ -152,7 +152,7 @@ export const BUILDINGS = {
     level: 3,
     size: { w: 2, h: 2 },
     cost: 5200,
-    capacity: 260,
+    capacity: 380,
     description: 'Uma torre residencial de vidro com terraços.',
   },
   villa: {

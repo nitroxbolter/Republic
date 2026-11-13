@@ -1,34 +1,12 @@
 import { useAtomValue } from 'jotai';
-import { useEffect, useRef, useState } from 'react';
-import { buildingFrameSize, paintBuilding } from '../../render/atlas/buildings';
+import { useState } from 'react';
 import { BUILDINGS, PLACEABLE_IDS, type BuildingDef, type BuildingId, type CivicGroup } from '../../sim/buildings/catalog';
 import type { ZoneToolId } from '../../game/tools';
 import { STAGES, unlockStage, unlockTech } from '../../sim/stages';
 import { TECHS } from '../../sim/research';
 import { activeToolAtom, buildingChoiceAtom, cityAtom, fundsAtom, gameAtom } from '../atoms';
 import { PickerChip, usePickerFold } from './pickerFold';
-
-const CARD_THUMB = 64;
-
-/** Paints the building with the same code as the in-game atlas, scaled to fit the card. */
-function BuildingThumb({ id, size = CARD_THUMB }: { id: BuildingId; size?: number }) {
-  const THUMB = size;
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const f = buildingFrameSize(id);
-    const scale = Math.min(THUMB / f.w, THUMB / f.h);
-    canvas.width = THUMB * dpr;
-    canvas.height = THUMB * dpr;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, ((THUMB - f.w * scale) / 2) * dpr, (THUMB - f.h * scale) * dpr);
-    paintBuilding(ctx, id, 0, 0, { stillParts: true });
-  }, [id, THUMB]);
-  return <canvas ref={ref} className="building-thumb" style={{ width: THUMB, height: THUMB }} aria-hidden="true" />;
-}
+import { BuildingThumb } from '../screens/wiki/BuildingThumb';
 
 const GROUPS: readonly { id: CivicGroup; label: string; hint: string }[] = [
   { id: 'services', label: 'Serviços', hint: 'Cada serviço atende a área ao redor. Casas atendidas são mais felizes; polícia, bombeiros, clínica e escola permitem o crescimento de torres.' },

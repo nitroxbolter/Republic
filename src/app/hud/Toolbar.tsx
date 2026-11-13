@@ -207,8 +207,8 @@ const ZONES_BUTTON: ToolDef = {
 
 /**
  * Phones held upright (D-097): one thumb-height row of five (Select, Clear, Civic, Zones, Roads)
- * that fits without scrolling. The five zone types sit in a row that opens above Zones, and stays
- * open while a zone tool is in use.
+ * that fits without scrolling. The five zone types sit in a row that opens above Zones and
+ * closes after a type is chosen, leaving the zone tool active on the map.
  */
 function PhoneDock() {
   const game = useAtomValue(gameAtom);
@@ -216,7 +216,7 @@ function PhoneDock() {
   const isActive = isActiveIn(active);
   const zoning = isZoneTool(active);
   const [zonesOpen, setZonesOpen] = useState(false);
-  const showZones = zonesOpen || zoning;
+  const showZones = zonesOpen;
   const byId = (id: ToolId) => TOOLS.find((t) => t.id === id)!;
   /** Another dock tool: the zone row folds away. */
   const pick = (id: ToolId) => {
@@ -251,7 +251,10 @@ function PhoneDock() {
               className={`zone-chip ${t.tone ?? ''} ${isActive(t.id) ? 'is-active' : ''}`}
               data-tour={`tool-${t.id}`}
               aria-pressed={isActive(t.id)}
-              onClick={() => press(game, t.id, isActive(t.id))}
+              onClick={() => {
+                game?.setTool(t.id);
+                setZonesOpen(false);
+              }}
             >
               <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 {t.icon}
@@ -269,11 +272,7 @@ function PhoneDock() {
           ZONES_BUTTON,
           zoning,
           () => {
-            // Closing the row also puts a zone tool down.
-            if (showZones) {
-              setZonesOpen(false);
-              if (zoning) game?.setTool('select');
-            } else setZonesOpen(true);
+            setZonesOpen((open) => !open);
           },
           // The tour's "pick Homes" step points here until the row is open.
           showZones ? undefined : 'tool-zone-r',

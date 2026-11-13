@@ -90,7 +90,7 @@ export const BALANCE = {
   migrationIncomeTaxStop: 95,
   migrationPurchasingPowerSlow: 0.45,
   migrationPurchasingPowerStop: 0.1,
-  /** Jobs add at most this share to housing occupancy and residential demand. */
+  /** Missing jobs reduce housing occupancy by at most this share, without blocking construction. */
   housingJobInfluence: 0.1,
   /** Annual senior mortality after hospitals become available, at full and zero hospital coverage. */
   annualSeniorMortalityCared: 0.02,
@@ -150,19 +150,19 @@ export const BALANCE = {
   upgradeAfterDays: 20,
   /** City population needed before buildings can reach each level (index = level). */
   levelPopulation: [0, 0, 150, 1000],
-  /**
-   * Demand model (master plan §6.4, Demand v2). Shops follow residents; offices and industry
-   * share whatever jobs the workforce could still fill, so no zone builds jobs nobody can staff.
-   */
+  /** Shops follow residents; industry follows available workers. */
   shopJobsPerResident: 0.08,
-  /** Share of new non-shop jobs that go to offices (the rest to industry). */
+  /** Office construction follows residential capacity, independent of existing job vacancies. */
+  officeJobsPerHousingResident: 0.16,
+  /** Reserved share of available jobs when estimating industrial demand. */
   officeJobShare: 0.35,
   /** Jobs wanted per worker (a little over 1, so there are always a few openings). */
   jobSlack: 1.05,
-  /** Housing wanted per resident the jobs could employ (> 1 so the city keeps growing). */
+  /** Housing wanted per existing resident (> 1 so the city keeps growing). */
   housingSlack: 1.2,
   /** Demand that a new town starts with: residents, shop jobs and industrial jobs. */
   seedHousing: 40,
+  seedOfficeJobs: 40,
   seedCommercialJobs: 6,
   seedIndustrialJobs: 20,
 

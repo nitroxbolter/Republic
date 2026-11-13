@@ -1606,6 +1606,24 @@ button.funds:hover {
   top: 16px;
   right: 16px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ng-wiki-link {
+  padding: 8px 12px;
+  border: 1px solid var(--border-panel);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.ng-wiki-link:hover,
+.ng-wiki-link:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .ng-notice {
   margin: 0;
@@ -2789,6 +2807,32 @@ button.funds:hover {
   align-items: center;
   gap: 18px;
 }
+.landing-wiki-link,
+.landing-wiki-cta {
+  color: var(--sign);
+  font-weight: 700;
+  text-decoration: none;
+}
+.landing-wiki-link {
+  margin-left: auto;
+  margin-right: 24px;
+  font-size: 14px;
+}
+.landing-wiki-cta {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 14px;
+}
+.landing-wiki-link:hover,
+.landing-wiki-cta:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.landing-wiki-link:focus-visible,
+.landing-wiki-cta:focus-visible {
+  outline: 2px solid var(--sign);
+  outline-offset: 4px;
+}
 .landing-text-button,
 .landing-link {
   padding: 0;
@@ -3177,6 +3221,154 @@ button.funds:hover {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ---------- Player wiki ---------- */
+.wiki-page {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background: radial-gradient(circle at 80% -10%, #203b3d 0, #111b26 40%, #0c1520 100%);
+  color: #edf2f4;
+  font-family: var(--font);
+}
+.wiki-header,
+.wiki-main,
+.wiki-footer {
+  width: min(1180px, calc(100% - 40px));
+  margin-inline: auto;
+}
+.wiki-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 0;
+  border-bottom: 1px solid rgba(222, 237, 235, 0.16);
+}
+.wiki-brand {
+  color: #f7eee0;
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.wiki-brand span { color: #f3b84c; }
+.wiki-back { color: #b8d2d1; font-weight: 650; text-decoration: none; }
+.wiki-back:hover, .wiki-back:focus-visible { color: #f3b84c; }
+.wiki-title { padding: 48px 0 26px; max-width: 720px; }
+.wiki-title > span, .wiki-kicker {
+  color: #f3b84c;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+.wiki-title h1 { margin: 10px 0; font-family: var(--font-display); font-size: clamp(36px, 5vw, 66px); line-height: 1.05; }
+.wiki-title p, .wiki-intro > p:last-child { color: #b7c8cb; font-size: 16px; line-height: 1.65; }
+.wiki-tabs, .wiki-filters, .wiki-choice { display: flex; flex-wrap: wrap; gap: 8px; }
+.wiki-tabs { position: sticky; top: 0; z-index: 5; padding: 12px 0; background: #101b27; border-bottom: 1px solid rgba(222, 237, 235, 0.15); }
+.wiki-tabs button, .wiki-filters button, .wiki-choice button, .wiki-situation-list button {
+  border: 1px solid rgba(222, 237, 235, 0.18);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #dbe7e8;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.wiki-tabs button { padding: 10px 16px; }
+.wiki-tabs button[aria-current="page"], .wiki-filters button[aria-pressed="true"], .wiki-choice button[aria-pressed="true"], .wiki-situation-list button[aria-pressed="true"] {
+  border-color: #58cfc0;
+  background: rgba(78, 204, 192, 0.17);
+  color: #a6f0df;
+}
+.wiki-tabs button:hover, .wiki-filters button:hover, .wiki-choice button:hover, .wiki-situation-list button:hover { border-color: #58cfc0; }
+.wiki-page button:focus-visible, .wiki-page a:focus-visible, .wiki-page input:focus-visible, .wiki-page select:focus-visible, .wiki-page summary:focus-visible { outline: 2px solid #f3b84c; outline-offset: 3px; }
+.wiki-section { padding: 32px 0 80px; }
+.wiki-intro { max-width: 750px; margin-bottom: 26px; }
+.wiki-intro h2 { margin: 8px 0; font-size: clamp(25px, 3vw, 38px); }
+.wiki-intro > p:last-child { margin: 0; }
+.wiki-steps, .wiki-building-grid, .wiki-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.wiki-step, .wiki-building, .wiki-controls, .wiki-calculation, .wiki-situation-detail, .wiki-summary-grid article, .wiki-callout {
+  border: 1px solid rgba(222, 237, 235, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+}
+.wiki-step { padding: 22px; }
+.wiki-step > span { color: #f3b84c; font-weight: 800; }
+.wiki-step h3 { margin: 12px 0 6px; font-size: 19px; }
+.wiki-step p, .wiki-building p, .wiki-callout p, .wiki-situation-detail p { margin: 0; color: #b8c9cc; line-height: 1.6; }
+.wiki-callout { margin-top: 16px; padding: 24px; border-color: rgba(243, 184, 76, 0.45); background: rgba(243, 184, 76, 0.08); }
+.wiki-callout strong { font-size: 19px; }
+.wiki-callout p { margin: 8px 0 16px; }
+.wiki-callout button { border: 0; background: none; color: #f3b84c; padding: 0; font: inherit; font-weight: 800; cursor: pointer; }
+.wiki-subtitle { margin: 34px 0 10px; }
+.wiki-faq details { border-bottom: 1px solid rgba(222, 237, 235, 0.16); }
+.wiki-faq summary { padding: 15px 0; cursor: pointer; font-weight: 700; }
+.wiki-faq p { margin: 0 0 16px; color: #b8c9cc; line-height: 1.6; }
+.wiki-catalog-tools { display: grid; gap: 16px; }
+.wiki-search, .wiki-select { display: grid; gap: 7px; color: #b8c9cc; font-size: 13px; font-weight: 650; }
+.wiki-search input, .wiki-select select {
+  width: 100%; padding: 11px 13px; border: 1px solid rgba(222, 237, 235, 0.24); border-radius: 9px;
+  background: #172635; color: #edf2f4; font: inherit; font-size: 15px;
+}
+.wiki-filters button, .wiki-choice button { padding: 8px 12px; font-size: 13px; }
+.wiki-count, .wiki-note, .wiki-empty { color: #aabfc2; font-size: 13px; line-height: 1.55; }
+.wiki-count { margin: 20px 0 12px; }
+.wiki-building { padding: 17px; min-width: 0; }
+.wiki-building-head { display: flex; align-items: center; gap: 14px; }
+.wiki-thumb { flex: 0 0 104px; display: grid; place-items: center; width: 104px; height: 104px; border-radius: 12px; background: #233944; }
+.wiki-building-type { color: #63d6c8; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+.wiki-building h3 { margin: 4px 0; font-size: 17px; }
+.wiki-building-stage { color: #aabfc2; font-size: 12px; line-height: 1.45; }
+.wiki-building > p { margin: 14px 0; font-size: 13px; }
+.wiki-building-facts { display: flex; flex-wrap: wrap; gap: 7px; }
+.wiki-building-facts span { padding: 7px 9px; border-radius: 7px; background: rgba(255, 255, 255, 0.065); color: #bed0d1; font-size: 12px; }
+.wiki-building-facts strong { color: #f5efe3; }
+.wiki-economy-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr); gap: 16px; align-items: start; }
+.wiki-controls, .wiki-calculation { padding: 23px; }
+.wiki-controls { display: grid; gap: 17px; }
+.wiki-home-preview { display: flex; align-items: center; gap: 16px; padding: 10px; border-radius: 10px; background: #233944; }
+.wiki-home-preview div { display: grid; gap: 4px; }
+.wiki-home-preview span { color: #b8c9cc; font-size: 12px; }
+.wiki-slider { display: grid; gap: 7px; }
+.wiki-slider > span { display: flex; justify-content: space-between; gap: 12px; color: #b8c9cc; font-size: 13px; }
+.wiki-slider strong { color: #f4eee1; }
+.wiki-slider input { width: 100%; accent-color: #58cfc0; }
+.wiki-tax-controls { display: grid; gap: 14px; padding-top: 14px; border-top: 1px solid rgba(222, 237, 235, 0.16); }
+.wiki-calculation { position: sticky; top: 76px; }
+.wiki-calculation h3 { margin: 0 0 18px; }
+.wiki-calc-line { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid rgba(222, 237, 235, 0.11); font-size: 13px; }
+.wiki-calc-line strong { white-space: nowrap; }
+.wiki-calc-line.is-total { margin-top: 6px; color: #a6f0df; font-size: 17px; font-weight: 800; }
+.wiki-warning { color: #f6be7c; font-size: 13px; line-height: 1.5; }
+.wiki-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }
+.wiki-summary-grid article { display: grid; gap: 6px; padding: 17px; }
+.wiki-summary-grid strong { color: #f3b84c; font-size: 22px; }
+.wiki-summary-grid span { color: #b8c9cc; font-size: 12px; }
+.wiki-situations { display: grid; grid-template-columns: minmax(200px, 0.4fr) minmax(0, 1fr); gap: 16px; }
+.wiki-situation-list { display: grid; align-content: start; gap: 8px; }
+.wiki-situation-list button { display: flex; justify-content: space-between; gap: 10px; padding: 12px 14px; text-align: left; }
+.wiki-situation-detail { padding: 28px; min-height: 300px; }
+.wiki-situation-detail h3 { margin: 8px 0 26px; font-size: 28px; }
+.wiki-situation-detail h4 { margin: 20px 0 6px; color: #a6f0df; }
+.wiki-footer { padding: 26px 0 38px; border-top: 1px solid rgba(222, 237, 235, 0.16); color: #91a8ab; font-size: 12px; }
+@media (max-width: 800px) {
+  .wiki-building-grid, .wiki-economy-grid, .wiki-situations { grid-template-columns: 1fr; }
+  .wiki-calculation { position: static; }
+  .wiki-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .wiki-header, .wiki-main, .wiki-footer { width: min(1180px, calc(100% - 28px)); }
+  .wiki-title { padding-top: 32px; }
+  .wiki-tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .wiki-tabs button { white-space: nowrap; }
+  .wiki-steps, .wiki-summary-grid { grid-template-columns: 1fr; }
+  .wiki-building-head { align-items: flex-start; }
+  .wiki-thumb { flex-basis: 82px; width: 82px; height: 82px; }
+  .wiki-thumb canvas { max-width: 78px; max-height: 78px; }
+  .landing-wiki-link { margin-right: 0; }
+  .ng-wiki-link { font-size: 12px; }
 }
 
 /* ======================================================================
@@ -5603,7 +5795,7 @@ summary {
   }
 }
 
-/* ---------- Folded picker (phones, D-097): what's chosen, and Change ---------- */
+/* ---------- Folded picker: chosen item and a way to choose again ---------- */
 .is-chip.building-picker,
 .is-chip.road-picker {
   display: flex;

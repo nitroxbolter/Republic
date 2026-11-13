@@ -1,5 +1,5 @@
 import { BALANCE } from '../../shared/balance';
-import { BUILDINGS, upkeepOf, type BuildingDef, type BuildingId, type BuildingInstance, type ServiceKind } from '../buildings/catalog';
+import { BUILDINGS, Lifestyle, upkeepOf, type BuildingDef, type BuildingId, type BuildingInstance, type ServiceKind } from '../buildings/catalog';
 import { isWorking } from './utilities';
 import type { City } from '../City';
 import { BridgeAxis, RoadType } from '../roads';
@@ -35,6 +35,8 @@ export interface BudgetReport {
   businessTurnoverAfterTax: number;
   utilityRevenue: number;
   costBalances: Readonly<Record<CostKind, CostBalance>>;
+  /** Occupant-weighted monthly housing charges by residential lifestyle tier. */
+  housingByClass: Readonly<Record<Lifestyle, HousingClassBalance>>;
   /** All adults, including unemployed and temporarily unavailable residents. */
   workers: number;
   employed: number;
@@ -56,6 +58,13 @@ export interface CostBalance {
   revenue: number;
   upkeep: number;
   net: number;
+}
+
+export interface HousingClassBalance {
+  residents: number;
+  rentPerResident: number;
+  taxPerResident: number;
+  paidPerResident: number;
 }
 
 const SERVICE_UPKEEP_SHARE: Readonly<Partial<Record<ServiceKind, number>>> = {
@@ -157,6 +166,11 @@ export function monthlyBudget(
     housing: { residents: 0, base: 0, tax: 0, nominal: 0 },
     transport: { residents: 0, base: 0, tax: 0, nominal: 0 },
   };
+  const housingClasses: Record<Lifestyle, { residents: number; rent: number; tax: number; paid: number }> = {
+    [Lifestyle.Basic]: { residents: 0, rent: 0, tax: 0, paid: 0 },
+    [Lifestyle.Comfortable]: { residents: 0, rent: 0, tax: 0, paid: 0 },
+    [Lifestyle.Prosperous]: { residents: 0, rent: 0, tax: 0, paid: 0 },
+  };
   const propertyPayments = new Map<number, PropertyPayment>();
   let residentsCounted = 0;
   for (const b of world.buildings.values()) {
@@ -182,6 +196,14 @@ export function monthlyBudget(
       householdBills.surcharge = b.property?.loan ? Math.min(b.property.loan.payment, surchargeCapacity) / Math.max(1, occupants) : 0;
       const workerCosts = livingCosts(grossWage * (1 - incomeTaxRate / 100), costTaxRates, supplied, householdBills);
       const seniorCosts = livingCosts(pensionPerSenior, costTaxRates, supplied, householdBills);
+      if (occupants > 0) {
+        const housingClass = housingClasses[b.lifestyle];
+        housingClass.residents += occupants;
+        housingClass.rent += bill.rent - subsidy;
+        housingClass.tax += (bill.rent - subsidy) * costTaxRates.housing / 100;
+        housingClass.paid += paidWorkers * (workerCosts.housingPaid + workerCosts.charges.housing.tax)
+          + seniors * (seniorCosts.housingPaid + seniorCosts.charges.housing.tax);
+      }
       propertyPayments.set(b.id, { rent: paidWorkers * workerCosts.housingPaid + seniors * seniorCosts.housingPaid + subsidy, surcharge: paidWorkers * workerCosts.surchargePaid + seniors * seniorCosts.surchargePaid, operatingCost: bill.operatingCost });
       for (const kind of COST_KINDS) {
         if (kind === 'energy' && !supplied.energy || kind === 'water' && !supplied.water) continue;
@@ -239,6 +261,12 @@ export function monthlyBudget(
     };
   };
   const costBalances = { energy: balanceFor('energy'), water: balanceFor('water'), housing: balanceFor('housing'), transport: balanceFor('transport') };
+  const housingByClass = Object.fromEntries(Object.entries(housingClasses).map(([tier, row]) => [tier, {
+    residents: row.residents,
+    rentPerResident: row.residents ? row.rent / row.residents : 0,
+    taxPerResident: row.residents ? row.tax / row.residents : 0,
+    paidPerResident: row.residents ? row.paid / row.residents : 0,
+  }])) as Record<Lifestyle, HousingClassBalance>;
   const incomeTaxRevenue = Math.round(incomeTaxesPaid);
   const residentTaxRevenue = incomeTaxRevenue + COST_KINDS.reduce((sum, kind) => sum + costBalances[kind].taxRevenue, 0);
   const taxRevenue = residentTaxRevenue + businessTaxRevenue;
@@ -265,6 +293,7 @@ export function monthlyBudget(
     businessTurnoverAfterTax,
     utilityRevenue,
     costBalances,
+    housingByClass,
     workers: ages.adults,
     employed,
     unemployed,

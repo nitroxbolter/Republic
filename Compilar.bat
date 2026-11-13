@@ -14,6 +14,9 @@ if not exist "%BUN_EXE%" (
   set "BUN_EXE=bun"
 )
 
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\replace-exe.ps1" -CheckOnly
+if errorlevel 1 exit /b 1
+
 echo Compilando o jogo...
 "%BUN_EXE%" run build
 if errorlevel 1 (

@@ -3,6 +3,8 @@
 
 FROM oven/bun:1.4-alpine AS build
 WORKDIR /app
+ARG VITE_PUBLIC_BASE=/
+ENV VITE_PUBLIC_BASE=${VITE_PUBLIC_BASE}
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .

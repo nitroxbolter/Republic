@@ -22,7 +22,10 @@ services:
 
   app:
     profiles: [app]
-    build: .
+    build:
+      context: .
+      args:
+        VITE_PUBLIC_BASE: ${VITE_PUBLIC_BASE:-/}
     environment:
       DATABASE_URL: postgres://citybuilder:${POSTGRES_PASSWORD:-citybuilder}@postgres:5432/citybuilder
       # One reverse proxy (your HTTPS server) in front of the app.

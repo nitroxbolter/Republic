@@ -28,6 +28,17 @@ describe('building-based property economy', () => {
     expect(monthlyBudget(world, 0, 1100, 1200, rates).costBalances.housing.taxRevenue).toBe(3);
   });
 
+  it('reports occupant-weighted rent and housing tax by residential class', () => {
+    const { world } = town('cottage', 3);
+    const apartment = world.addBuilding({ def: 'walkup', x: 6, y: 2, variant: 0, occupants: 10, lifestyle: Lifestyle.Comfortable }, 1, 1);
+    apartment.powered = true; apartment.watered = true;
+    const rates = { ...defaultCostTaxRates(), housing: 10 };
+    const report = monthlyBudget(world, 0, 1100, 1200, rates);
+    expect(report.housingByClass[Lifestyle.Basic]).toMatchObject({ residents: 3, rentPerResident: 50, taxPerResident: 5, paidPerResident: 55 });
+    expect(report.housingByClass[Lifestyle.Comfortable]).toMatchObject({ residents: 10, rentPerResident: 60, taxPerResident: 6, paidPerResident: 66 });
+    expect(report.housingByClass[Lifestyle.Prosperous].residents).toBe(0);
+  });
+
   it('partially occupied homes charge the same total rent among fewer residents', () => {
     const { home } = town('apartment_block', 100);
     expect(propertyBills(home, 0).rent / home.occupants).toBe(10);

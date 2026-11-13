@@ -7,9 +7,9 @@ work session, read **Current Status** below, then the relevant spec.
 
 | | |
 |---|---|
-| **Current phase** | City evolution (specs/evolution.md): E0 stages ✅, E1 lifestyle ✅, E2 garbage ✅ |
-| **Next phase** | E3 incidents (fire, theft, illness working together), then AQI, Town Hall tax collection, industry materials; server-run cities after (D-085) |
-| **Last updated** | 2026-11-12 |
+| **Current phase** | City evolution, property economy, demographic policy and in-game Wiki |
+| **Next phase** | Follow the open items in `03-roadmap.md` |
+| **Last updated** | 2026-11-13 |
 
 ## Run It
 
@@ -17,6 +17,7 @@ work session, read **Current Status** below, then the relevant spec.
 bun install
 docker compose up -d   # Postgres for the save server (accounts and cloud saves)
 bun run dev          # http://localhost:5173 opens the New Game screen; /demo opens a grown city
+                  # /wiki opens the interactive player guide and building catalog
                   # (?seed=N&size=64|128|256&preset=coastal&funds=N skips it)
                   # bun run dev runs Vite and the save server (:8787); without Postgres the game still runs, saving on the device
 bun run sim:run --scenario demo --years 1   # headless sim: history CSV + per-system timings
@@ -52,6 +53,8 @@ bun run typecheck && bun run lint
 | [specs/transport.md](specs/transport.md) | Road hierarchy, wide roads, flyovers, bridges, public transport, parks |
 | [specs/evolution.md](specs/evolution.md) | City stages and unlocks, lifestyle tiers, hospital, university, garbage |
 | [specs/real-estate-demography.md](specs/real-estate-demography.md) | Building rent, utilities, property loans and demographic policy |
+| [guia-do-jogador.md](guia-do-jogador.md) | Guia em português sobre crescimento, trabalho, contas, serviços e impostos |
+| [specs/wiki.md](specs/wiki.md) | Wiki interativa, catálogo de edifícios e simulador de orçamento |
 | [deploy.md](deploy.md) | Docker image, environment settings, production checklist |
 | [decisions.md](decisions.md) | Decision log (why we chose X over Y) |
 | [progress-log.md](progress-log.md) | Dated log of what got done each session |

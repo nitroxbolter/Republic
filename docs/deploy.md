@@ -36,6 +36,28 @@ itself (`127.0.0.1:8787` for the app). HTTPS comes from your own reverse proxy o
 
 **Update** to a new version: `git pull && docker compose --profile app up -d --build`.
 
+### Publishing below an existing site path
+
+Set `VITE_PUBLIC_BASE=/Republic/` in the deployment `.env` before building the image. The
+client then loads its assets, API, demo and wiki below that path. Put nginx in front of the app:
+
+```nginx
+location = /Republic { return 301 /Republic/; }
+location ^~ /Republic/ {
+    proxy_pass http://127.0.0.1:8787/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cookie_path / /Republic/;
+}
+```
+
+The trailing slash on `proxy_pass` removes `/Republic/` before forwarding. Keep the rest of
+the host's site configuration intact. If GitHub sign-in is enabled, set `PUBLIC_URL` to the
+external URL including `/Republic` and register its callback ending in
+`/Republic/api/auth/github/callback`.
+
 **Back up** the database (accounts and cloud saves), e.g. nightly with cron:
 ```bash
 docker compose exec -T postgres pg_dump -U citybuilder citybuilder | gzip > backup-$(date +%F).sql.gz
