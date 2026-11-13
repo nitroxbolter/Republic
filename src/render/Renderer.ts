@@ -27,6 +27,8 @@ import { Smoke } from './fx/Smoke';
 import { AgentRenderer } from './agents/AgentRenderer';
 import { Indicators } from './overlays/Indicators';
 import { Ambient } from './ambient/Ambient';
+import { MilitaryRenderer } from './agents/MilitaryRenderer';
+import type { MilitaryUnit } from '../sim/systems/military';
 
 /** Mutable handle to the current view, shared with overlays, effects and agents. */
 export interface ViewRef {
@@ -97,6 +99,7 @@ export class Renderer {
   /** Blade speed in radians per real second (set by the game from wind and game speed). */
   private rotorSpin: () => number = () => 0;
   agents!: AgentRenderer;
+  military!: MilitaryRenderer;
   indicators!: Indicators;
   /** Clouds, fountains, beacons and birds (render/ambient). */
   ambient!: Ambient;
@@ -110,6 +113,8 @@ export class Renderer {
   private stopSource: () => readonly BusStop[] = () => [];
   private lightSource: () => readonly TrafficLight[] = () => [];
   private trainSource: () => readonly RailCarPose[] = () => [];
+  private militarySource: () => readonly MilitaryUnit[] = () => [];
+  private selectedMilitarySource: () => number | null = () => null;
   private needsSource: () => ReadonlyMap<number, BuildingNeeds> = () => new Map();
   bubbles!: Bubbles;
   /** Traffic overlay: road tiles tinted by congestion (null = off). */
@@ -189,6 +194,11 @@ export class Renderer {
     this.trainSource = trains;
   }
 
+  setMilitarySource(units: () => readonly MilitaryUnit[], selected: () => number | null) {
+    this.militarySource = units;
+    this.selectedMilitarySource = selected;
+  }
+
   /** Where the complaint bubbles read each building's needs from. */
   /** How fast turbine blades turn, in radians per real second. */
   setRotorSpin(spin: () => number) {
@@ -248,6 +258,7 @@ export class Renderer {
     this.rotors = new Rotors(this.viewRef);
     this.ambient = new Ambient(tex.ambient, this.viewRef);
     this.agents = new AgentRenderer(tex, this.viewRef);
+    this.military = new MilitaryRenderer(this.viewRef);
     this.indicators = new Indicators({ road: tex.warnRoad, power: tex.warnPower, water: tex.warnWater, coin: tex.taxCoin }, this.viewRef);
     this.hover = new HoverHighlight(tex.hover, this.viewRef);
     const t0 = performance.now();
@@ -266,6 +277,7 @@ export class Renderer {
       this.daylight,
       this.objects,
       this.agents.people,
+      this.military.container,
       this.agents.raised,
       this.ambient.lower,
       this.rotors.container,
@@ -454,6 +466,7 @@ export class Renderer {
     this.border.cull(viewRect);
     this.border.update(dt);
     this.agents.update(this.world, this.agentSource(), this.stopSource(), this.lightSource(), viewRect, cam.zoom, this.trainSource());
+    this.military.update(this.world, this.militarySource(), this.selectedMilitarySource(), viewRect);
     this.ground.update(dt);
     this.hover.update(dt);
     this.toolPreview.update(dt);

@@ -86,6 +86,7 @@ function MilitaryBody({ onClose }: { onClose: () => void }) {
 
     <section className="budget-card">
       <h3 className="budget-heading">Efetivo e soldos</h3>
+      <p className="tax-hint">Unidades ficam no pátio da base. No mapa, clique em um soldado, veículo ou helicóptero e depois clique no destino; Esc cancela a seleção. Tropas e veículos contornam prédios e água. Helicópteros sobrevoam obstáculos.</p>
       <Stock label="Soldados alojados" value={report.inventory.soldiers} capacity={report.capacity.soldiers} />
       {!report.capacity.soldiers && <p className="tax-hint warn-text">Construa um Quartel para aumentar a capacidade de alojamento.</p>}
       <div className="budget-line"><span>Soldos no próximo mês</span><strong>{money(report.monthlyPayroll)}/mês</strong></div>

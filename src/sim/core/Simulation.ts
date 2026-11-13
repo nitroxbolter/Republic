@@ -22,6 +22,7 @@ import { societyDay } from '../systems/society';
 import { advanceDemographicPolicy, closeDemographicMonth, demographicBirthDay } from '../systems/demography';
 import { TrafficSystem } from '../systems/traffic';
 import { UtilitiesSystem, updateUtilities, type UtilityReport } from '../systems/utilities';
+import { advanceMilitaryUnits } from '../systems/military';
 import type { World } from '../World';
 import { emptyOutcome, type DayOutcome, type SimSystem, type WorldChange } from './System';
 import { SystemTimings } from './timings';
@@ -184,6 +185,7 @@ export class Simulation {
 
   /** Every frame, for the visible agents only: `dt` in sim seconds, already scaled by game speed. */
   frame(dt: number) {
+    advanceMilitaryUnits(this.city, dt);
     this.timings.run('traffic.frame', () => this.traffic.onFrame(dt, this.city.hour));
     this.trains.onFrame(dt);
     this.incidents.onFrame(dt);

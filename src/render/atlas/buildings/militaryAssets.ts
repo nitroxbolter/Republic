@@ -4,6 +4,13 @@ import militaryDepotUrl from './military-assets/military_depot.png';
 import armoryUrl from './military-assets/armory.png';
 import barracksUrl from './military-assets/barracks.png';
 import trainingGroundUrl from './military-assets/training_ground.png';
+import soldierUrl from './military-assets/unit_soldier.png';
+import patrolUrl from './military-assets/unit_patrol.png';
+import transportUrl from './military-assets/unit_transport.png';
+import armoredUrl from './military-assets/unit_armored.png';
+import helicopterUrl from './military-assets/unit_helicopter.png';
+import { Texture } from 'pixi.js';
+import type { MilitaryUnitKind } from '../../../sim/systems/military';
 import { HALF_W } from '../../../shared/constants';
 import { BUILDINGS, type BuildingId } from '../../../sim/buildings/catalog';
 import { GROUND_PAD } from '../geometry';
@@ -17,8 +24,18 @@ const SOURCES = {
   training_ground: trainingGroundUrl,
 } as const satisfies Partial<Record<BuildingId, string>>;
 
+const UNIT_SOURCES: Readonly<Record<MilitaryUnitKind, string>> = {
+  soldier: soldierUrl,
+  patrol: patrolUrl,
+  transport: transportUrl,
+  armored: armoredUrl,
+  helicopter: helicopterUrl,
+};
+
 type MilitarySpriteId = keyof typeof SOURCES;
 const sprites = new Map<MilitarySpriteId, HTMLImageElement>();
+const unitImages = new Map<MilitaryUnitKind, HTMLImageElement>();
+const unitTextures = new Map<MilitaryUnitKind, Texture>();
 let loading: Promise<void> | undefined;
 
 export function isMilitarySprite(id: BuildingId): id is MilitarySpriteId {
@@ -29,10 +46,11 @@ export function isMilitarySprite(id: BuildingId): id is MilitarySpriteId {
 export function loadMilitaryAssets(): Promise<void> {
   if (!loading) {
     loading = Promise.all(
-      Object.entries(SOURCES).map(([id, src]) => new Promise<void>((resolve, reject) => {
+      [...Object.entries(SOURCES).map(([id, src]) => [id, src] as const), ...Object.entries(UNIT_SOURCES).map(([id, src]) => [id, src] as const)].map(([id, src]) => new Promise<void>((resolve, reject) => {
         const image = new Image();
         image.onload = () => {
-          sprites.set(id as MilitarySpriteId, image);
+          if (id in UNIT_SOURCES) unitImages.set(id as MilitaryUnitKind, image);
+          else sprites.set(id as MilitarySpriteId, image);
           resolve();
         };
         image.onerror = () => reject(new Error(`Não foi possível carregar o asset militar: ${id}`));
@@ -44,6 +62,18 @@ export function loadMilitaryAssets(): Promise<void> {
     });
   }
   return loading;
+}
+
+/** Pixi texture for one of the cropped unit sprites. */
+export function militaryUnitTexture(kind: MilitaryUnitKind): Texture {
+  let texture = unitTextures.get(kind);
+  if (!texture) {
+    const image = unitImages.get(kind);
+    if (!image) throw new Error(`Asset militar ainda não carregado: ${kind}`);
+    texture = Texture.from(image);
+    unitTextures.set(kind, texture);
+  }
+  return texture;
 }
 
 /** Paint the supplied isometric sprite inside its lot; return false until it has loaded. */

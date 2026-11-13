@@ -17,7 +17,7 @@ import { ZoneType } from './zones';
 import { initialProperty, type PropertyState } from './systems/realEstate';
 import { initialDemography, type DemographicPolicy, type PermitLimits } from './systems/demography';
 import { BANK_MAX_TERM, investmentRate, loanRate, type BankState, type BankInvestment, type BankLoan } from './systems/bank';
-import type { MilitaryState } from './systems/military';
+import { restoreMilitaryUnits, type MilitaryState, type MilitaryUnitKind } from './systems/military';
 
 /**
  * The save format (docs/specs/saving.md, D-034): only what can't be recomputed. Terrain is
@@ -211,7 +211,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, bank: { nextId: city.bank.nextId, investments: city.bank.investments.map((item) => ({ ...item })), loans: city.bank.loans.map((item) => ({ ...item })) }, military: { ...city.military, vehicles: { ...city.military.vehicles } }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, bank: { nextId: city.bank.nextId, investments: city.bank.investments.map((item) => ({ ...item })), loans: city.bank.loans.map((item) => ({ ...item })) }, military: { ...city.military, vehicles: { ...city.military.vehicles }, units: city.military.units.map((unit) => ({ ...unit, path: unit.path.map((point) => ({ ...point })) })) }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -304,7 +304,10 @@ export function deserialize(data: SaveData): City {
   if (data.city.propertyLedger) city.propertyLedger = { ...data.city.propertyLedger };
   if (data.city.demography) city.demography = { ...data.city.demography, permitLimits: { ...data.city.demography.permitLimits }, permitUsed: { ...data.city.demography.permitUsed } };
   if (data.city.bank) city.bank = { nextId: data.city.bank.nextId, investments: data.city.bank.investments.map((item) => ({ ...item })), loans: data.city.bank.loans.map((item) => ({ ...item })) };
-  if (data.city.military) city.military = { ...data.city.military, vehicles: { ...data.city.military.vehicles } };
+  if (data.city.military) {
+    city.military = { ...data.city.military, vehicles: { ...data.city.military.vehicles }, units: data.city.military.units?.map((unit) => ({ ...unit, path: unit.path.map((point) => ({ ...point })) })) ?? [] };
+    restoreMilitaryUnits(city);
+  }
   city.day = data.city.day;
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
@@ -601,12 +604,24 @@ function parseMilitary(value: unknown): { military?: MilitaryState } {
   const keys = ['patrol', 'transport', 'armored', 'helicopter'] as const;
   const counts = [value.soldiers, value.rifles, value.ammunition, value.supplies, ...keys.map((key) => vehicles[key])];
   if (!counts.every((count) => Number.isSafeInteger(count) && isFiniteNumber(count) && count >= 0 && count <= 1_000_000_000)) return {};
+  const kinds: readonly MilitaryUnitKind[] = ['soldier', 'patrol', 'transport', 'armored', 'helicopter'];
+  const units = Array.isArray(value.units) ? value.units.slice(0, 20_000).flatMap((raw) => {
+    if (!isObj(raw) || !Number.isSafeInteger(raw.id) || !isFiniteNumber(raw.id) || raw.id < 1 || !kinds.includes(raw.kind as MilitaryUnitKind) || !isFiniteNumber(raw.x) || !isFiniteNumber(raw.y) || Math.abs(raw.x) > 100_000 || Math.abs(raw.y) > 100_000 || !Array.isArray(raw.path) || raw.path.length > 20_000 || !Number.isSafeInteger(raw.pathIndex) || !isFiniteNumber(raw.pathIndex) || raw.pathIndex < 0 || raw.pathIndex > raw.path.length || !isFiniteNumber(raw.heading)) return [];
+    const path = raw.path.flatMap((point) => isObj(point) && isFiniteNumber(point.x) && isFiniteNumber(point.y) && Math.abs(point.x) <= 100_000 && Math.abs(point.y) <= 100_000 ? [{ x: point.x, y: point.y }] : []);
+    if (path.length !== raw.path.length) return [];
+    return [{ id: raw.id as number, kind: raw.kind as MilitaryUnitKind, x: raw.x, y: raw.y, path, pathIndex: raw.pathIndex as number, heading: raw.heading }];
+  }) : [];
+  const uniqueUnits = units.filter((unit, index) => units.findIndex((other) => other.id === unit.id) === index);
+  const maxId = Math.max(0, ...uniqueUnits.map((unit) => unit.id));
+  const nextUnitId = Number.isSafeInteger(value.nextUnitId) && isFiniteNumber(value.nextUnitId) && value.nextUnitId > maxId ? value.nextUnitId : maxId + 1;
   return { military: {
     soldiers: value.soldiers as number,
     rifles: value.rifles as number,
     ammunition: value.ammunition as number,
     supplies: value.supplies as number,
     vehicles: Object.fromEntries(keys.map((key) => [key, vehicles[key]])) as MilitaryState['vehicles'],
+    units: uniqueUnits,
+    nextUnitId,
   } };
 }
 

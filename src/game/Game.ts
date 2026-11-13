@@ -21,7 +21,7 @@ import { stageRequirements } from '../sim/progression';
 import { lifestyleReport } from '../sim/systems/lifestyle';
 import { currentTech, researchRate, TECHS } from '../sim/research';
 import { materialStorage } from '../sim/systems/materials';
-import { enlistSoldiers, purchaseMilitary, type MilitaryPurchase, type MilitaryActionResult } from '../sim/systems/military';
+import { enlistSoldiers, issueMilitaryMove, purchaseMilitary, type MilitaryPurchase, type MilitaryActionResult } from '../sim/systems/military';
 import { collectTaxes, townHall } from '../sim/systems/budget';
 import { acquireProperty, financeProperty, privateRecoverProperty, repayPropertyLoan } from '../sim/systems/realEstate';
 import { inspectInfo } from './inspect';
@@ -128,6 +128,7 @@ export class Game {
   private speedIndex = 1;
   private inspected: number | null = null;
   private inspectedZone: TilePos | null = null;
+  private selectedMilitaryUnit: number | null = null;
   private drag: ToolDrag | null = null;
   /**
    * The drag is finished but was drawn with a finger, so it waits for Build or Cancel (D-080):
@@ -183,6 +184,7 @@ export class Game {
       () => this.sim.trains.poses(),
     );
     renderer.setNeedsSource(() => this.sim.needs.byBuilding);
+    renderer.setMilitarySource(() => this.city.military.units, () => this.selectedMilitaryUnit);
     // Blades turn with the day's wind, faster at higher game speeds, and stop when paused.
     renderer.setRotorSpin(() => Math.min(ROTOR_SPIN_MAX, GAME_SPEEDS[this.speedIndex] * ROTOR_SPIN * windFactor(this.world.seed, this.city.day)));
     this.loop = new GameLoop(
@@ -1055,6 +1057,28 @@ export class Game {
   private onClick(screen: ScreenPoint) {
     if (this.toolId !== 'select') return;
     const t = this.tileAt(screen);
+    const clickedUnit = [...this.city.military.units]
+      .map((unit) => ({ unit, distance: Math.hypot(unit.x - (t.x + 0.5), unit.y - (t.y + 0.5)) }))
+      .filter(({ distance }) => distance <= 0.78)
+      .sort((a, b) => a.distance - b.distance)[0]?.unit;
+    if (clickedUnit) {
+      this.selectedMilitaryUnit = clickedUnit.id;
+      this.inspect(null);
+      this.notify('info', `${this.militaryUnitLabel(clickedUnit.kind)} selecionado. Clique no mapa para mover.`);
+      return;
+    }
+    if (this.selectedMilitaryUnit !== null) {
+      const result = issueMilitaryMove(this.city, this.selectedMilitaryUnit, t.x, t.y);
+      if (result === 'ok') {
+        this.notify('info', 'Ordem de deslocamento enviada.');
+        return;
+      }
+      if (result === 'blocked') {
+        this.notify('error', 'Destino inacessível: unidades terrestres não atravessam água ou prédios.');
+        return;
+      }
+      this.selectedMilitaryUnit = null;
+    }
     const id = this.world.building[this.world.index(t.x, t.y)];
     if (id === -1 && isZoned(this.world.zone[this.world.index(t.x, t.y)])) {
       this.inspected = null;
@@ -1063,6 +1087,10 @@ export class Game {
       this.emitZoneInspect();
       this.updatePreview();
     } else this.inspect(id === -1 ? null : id);
+  }
+
+  private militaryUnitLabel(kind: string) {
+    return ({ soldier: 'Soldado', patrol: 'Viatura', transport: 'Caminhão militar', armored: 'Blindado', helicopter: 'Helicóptero' } as Record<string, string>)[kind] ?? 'Unidade';
   }
 
   /** Open the info panel for a building (or close it with null). */
@@ -1279,6 +1307,10 @@ export class Game {
 
   /** Right click / Esc: drop the drag if there is one, otherwise put the tool away. */
   cancel() {
+    if (this.selectedMilitaryUnit !== null) {
+      this.selectedMilitaryUnit = null;
+      return;
+    }
     if (this.carrying !== null) {
       // Put it back down where it was (nothing moved yet).
       this.carrying = null;
