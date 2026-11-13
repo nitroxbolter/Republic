@@ -14,6 +14,7 @@ import { RAIL } from '../rail';
 import { airScore, aqiBand, type AirSystem } from './air';
 import type { City } from '../City';
 import { workingAge } from './society';
+import { propertyBills } from './realEstate';
 
 /**
  * Needs system (docs/specs/needs.md): every finished, connected zoned building scores its
@@ -80,7 +81,7 @@ export const COMPLAINT_TEXT: Readonly<Record<ComplaintKind, string>> = {
   traffic: 'O trânsito dificulta o acesso dos clientes',
   air: 'Fumaça e ruído demais',
   parks: 'Não há parques para aproveitar',
-  affordability: 'Os impostos reduziram nosso poder de compra',
+  affordability: 'Aluguel, contas ou impostos reduziram nosso poder de compra',
   workers: 'Não encontramos trabalhadores',
   customers: 'Não há clientes suficientes',
   abandoned: 'Este lugar está abandonado',
@@ -299,6 +300,14 @@ export class NeedsSystem implements SimSystem {
           jobCover,
           workerShare,
           purchasingPower: householdPurchasingPower(taxRate, city ?? undefined),
+          affordability: (() => {
+            if (d.category !== 'residential') return 1;
+            const bill = propertyBills(b, city?.costTaxRates.housing ?? 0);
+            const expected = Math.max(1, d.capacity * 0.65);
+            const wage = (city?.minimumWage ?? BALANCE.defaultMinimumWage) * BALANCE.lifestyleWage[b.lifestyle] * (1 - (city?.incomeTaxRate ?? 0) / 100);
+            const housing = (bill.rent * (1 - (city?.demography.housingSubsidy ?? 0)) + bill.housingTax + bill.surcharge) / expected;
+            return Math.max(0.15, Math.min(1, wage * BALANCE.propertyHousingIncomeLimit / Math.max(1, housing)));
+          })(),
           // A theft nobody stopped, or a patient nobody reached, halves the need for a month (E3).
           safety: ((b.services & police ? 0.6 : 0) + (b.services & fire ? 0.4 : 0)) * (b.robbed > 0 ? 0.5 : 1) * Math.max(0.35, 1 - Math.max(0, (city?.society.prisonOverflow ?? 0) - 2) / Math.max(5, stats.population * 0.02)),
           health: (b.services & health ? 1 : 0) * (b.sick > 0 ? 0.5 : 1) * Math.max(0.5, 1 - ((city?.society.sick ?? 0) + 5 * (city?.society.recentDeaths ?? 0)) / Math.max(1, stats.population)),
@@ -347,6 +356,7 @@ export class NeedsSystem implements SimSystem {
       jobCover: number;
       workerShare: number;
       purchasingPower: number;
+      affordability: number;
       safety: number;
       traffic: number;
       health: number;
@@ -395,7 +405,7 @@ export class NeedsSystem implements SimSystem {
       case 'parks':
         return Math.min(1, ctx.parks() / 2);
       case 'affordability':
-        return Math.min(1, ctx.purchasingPower * 0.9);
+        return Math.min(ctx.affordability, Math.min(1, ctx.purchasingPower * 0.9));
       case 'workers':
         return ctx.workerShare;
       case 'customers':

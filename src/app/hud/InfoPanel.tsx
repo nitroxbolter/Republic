@@ -42,10 +42,12 @@ const NEED_HINT: Readonly<Record<NeedKind, string>> = {
   traffic: 'Wider roads around here',
   air: 'Keep factories, power plants and landfills further away',
   parks: 'Build parks within 6 tiles',
-  affordability: 'Lower taxes to restore household spending power',
+  affordability: 'Reduza impostos ou aumente empregos e renda para cobrir o aluguel',
   workers: 'Zone more homes nearby',
   customers: 'More residents nearby',
 };
+const propertyMoney = (n: number) => `$${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
+const propertyStatus = { regular: 'Regular', loss: 'Prejuízo', delinquent: 'Inadimplente', critical: 'Crítico', recovery: 'Em recuperação', financed: 'Financiado', bankrupt: 'Em falência' } as const;
 
 const SERVICE_LABEL: Readonly<Record<ServiceKind, string>> = {
   police: 'Police',
@@ -252,6 +254,33 @@ export function InfoPanel() {
         <Stat label="Air quality" value={`IQA ${info.aqi} · ${aqiBand(info.aqi).label}`} />
       </div>
       {info.lifestyle && <p className="info-note">{info.lifestyle.note}</p>}
+
+      {info.property && (
+        <section className="info-section">
+          <h3 className="info-section-title">Finanças do imóvel</h3>
+          <div className="info-row"><span>Situação</span><strong>{propertyStatus[info.property.status]}{info.property.publicOwned ? ' · público' : ''}</strong></div>
+          <div className="info-row"><span>Ocupação</span><strong>{info.capacity ? Math.round(info.occupants / info.capacity * 100) : 0}%</strong></div>
+          <div className="info-row"><span>Aluguel do edifício / por morador</span><strong>{propertyMoney(info.property.rent)} / {propertyMoney(info.property.rentPerResident)}</strong></div>
+          <div className="info-row"><span>Energia / água por morador</span><strong>{propertyMoney(info.property.energyPerResident)} / {propertyMoney(info.property.waterPerResident)}</strong></div>
+          <div className="info-row"><span>Imposto de moradia do edifício</span><strong>{propertyMoney(info.property.housingTax)}</strong></div>
+          {info.property.surchargePerResident > 0 && <div className="info-row"><span>Adicional temporário por morador</span><strong>{propertyMoney(info.property.surchargePerResident)}</strong></div>}
+          <div className="info-row"><span>Manutenção do proprietário</span><strong>{propertyMoney(info.property.operatingCost)}/mês</strong></div>
+          <div className="info-row"><span>Aluguel recebido no último mês</span><strong>{propertyMoney(info.property.lastRent)}</strong></div>
+          <div className="info-row"><span>Resultado do último mês</span><strong>{propertyMoney(info.property.lastResult)}</strong></div>
+          <div className="info-row"><span>Reservas / dívida</span><strong>{propertyMoney(info.property.reserve)} / {propertyMoney(info.property.debt)}</strong></div>
+          <div className="info-row"><span>Meses inadimplentes</span><strong>{info.property.delinquentMonths}</strong></div>
+          {info.property.loan && <>
+            <div className="info-row"><span>Parcela mensal / saldo</span><strong>{propertyMoney(info.property.loan.payment)} / {propertyMoney(info.property.loan.balance)}</strong></div>
+            <div className="info-row"><span>Juros / atrasos</span><strong>{Math.round(info.property.loan.interestRate * 100)}% / {propertyMoney(info.property.loan.late)}</strong></div>
+            {info.property.reserve >= info.property.loan.balance + info.property.loan.lateInterest && <button type="button" className="secondary-button" onClick={() => game?.repayPropertyLoan(info.id)}>Quitar financiamento com reservas</button>}
+          </>}
+          {(info.property.canFinance || info.property.canAcquire || info.property.canPrivateRecover) && <div className="info-actions">
+            {info.property.canFinance && <button type="button" className="secondary-button" onClick={() => game?.financeProperty(info.id)}>Financiar recuperação</button>}
+            {info.property.canAcquire && <button type="button" className="secondary-button" onClick={() => game?.acquireProperty(info.id)}>Adquirir pelo governo</button>}
+            {info.property.canPrivateRecover && <button type="button" className="secondary-button" onClick={() => game?.privateRecoverProperty(info.id)}>Venda privada</button>}
+          </div>}
+        </section>
+      )}
 
       {needs.length > 0 && (
         <section className="info-section">

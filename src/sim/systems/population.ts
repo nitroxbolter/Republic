@@ -7,6 +7,7 @@ import { economyReport, effectiveJobs, employmentFactor, type HouseholdPolicy } 
 import type { SimSystem } from '../core/System';
 import { workingAge } from './society';
 import type { City } from '../City';
+import { migrationOutlook, recordMigration } from './demography';
 
 /**
  * Population system: people move into homes and fill jobs, once a day.
@@ -51,25 +52,30 @@ export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, s
 }
 
 /**
- * One in-game day. Homes with road access fill toward a target that rises with job
- * availability; job buildings take workers from the workforce in proportion to capacity.
+ * One in-game day. Housing attracts migrants independently of local job supply;
+ * jobs still determine employment and therefore spending, taxes and happiness.
  */
 export function simulateDay(world: World, taxRate: number = BALANCE.baseTaxRate, society?: City['society'], policy?: City) {
   const before = cityStats(world, taxRate, society, policy);
   const workforce = workingAge(before.population, society?.sick, society?.prisoners);
-  // How well jobs cover the workforce: 1 when every worker could have a job.
   const jobCover = workforce === 0 ? (before.jobs > 0 ? 1 : 0) : Math.min(1, before.jobs / workforce);
-  const fill = BALANCE.minHousingFill + (1 - BALANCE.minHousingFill) * jobCover;
+  const outlook = migrationOutlook(policy, taxRate, economyReport(world, taxRate, policy).purchasingPower);
+  const migrationRate = policy ? Math.max(BALANCE.demographicNaturalMoveInFloor, 1 - policy.demography.slowLevel * (1 - BALANCE.demographicNaturalMoveInFloor) + (policy.demography.strategy === 'stimulate' && policy.demography.incentivesEnabled ? policy.demography.incentiveLevel * BALANCE.demographicStimulusMoveInBonus : 0)) : 1;
+  let immigration = 0, emigration = 0;
 
   for (const b of world.buildings.values()) {
     const d = BUILDINGS[b.def];
     if (d.category !== 'residential' || !isActive(b)) continue;
-    // No power or water: people leave. Otherwise services set how full a home gets (docs/specs/core.md).
-    const target = hasUtilities(b) && !b.abandoned ? Math.round(d.capacity * fill * happinessFactor(b)) : 0;
-    if (b.occupants < target) b.occupants += Math.max(1, Math.round((target - b.occupants) * BALANCE.moveInRate));
+    // Jobs help modestly; even a town with none can occupy most available homes.
+    const target = hasUtilities(b) && !b.abandoned ? Math.round(d.capacity * Math.max(0.7, happinessFactor(b)) * (1 - BALANCE.housingJobInfluence * (1 - jobCover))) : 0;
+    const previous = b.occupants;
+    if (b.occupants < target && outlook > 0) b.occupants += Math.max(1, Math.round((target - b.occupants) * BALANCE.moveInRate * migrationRate * outlook * happinessFactor(b)));
     else if (b.occupants > target) b.occupants -= Math.max(1, Math.round((b.occupants - target) * BALANCE.moveInRate));
     b.occupants = Math.min(d.capacity, Math.max(0, b.occupants));
+    immigration += Math.max(0, b.occupants - previous);
+    emigration += Math.max(0, previous - b.occupants);
   }
+  if (policy) recordMigration(policy, immigration, emigration);
 
   // Share the (new) workforce across job buildings by capacity.
   const after = cityStats(world, taxRate, society, policy);

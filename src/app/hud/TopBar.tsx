@@ -333,12 +333,13 @@ function Funds({ short }: { short?: boolean }) {
 
 function Population({ short }: { short?: boolean }) {
   const city = useAtomValue(cityAtom);
+  const demography = useOverlay('demography');
   const pop = city?.population ?? 0;
   const flash = useFlash(pop);
   return (
-    <Stat title={city ? `População: ${pop.toLocaleString()} moradores em ${city.housing.toLocaleString()} moradias` : 'População'} flash={flash} glyph={PEOPLE}>
+    <button type="button" className="top-population-button" title="Abrir Política Demográfica" aria-label="Abrir Política Demográfica" aria-expanded={demography.open} onClick={demography.toggle}><Stat title={city ? `População: ${pop.toLocaleString()} moradores em ${city.housing.toLocaleString()} moradias` : 'População'} flash={flash} glyph={PEOPLE}>
       <span className="stat-value">{short ? compactNumber(pop) : pop.toLocaleString()}</span>
-    </Stat>
+    </Stat></button>
   );
 }
 

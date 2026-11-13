@@ -9,6 +9,8 @@ import { cityStats } from './population';
 import { demographics, workingAge } from './society';
 import { BASE_COSTS, COST_KINDS, defaultCostTaxRates, livingCosts, type CostKind, type CostTaxRates } from './livingCosts';
 import { economyReport } from './economy';
+import { propertyBills, forecastPropertyFlows, settleProperties, type PropertyFlows, type PropertyPayment } from './realEstate';
+import { demographicMonthlyCost } from './demography';
 import type { DayOutcome, SimSystem } from '../core/System';
 
 /** Monthly company and resident taxes, utility bills and recycling against upkeep and pensions. */
@@ -17,10 +19,11 @@ export interface BudgetReport {
   income: number;
   expenses: number;
   net: number;
+  cashNet: number;
   /** Company tax rate (percent) used for this report. */
   taxRate: number;
   incomeTaxRate: number;
-  breakdown: { roads: number; transport: number; services: number; utilities: number; parks: number; pensions: number };
+  breakdown: { roads: number; transport: number; services: number; utilities: number; parks: number; pensions: number; demographicIncentives: number; housingSubsidies: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
   taxRevenue: number;
@@ -38,6 +41,8 @@ export interface BudgetReport {
   unemployed: number;
   unavailable: number;
   seniors: number;
+  propertyFlows: PropertyFlows;
+  propertyPayments: ReadonlyMap<number, PropertyPayment>;
 }
 
 export interface CostBalance {
@@ -134,8 +139,9 @@ export function monthlyBudget(
   costTaxRates: CostTaxRates = defaultCostTaxRates(),
   incomeTaxRate = 0,
   society?: City['society'],
+  policyCity?: City,
 ): BudgetReport {
-  const s = cityStats(world, taxRate, society, { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate });
+  const s = cityStats(world, taxRate, society, policyCity ?? { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate });
   const ages = demographics(s.population);
   const availableWorkers = workingAge(s.population, society?.sick, society?.prisoners);
   const employed = Math.min(availableWorkers, s.workers);
@@ -144,29 +150,44 @@ export function monthlyBudget(
   const employedShare = ages.adults > 0 ? employed / ages.adults : 0;
   let recycled = 0;
   let incomeTaxesPaid = 0;
-  const charged: Record<CostKind, { residents: number; base: number; tax: number }> = {
-    energy: { residents: 0, base: 0, tax: 0 },
-    water: { residents: 0, base: 0, tax: 0 },
-    housing: { residents: 0, base: 0, tax: 0 },
-    transport: { residents: 0, base: 0, tax: 0 },
+  let housingSubsidies = 0;
+  const charged: Record<CostKind, { residents: number; base: number; tax: number; nominal: number }> = {
+    energy: { residents: 0, base: 0, tax: 0, nominal: 0 },
+    water: { residents: 0, base: 0, tax: 0, nominal: 0 },
+    housing: { residents: 0, base: 0, tax: 0, nominal: 0 },
+    transport: { residents: 0, base: 0, tax: 0, nominal: 0 },
   };
+  const propertyPayments = new Map<number, PropertyPayment>();
   let residentsCounted = 0;
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
-    if (d.category === 'residential' && b.construction === 0 && !b.abandoned) {
-      const seniors = demographics(residentsCounted + b.occupants).seniors - demographics(residentsCounted).seniors;
-      const adults = b.occupants - seniors;
+    if (d.category === 'residential' && b.construction === 0) {
+      const bill = propertyBills(b, costTaxRates.housing);
+      const occupants = b.abandoned ? 0 : b.occupants;
+      const subsidy = occupants > 0 && !b.property?.publicOwned ? bill.rent * (policyCity?.demography.housingSubsidy ?? 0) : 0;
+      housingSubsidies += subsidy;
+      const perPerson = occupants > 0 ? { housing: (bill.rent - subsidy) / occupants, energy: bill.energy / occupants, water: bill.water / occupants, surcharge: bill.surcharge / occupants } : { housing: 0, energy: 0, water: 0, surcharge: 0 };
+      const householdBills = { ...BASE_COSTS, ...perPerson };
+      const seniors = demographics(residentsCounted + occupants).seniors - demographics(residentsCounted).seniors;
+      const adults = occupants - seniors;
       const paidWorkers = adults * employedShare;
-      residentsCounted += b.occupants;
+      residentsCounted += occupants;
       const supplied = { energy: b.powered, water: b.watered };
       const grossWage = minimumWage * BALANCE.lifestyleWage[b.lifestyle];
       incomeTaxesPaid += paidWorkers * grossWage * incomeTaxRate / 100;
-      const workerCosts = livingCosts(grossWage * (1 - incomeTaxRate / 100), costTaxRates, supplied);
-      const seniorCosts = livingCosts(pensionPerSenior, costTaxRates, supplied);
+      const rentPerPerson = occupants > 0 ? bill.rent / occupants : 0;
+      const housingDue = (rentPerPerson - subsidy / Math.max(1, occupants)) * (1 + costTaxRates.housing / 100);
+      const surchargeCapacity = paidWorkers * Math.max(0, grossWage * (1 - incomeTaxRate / 100) * BALANCE.propertyHousingIncomeLimit - housingDue)
+        + seniors * Math.max(0, pensionPerSenior * BALANCE.propertyHousingIncomeLimit - housingDue);
+      householdBills.surcharge = b.property?.loan ? Math.min(b.property.loan.payment, surchargeCapacity) / Math.max(1, occupants) : 0;
+      const workerCosts = livingCosts(grossWage * (1 - incomeTaxRate / 100), costTaxRates, supplied, householdBills);
+      const seniorCosts = livingCosts(pensionPerSenior, costTaxRates, supplied, householdBills);
+      propertyPayments.set(b.id, { rent: paidWorkers * workerCosts.housingPaid + seniors * seniorCosts.housingPaid + subsidy, surcharge: paidWorkers * workerCosts.surchargePaid + seniors * seniorCosts.surchargePaid, operatingCost: bill.operatingCost });
       for (const kind of COST_KINDS) {
         if (kind === 'energy' && !supplied.energy || kind === 'water' && !supplied.water) continue;
         const row = charged[kind];
-        row.residents += b.occupants;
+        row.residents += occupants;
+        row.nominal += occupants * householdBills[kind];
         row.base += paidWorkers * workerCosts.charges[kind].base + seniors * seniorCosts.charges[kind].base;
         row.tax += paidWorkers * workerCosts.charges[kind].tax + seniors * seniorCosts.charges[kind].tax;
       }
@@ -175,7 +196,7 @@ export function monthlyBudget(
     if (d.garbage?.recycles) recycled += b.filled * d.garbage.recycles;
   }
   const recycling = Math.round(recycled * BALANCE.recyclePrice);
-  const businessTurnover = economyReport(world, taxRate, { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate }).businessTurnover;
+  const businessTurnover = economyReport(world, taxRate, policyCity ?? { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate }).businessTurnover;
   const businessTaxRevenue = Math.round(businessTurnover * taxRate / 100);
   const businessTurnoverAfterTax = businessTurnover - businessTaxRevenue;
   let roads = 0;
@@ -212,8 +233,8 @@ export function monthlyBudget(
     const revenue = baseRevenue + taxRevenue;
     const upkeep = categoryUpkeep[kind];
     return {
-      residents: row.residents, billPerResident: BASE_COSTS[kind], taxRate: costTaxRates[kind],
-      nominalBase: row.residents * BASE_COSTS[kind], nominalTax: row.residents * BASE_COSTS[kind] * costTaxRates[kind] / 100,
+      residents: row.residents, billPerResident: row.residents ? row.nominal / row.residents : BASE_COSTS[kind], taxRate: costTaxRates[kind],
+      nominalBase: row.nominal, nominalTax: row.nominal * costTaxRates[kind] / 100,
       baseRevenue, taxRevenue, revenue, upkeep, net: revenue - upkeep,
     };
   };
@@ -222,16 +243,19 @@ export function monthlyBudget(
   const residentTaxRevenue = incomeTaxRevenue + COST_KINDS.reduce((sum, kind) => sum + costBalances[kind].taxRevenue, 0);
   const taxRevenue = residentTaxRevenue + businessTaxRevenue;
   const utilityRevenue = costBalances.energy.baseRevenue + costBalances.water.baseRevenue;
-  const income = taxRevenue + utilityRevenue + recycling;
+  const forecastFlows = forecastPropertyFlows(world, propertyPayments);
+  const income = taxRevenue + utilityRevenue + recycling + Math.round(forecastFlows.interest + forecastFlows.publicRent);
   const pensions = ages.seniors * pensionPerSenior;
-  const expenses = Math.round(roads + transport + services + utilities + parks + pensions);
+  const demographicIncentives = policyCity ? demographicMonthlyCost(policyCity, true) : 0;
+  const expenses = Math.round(roads + transport + services + utilities + parks + pensions + demographicIncentives + housingSubsidies + forecastFlows.publicOperating);
   return {
     income,
     expenses,
     net: income - expenses,
+    cashNet: income - expenses + forecastFlows.principal,
     taxRate,
     incomeTaxRate,
-    breakdown: { roads: Math.round(roads), transport, services, utilities, parks, pensions },
+    breakdown: { roads: Math.round(roads), transport, services, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies) },
     recycling,
     taxRevenue,
     businessTaxRevenue,
@@ -246,6 +270,8 @@ export function monthlyBudget(
     unemployed,
     unavailable,
     seniors: ages.seniors,
+    propertyFlows: forecastFlows,
+    propertyPayments,
   };
 }
 
@@ -261,18 +287,38 @@ export interface HeldTaxes {
 
 /** Apply a month's budget to the city: upkeep from the funds, taxes to the funds or the Town Hall's chest. */
 export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | null } {
-  const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society);
+  const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
+  const flows = settleProperties(city.world, Math.floor(city.day / BALANCE.daysPerMonth), r.propertyPayments);
+  const anticipated = r.propertyFlows;
+  city.propertyLedger.recovered += flows.principal + flows.interest;
+  flows.loanedTotal = city.propertyLedger.loaned;
+  flows.recoveredTotal = city.propertyLedger.recovered;
+  flows.losses = city.propertyLedger.writtenOff;
+  flows.loansIssued = city.propertyLedger.issuedThisMonth;
+  flows.acquisitions = city.propertyLedger.acquiredThisMonth;
+  flows.earlyPrincipal = city.propertyLedger.repaidEarlyThisMonth - city.propertyLedger.earlyInterestThisMonth;
+  flows.earlyInterest = city.propertyLedger.earlyInterestThisMonth;
+  city.propertyLedger.issuedThisMonth = 0;
+  city.propertyLedger.acquiredThisMonth = 0;
+  city.propertyLedger.repaidEarlyThisMonth = 0;
+  city.propertyLedger.earlyInterestThisMonth = 0;
+  r.propertyFlows = flows;
+  const regularIncome = r.income - Math.round(anticipated.interest + anticipated.publicRent);
+  r.income += Math.round(flows.interest + flows.publicRent) - Math.round(anticipated.interest + anticipated.publicRent);
+  r.expenses += Math.round(flows.publicOperating) - Math.round(anticipated.publicOperating);
+  r.net = r.income - r.expenses;
+  r.cashNet = r.net + flows.principal;
   if (!city.collectsTaxes) {
-    city.funds += r.net;
+    city.funds += r.cashNet;
     return { ...r, held: null };
   }
-  city.funds -= r.expenses;
-  const cap = Math.max(0, r.income) * BALANCE.chestMonths;
-  const total = city.uncollected + r.income;
+  city.funds += flows.principal + flows.interest + flows.publicRent - r.expenses;
+  const cap = Math.max(0, regularIncome) * BALANCE.chestMonths;
+  const total = city.uncollected + regularIncome;
   city.uncollected = Math.min(total, Math.max(cap, city.uncollected));
   return {
     ...r,
-    held: { waiting: city.uncollected, lost: total - city.uncollected, filling: city.uncollected >= r.income * BALANCE.chestWarnMonths },
+    held: { waiting: city.uncollected, lost: total - city.uncollected, filling: city.uncollected >= regularIncome * BALANCE.chestWarnMonths },
   };
 }
 
@@ -313,6 +359,14 @@ export class BudgetSystem implements SimSystem {
   }
   /** Next month at today's numbers. */
   forecast(): BudgetReport {
-    return monthlyBudget(this.city.world, this.city.taxRate, this.city.pensionPerSenior, this.city.minimumWage, this.city.costTaxRates, this.city.incomeTaxRate, this.city.society);
+    const report = monthlyBudget(this.city.world, this.city.taxRate, this.city.pensionPerSenior, this.city.minimumWage, this.city.costTaxRates, this.city.incomeTaxRate, this.city.society, this.city);
+    report.propertyFlows.loanedTotal = this.city.propertyLedger.loaned;
+    report.propertyFlows.recoveredTotal = this.city.propertyLedger.recovered;
+    report.propertyFlows.losses = this.city.propertyLedger.writtenOff;
+    report.propertyFlows.loansIssued = this.city.propertyLedger.issuedThisMonth;
+    report.propertyFlows.acquisitions = this.city.propertyLedger.acquiredThisMonth;
+    report.propertyFlows.earlyPrincipal = this.city.propertyLedger.repaidEarlyThisMonth - this.city.propertyLedger.earlyInterestThisMonth;
+    report.propertyFlows.earlyInterest = this.city.propertyLedger.earlyInterestThisMonth;
+    return report;
   }
 }

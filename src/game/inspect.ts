@@ -9,6 +9,7 @@ import { COMPLAINT_TEXT, NEED_KINDS } from '../sim/systems/needs';
 import { isWorking, needsUtilities } from '../sim/systems/utilities';
 import { platformOf, stationName } from '../sim/rail';
 import type { InspectInfo } from './events';
+import { propertyBills, propertyState } from '../sim/systems/realEstate';
 
 /**
  * What the info panel shows for a building (app/hud/InfoPanel.tsx), read from the simulation.
@@ -18,6 +19,12 @@ export function inspectInfo(sim: Simulation, b: BuildingInstance): InspectInfo {
   const d: BuildingDef = BUILDINGS[b.def];
   return {
     id: b.id,
+    property: d.category === 'residential' ? (() => {
+      const bill = propertyBills(b, sim.city.costTaxRates.housing);
+      const p = propertyState(b);
+      const count = Math.max(1, b.occupants);
+      return { status: p.status, rent: bill.rent, rentPerResident: b.occupants ? bill.rent / count : 0, energyPerResident: b.occupants ? bill.energy / count : 0, waterPerResident: b.occupants ? bill.water / count : 0, housingTax: bill.housingTax, surchargePerResident: b.occupants ? bill.surcharge / count : 0, operatingCost: bill.operatingCost, lastRent: p.lastRent, lastResult: p.lastResult, debt: p.debt, reserve: p.reserve, delinquentMonths: p.delinquentMonths, publicOwned: p.publicOwned, loan: p.loan && { payment: p.loan.payment, balance: p.loan.balance, late: p.loan.late, lateInterest: p.loan.lateInterest, interestRate: p.loan.interestRate, months: p.loan.months, term: p.loan.term }, canFinance: p.debt > 0 && p.delinquentMonths >= BALANCE.propertyFinanceMonths && !p.loan && sim.city.funds >= p.debt, canAcquire: p.status === 'bankrupt' && !p.publicOwned && sim.city.funds >= p.debt + bill.rent * 12, canPrivateRecover: p.status === 'bankrupt' };
+    })() : null,
     name: d.name,
     category: d.category,
     level: d.level,

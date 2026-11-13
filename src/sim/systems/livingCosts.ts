@@ -28,6 +28,8 @@ export interface LivingCosts {
   /** The tax share of governmentPaid, excluding the basic utility bills. */
   taxesPaid: number;
   utilityPaid: number;
+  housingPaid: number;
+  surchargePaid: number;
   /** Actual government receipts by bill after utility availability and income limits. */
   charges: Readonly<Record<CostKind, GovernmentCharge>>;
 }
@@ -36,35 +38,44 @@ export interface GovernmentCharge { base: number; tax: number }
 
 export interface SuppliedUtilities { energy: boolean; water: boolean }
 
+export interface HouseholdBills { energy: number; water: number; housing: number; transport: number; food: number; surcharge?: number }
+
 /** One resident's monthly wage or pension after essential bills and government charges. */
 export function livingCosts(
   gross: number, rates: CostTaxRates,
   supplied: SuppliedUtilities = { energy: true, water: true },
+  bills: HouseholdBills = BASE_COSTS,
 ): LivingCosts {
-  const privateBase = BASE_COSTS.food + BASE_COSTS.housing + BASE_COSTS.transport;
-  const utilityBase = (supplied.energy ? BASE_COSTS.energy : 0) + (supplied.water ? BASE_COSTS.water : 0);
-  const categoryTax = COST_KINDS.reduce((sum, kind) => sum +
-    (kind === 'energy' && !supplied.energy || kind === 'water' && !supplied.water ? 0 : BASE_COSTS[kind] * rates[kind] / 100), 0);
-  const governmentDue = utilityBase + categoryTax;
-  const governmentPaid = Math.min(governmentDue, Math.max(0, gross - privateBase));
-  const paidShare = governmentDue > 0 ? governmentPaid / governmentDue : 0;
-  const charge = (kind: CostKind): GovernmentCharge => {
-    const suppliedHere = (kind !== 'energy' || supplied.energy) && (kind !== 'water' || supplied.water);
-    return {
-      base: suppliedHere && (kind === 'energy' || kind === 'water') ? BASE_COSTS[kind] * paidShare : 0,
-      tax: suppliedHere ? BASE_COSTS[kind] * rates[kind] / 100 * paidShare : 0,
-    };
-  };
-  const charges = { energy: charge('energy'), water: charge('water'), housing: charge('housing'), transport: charge('transport') };
-  const base = privateBase + utilityBase;
+  const due = { energy: supplied.energy ? bills.energy : 0, water: supplied.water ? bills.water : 0, housing: bills.housing, transport: bills.transport };
+  const categoryTax = COST_KINDS.reduce((sum, kind) => sum + due[kind] * rates[kind] / 100, 0);
+  const base = bills.food + due.housing + due.energy + due.water + due.transport + (bills.surcharge ?? 0);
   const total = base + categoryTax;
+  let available = Math.max(0, gross);
+  const pay = (amount: number) => { const paid = Math.min(available, Math.max(0, amount)); available -= paid; return paid; };
+  const housingPaid = pay(due.housing);
+  const surchargePaid = pay(bills.surcharge ?? 0);
+  const energyPaid = pay(due.energy);
+  const waterPaid = pay(due.water);
+  pay(bills.food);
+  const transportPaid = pay(due.transport);
+  const charges = {
+    energy: { base: energyPaid, tax: pay(due.energy * rates.energy / 100) },
+    water: { base: waterPaid, tax: pay(due.water * rates.water / 100) },
+    housing: { base: 0, tax: pay(housingPaid * rates.housing / 100) },
+    transport: { base: 0, tax: pay(transportPaid * rates.transport / 100) },
+  };
+  const utilityPaid = energyPaid + waterPaid;
+  const taxesPaid = COST_KINDS.reduce((sum, kind) => sum + charges[kind].tax, 0);
+  const governmentPaid = utilityPaid + taxesPaid;
   return {
     gross, base, categoryTax, total,
-    disposable: Math.max(0, gross - total),
+    disposable: available,
     shortfall: Math.max(0, total - gross),
     governmentPaid,
-    taxesPaid: categoryTax * paidShare,
-    utilityPaid: utilityBase * paidShare,
+    taxesPaid,
+    utilityPaid,
+    housingPaid,
+    surchargePaid,
     charges,
   };
 }

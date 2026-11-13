@@ -23,7 +23,9 @@ import type { City } from '../City';
 import type { DayOutcome, SimSystem } from '../core/System';
 import { materialsFor, UNLIMITED, type MaterialStock } from './materials';
 import { techEffects } from '../research';
-import { economyReport, effectiveJobs, householdPurchasingPower, type HouseholdPolicy } from './economy';
+import { economyReport, effectiveJobs, type HouseholdPolicy } from './economy';
+import { initialProperty } from './realEstate';
+import { migrationOutlook } from './demography';
 
 /**
  * Zoned growth: demand, new lots, construction and levelling up. Runs once per in-game day.
@@ -43,11 +45,11 @@ export interface ZoneDemand {
   readonly i: number;
 }
 
-export type LotReason = 'noRoad' | 'noDemand' | 'materials' | 'noModel' | 'queued';
+export type LotReason = 'noRoad' | 'noDemand' | 'materials' | 'noModel' | 'permitLimit' | 'queued';
 export type LotReasonCounts = Record<LotReason, number>;
 export type ZoneDiagnostics = Record<keyof ZoneDemand, LotReasonCounts>;
 
-const emptyReasons = (): LotReasonCounts => ({ noRoad: 0, noDemand: 0, materials: 0, noModel: 0, queued: 0 });
+const emptyReasons = (): LotReasonCounts => ({ noRoad: 0, noDemand: 0, materials: 0, noModel: 0, permitLimit: 0, queued: 0 });
 
 export interface LotDiagnosis {
   x: number;
@@ -83,12 +85,14 @@ export function investorScore(world: World, taxRate: number = BALANCE.baseTaxRat
   let capacity = 0;
   let happy = 0;
   let happyCount = 0;
+  let affluentResidents = 0;
   for (const b of world.buildings.values()) {
     const d = BUILDINGS[b.def];
     if (b.construction > 0 || b.abandoned) continue;
     if (d.category === 'residential') {
       capacity += d.capacity;
       occupied += b.occupants;
+      affluentResidents += b.occupants * (b.lifestyle === Lifestyle.Prosperous ? 1 : b.lifestyle === Lifestyle.Comfortable ? 0.4 : 0);
       happy += b.happiness;
       happyCount++;
     }
@@ -97,7 +101,8 @@ export function investorScore(world: World, taxRate: number = BALANCE.baseTaxRat
   const mood = happyCount === 0 ? 0 : happy / happyCount;
   const stats = cityStats(world, taxRate, undefined, policy);
   const jobs = stats.housing === 0 ? 0 : Math.min(1, stats.jobs / Math.max(1, stats.population * BALANCE.workforceShare));
-  return Math.max(0, Math.min(1, homes * 0.35 + mood * 0.4 + jobs * 0.25));
+  const affluence = occupied > 0 ? affluentResidents / occupied : 0;
+  return Math.max(0, Math.min(1, (homes * 0.35 + mood * 0.4 + jobs * 0.25) * (0.75 + 0.25 * affluence)));
 }
 
 function isAffluentBuilding(id: BuildingId, confidence: number): boolean {
@@ -122,6 +127,7 @@ function ratio(want: number, have: number, floor: number): number {
 /** Higher taxes than the base rate cool demand, lower ones warm it (docs/specs/core.md). */
 /** What demand is made of: capacities built, capacities wanted, and the tax effect. */
 interface DemandInputs {
+  population: number;
   housing: number;
   shops: number;
   offices: number;
@@ -138,6 +144,7 @@ interface DemandInputs {
 
 function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): DemandInputs {
   let housing = 0;
+  let population = 0;
   let shops = 0;
   let offices = 0;
   let industrial = 0;
@@ -150,7 +157,7 @@ function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): 
     if (d.category === 'residential' && b.lifestyle > Lifestyle.Basic && b.services & university && !b.abandoned) {
       graduates += b.occupants * BALANCE.graduateShare;
     }
-    if (d.category === 'residential') housing += d.capacity;
+    if (d.category === 'residential' && !b.abandoned) { housing += d.capacity; if (b.construction === 0) population += b.occupants; }
     else if (d.category === 'commercial') {
       if (d.density === 'high') offices += d.capacity;
       else shops += d.capacity;
@@ -166,13 +173,16 @@ function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): 
   // Zone supply uses structural jobs to avoid building duplicate offices/industry just because
   // a tax shock temporarily lowered current production and staffing.
   const openJobs = housing * BALANCE.workforceShare * BALANCE.jobSlack - structuralJobs;
+  const city = policy && 'demography' in policy ? policy as City : undefined;
+  const outlook = migrationOutlook(city, taxRate, economy.purchasingPower);
   return {
+    population,
     housing,
     shops,
     offices,
     industrial,
     openJobs,
-    wantR: (jobs / BALANCE.workforceShare) * BALANCE.housingSlack + BALANCE.seedHousing,
+    wantR: ((population * BALANCE.housingSlack + BALANCE.seedHousing) + BALANCE.housingJobInfluence * Math.max(0, (jobs / BALANCE.workforceShare) * BALANCE.housingSlack - population * BALANCE.housingSlack)) * outlook,
     wantShops: (housing * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs) * economy.purchasingPower,
     wantOffices: offices + openJobs * BALANCE.officeJobShare + graduates * BALANCE.graduateOfficeJobs,
     wantI: industrial + openJobs * (1 - BALANCE.officeJobShare) + BALANCE.seedIndustrialJobs,
@@ -197,7 +207,8 @@ export type DemandWhy = Readonly<Record<keyof ZoneDemand, string>>;
 export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRate, policy?: HouseholdPolicy): DemandWhy {
   const x = demandInputs(world, taxRate, policy);
   const n = (v: number) => Math.round(Math.abs(v)).toLocaleString();
-  const purchasingPower = householdPurchasingPower(taxRate, policy);
+  const purchasingPower = economyReport(world, taxRate, policy).purchasingPower;
+  const outlook = migrationOutlook(policy && 'demography' in policy ? policy as City : undefined, taxRate, purchasingPower);
   const taxNote = purchasingPower < 0.98
     ? ` O poder de compra está em ${Math.round(purchasingPower * 100)}% do nível de referência; impostos e custo de vida reduzem as vendas.`
     : taxRate !== BALANCE.baseTaxRate
@@ -206,9 +217,11 @@ export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRat
   const tooManyJobs = `A cidade já tem ${n(x.openJobs)} empregos a mais que trabalhadores. Moradias atraem trabalhadores.`;
   return {
     r:
-      (x.wantR > x.housing
-        ? `Há empregos precisando de trabalhadores: espaço para cerca de ${n(x.wantR - x.housing)} novos moradores.`
-        : 'Há mais moradias que empregos: lojas, escritórios e indústrias atraem moradores.') + taxNote,
+      (outlook <= 0
+        ? 'A imigração está parada: faltam hospitais nas áreas residenciais ou os impostos estão extremos.'
+        : x.wantR > x.housing
+          ? `Há procura por cerca de ${n(x.wantR - x.housing)} vagas de moradia, mesmo sem novos empregos.`
+          : 'As moradias disponíveis atendem à demanda atual. Novos moradores podem ocupar as vagas existentes.') + taxNote,
     c:
       (x.wantShops > x.shops
         ? `Os moradores querem cerca de ${n(x.wantShops - x.shops)} novos empregos em lojas próximas.`
@@ -262,6 +275,8 @@ function lotReason(city: City, x: number, y: number, context: LotContext): LotRe
   if (!isZoned(zone) || world.building[i] !== -1) return null;
   if (findEntrance(world, x, y, 1, 1, BALANCE.roadAccessRange) === -1) return 'noRoad';
   if (demandFor(context.demand, zone) <= 0) return 'noDemand';
+  const key = demandKey(zone);
+  if (city.demography.permitUsed[key] >= city.demography.permitLimits[key]) return 'permitLimit';
   const needed = context.minMaterials.get(zone) ?? Infinity;
   if (!Number.isFinite(needed)) return 'noModel';
   if (needed > context.availableMaterials) return 'materials';
@@ -298,6 +313,7 @@ export function diagnoseLot(city: City, x: number, y: number, importsUsed = 0): 
     noDemand: 'Sem demanda para construir',
     materials: 'Faltam materiais de construção',
     noModel: 'Nenhum edifício disponível',
+    permitLimit: 'Limite mensal de licenças atingido',
     queued: 'Aguardando a vez de construir',
   }[reason];
   const detail = reason === 'noRoad'
@@ -308,6 +324,8 @@ export function diagnoseLot(city: City, x: number, y: number, importsUsed = 0): 
         ? `O estoque mais a importação disponível hoje não cobre o primeiro edifício deste terreno. Produza materiais na indústria ou aguarde a reposição diária.`
         : reason === 'noModel'
           ? 'Ainda não há um edifício elegível para esta densidade. Melhore a ocupação, a satisfação e os empregos da cidade.'
+          : reason === 'permitLimit'
+            ? 'O limite mensal de novas construções desta zona foi atingido. Ajuste as licenças na Política Demográfica ou aguarde o mês seguinte.'
           : `A demanda está positiva. O jogo inicia até ${Math.ceil(demandFor(context.demand, zone) * BALANCE.growthPerDay)} novos terrenos desta zona por dia, escolhidos entre todos os terrenos aptos. Deixe o tempo avançar.`;
   return { x, y, zone, reason, title, detail };
 }
@@ -359,6 +377,8 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
   }
 
   const demand = zoneDemand(world, taxRate, policy);
+  const permits = policy && 'demography' in policy ? (policy as City).demography : null;
+  const slowFactor = permits ? 1 - 0.5 * permits.slowLevel : 1;
   const confidence = investorScore(world, taxRate, policy);
   const build = (def: BuildingId, x: number, y: number, occupants = 0, lifestyle: Lifestyle = Lifestyle.Basic) => {
     const { w, h } = BUILDINGS[def].size;
@@ -385,7 +405,9 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
       h,
     );
     started.push(b.id);
+    if (permits && BUILDINGS[def].zone && BUILDINGS[def].density) permits.permitUsed[demandKey(zoneOf(BUILDINGS[def].zone, BUILDINGS[def].density))]++;
     changed.push(areaOf(b));
+    return b;
   };
 
   // 2. New lots on empty zoned tiles with road access, at their density's first level.
@@ -402,13 +424,16 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
   const waiting = { r: 0, c: 0, o: 0, i: 0 };
   for (const z of ZONED_TYPES) {
     const d = demandFor(demand, z);
+    const key = demandKey(z);
+    const remaining = permits ? Math.max(0, permits.permitLimits[key] - permits.permitUsed[key]) : Infinity;
+    if (remaining <= 0) { waiting[key] += empty.get(z)?.length ?? 0; continue; }
     if (d <= 0) {
       waiting[demandKey(z)] += empty.get(z)?.length ?? 0;
       continue;
     }
     const ids = eligibleBuildings(zonedBuildings(ZONE_LETTER[z], ZONE_DENSITY[z], startLevel(ZONE_LETTER[z], ZONE_DENSITY[z]), 1), confidence);
     if (ids.length === 0) continue;
-    for (const t of sample(empty.get(z) ?? [], Math.ceil(d * BALANCE.growthPerDay), rng)) {
+    for (const t of sample(empty.get(z) ?? [], Math.min(remaining, Math.ceil(d * BALANCE.growthPerDay * slowFactor)), rng)) {
       const id = pick(ids, rng);
       if (stock.take(materialsFor(id))) build(id, t.x, t.y);
     }
@@ -431,7 +456,8 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
   for (const z of ZONED_TYPES) {
     const d = demandFor(demand, z);
     if (d <= 0) continue;
-    let budget = Math.ceil(d * BALANCE.upgradesPerDay);
+    const key = demandKey(z);
+    let budget = Math.min(permits ? Math.max(0, permits.permitLimits[key] - permits.permitUsed[key]) : Infinity, Math.ceil(d * BALANCE.upgradesPerDay * slowFactor));
     for (const b of sample(candidates.get(z) ?? [], Infinity, rng)) {
       if (budget === 0) break;
       // An earlier merge today may already have absorbed this building.
@@ -443,7 +469,7 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
   return { changed, started, completed, waiting };
 }
 
-type Build = (def: BuildingId, x: number, y: number, occupants?: number, lifestyle?: Lifestyle) => void;
+type Build = (def: BuildingId, x: number, y: number, occupants?: number, lifestyle?: Lifestyle) => BuildingInstance;
 
 function upgrade(world: World, b: BuildingInstance, zone: ZonedType, rng: Rng, build: Build, confidence: number, stock: MaterialStock): boolean {
   const def: BuildingDef = BUILDINGS[b.def];
@@ -452,17 +478,21 @@ function upgrade(world: World, b: BuildingInstance, zone: ZonedType, rng: Rng, b
   const next = def.level + 1;
   /** Rebuild as `id`; false (nothing touched) when its materials can't be had today. */
   const replace = (olds: readonly BuildingInstance[], x: number, y: number, id: BuildingId): boolean => {
+    if (olds.some((o) => o.property && (o.property.debt > 0 || o.property.loan || o.property.publicOwned))) return false;
     if (!stock.take(materialsFor(id))) return false;
     let occupants = 0;
+    let reserve = 0;
     // People bring their lifestyle; a merged block takes the lowest tier among its homes.
     let lifestyle: Lifestyle = Lifestyle.Prosperous;
     for (const o of olds) {
       const s = BUILDINGS[o.def].size;
       occupants += o.occupants;
+      reserve += o.property?.reserve ?? 0;
       if (o.lifestyle < lifestyle) lifestyle = o.lifestyle;
       world.removeBuilding(o.id, s.w, s.h);
     }
-    build(id, x, y, occupants, lifestyle);
+    const next = build(id, x, y, occupants, lifestyle);
+    if (reserve > 0 && BUILDINGS[id].category === 'residential') next.property = { ...initialProperty(next), reserve };
     return true;
   };
 
@@ -573,6 +603,7 @@ export class GrowthSystem implements SimSystem {
         count.noDemand && `${count.noDemand} sem demanda`,
         count.materials && `${count.materials} sem materiais suficientes`,
         count.noModel && `${count.noModel} sem edifício elegível`,
+        count.permitLimit && `${count.permitLimit} com limite mensal de licenças atingido`,
         count.queued && `${count.queued} aguardando a fila diária de construção`,
       ].filter(Boolean);
       return parts.length ? `${base[key]} Terrenos vazios: ${parts.join('; ')}. Selecione um terreno para ver o motivo e o que fazer.` : base[key];

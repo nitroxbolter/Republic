@@ -775,6 +775,8 @@ export function wealthOf(id: BuildingId): WealthTier {
 }
 
 export interface BuildingInstance {
+  /** Residential owner's balance sheet; absent on buildings from old saves until first close. */
+  property?: import('../systems/realEstate').PropertyState;
   id: number;
   def: BuildingId;
   /** Footprint's top (north) tile. */

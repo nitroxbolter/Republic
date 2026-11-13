@@ -5,6 +5,7 @@ import { emptyIncidents, type IncidentState } from './systems/incidents';
 import { Stage } from './stages';
 import type { World } from './World';
 import { defaultCostTaxRates, type CostTaxRates } from './systems/livingCosts';
+import { initialDemography, type DemographicPolicy } from './systems/demography';
 
 /** City-wide state that isn't per-tile: money and the calendar. */
 export class City {
@@ -19,8 +20,10 @@ export class City {
   /** Monthly government payment per senior, independent of the minimum wage. */
   pensionPerSenior: number = BALANCE.defaultPensionPerSenior;
   costTaxRates: CostTaxRates = defaultCostTaxRates();
+  propertyLedger = { loaned: 0, recovered: 0, writtenOff: 0, issuedThisMonth: 0, acquiredThisMonth: 0, repaidEarlyThisMonth: 0, earlyInterestThisMonth: 0 };
+  demography: DemographicPolicy = initialDemography();
   /** Aggregate social state; individual residents are represented by their homes. */
-  society = { sick: 0, prisoners: 0, deaths: 0, recentDeaths: 0, untreatedDeaths: 0, prisonOverflow: 0 };
+  society = { sick: 0, prisoners: 0, deaths: 0, recentDeaths: 0, untreatedDeaths: 0, prisonOverflow: 0, naturalDeathCarry: 0 };
   /**
    * Fixed sim ticks since founding (SIM_TICK_HZ per sim second). The time of day comes from
    * this integer, never from frame time, so every machine plays a city the same way (D-068).
@@ -54,6 +57,7 @@ export class City {
   constructor(world: World, funds: number = BALANCE.startingFunds) {
     this.world = world;
     this.funds = funds;
+    world.onRemoveBuilding = (b) => { if (b.property?.loan) this.propertyLedger.writtenOff += b.property.loan.balance + b.property.loan.late; };
   }
 
   /** Sim seconds on the time-of-day clock (separate from the calendar; see docs/04-ui-ux.md). */

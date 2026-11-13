@@ -57,9 +57,44 @@ export const BALANCE = {
   foodBill: 200,
   housingBill: 450,
   transportBill: 200,
+  /** Monthly rent for the entire residential building, shared by its actual occupants. */
+  propertyRent: { cottage: 150, family_house: 250, townhouses: 450, walkup: 600, apartment_block: 1_000, condo_tower: 2_500, villa: 1_500, luxury_apartments: 3_000 },
+  /** Utility charges: common-area use scales with capacity; variable use scales with occupants. */
+  propertyCommonEnergy: 0.7,
+  propertyCommonWater: 0.6,
+  propertyUtilityScale: [1, 1.2, 1.5],
+  propertyScaleDiscount: 0.2,
+  propertyOperatingShare: 0.35,
+  propertyReserveMonths: 1,
+  propertyAlertMonths: 3,
+  propertyFinanceMonths: 6,
+  propertyCriticalMonths: 9,
+  propertyBankruptcyMonths: 12,
+  propertyLoanInterest: 0.02,
+  propertyLoanTerm: 24,
+  propertyHousingIncomeLimit: 0.3,
+  /** Demographic policy uses migration speed, not forced population changes. */
+  demographicBirthsPerResidentYear: 0.008,
+  demographicNaturalMoveInFloor: 0.55,
+  demographicStimulusMoveInBonus: 0.3,
+  demographicPolicySmoothing: 0.25,
+  demographicIncentivePerImmigrant: 12,
+  demographicIncentivePerResident: 0.08,
+  demographicInfrastructureWarning: 0.75,
+  demographicMaxHousingSubsidy: 0.2,
   policeCells: 8,
-  /** Homes only fill to this share of capacity while there are no jobs; jobs lift it to 100%. */
-  minHousingFill: 0.45,
+  /** Migration slows only as taxation becomes severe; ordinary unemployment affects satisfaction instead. */
+  migrationCompanyTaxSlow: 70,
+  migrationCompanyTaxStop: 95,
+  migrationIncomeTaxSlow: 70,
+  migrationIncomeTaxStop: 95,
+  migrationPurchasingPowerSlow: 0.45,
+  migrationPurchasingPowerStop: 0.1,
+  /** Jobs add at most this share to housing occupancy and residential demand. */
+  housingJobInfluence: 0.1,
+  /** Annual senior mortality after hospitals become available, at full and zero hospital coverage. */
+  annualSeniorMortalityCared: 0.02,
+  annualSeniorMortalityNoHospital: 0.08,
   /** Monthly tax per resident and per worker. */
   taxPerResident: 3,
   taxPerWorker: 2,

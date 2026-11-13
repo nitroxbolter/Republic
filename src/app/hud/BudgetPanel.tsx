@@ -21,6 +21,9 @@ function Lines({ r }: { r: BudgetReport }) {
     ['Infraestrutura', r.breakdown.utilities],
     ['Parques e outros prédios públicos', r.breakdown.parks],
     ['Aposentadorias', r.breakdown.pensions],
+    ['Manutenção de imóveis públicos', r.propertyFlows.publicOperating],
+    ['Incentivos à migração', r.breakdown.demographicIncentives],
+    ['Subsídios habitacionais', r.breakdown.housingSubsidies],
   ];
   return (
     <div className="budget-card budget-lines">
@@ -29,6 +32,8 @@ function Lines({ r }: { r: BudgetReport }) {
       <div className="budget-line income"><span>Imposto de renda</span><strong>+{money(r.incomeTaxRevenue)}</strong></div>
       <div className="budget-line income"><span>Impostos das contas dos habitantes</span><strong>+{money(r.residentTaxRevenue - r.incomeTaxRevenue)}</strong></div>
       <div className="budget-line income"><span>Contas de energia e água</span><strong>+{money(r.utilityRevenue)}</strong></div>
+      {r.propertyFlows.publicRent > 0 && <div className="budget-line income"><span>Aluguéis de imóveis públicos</span><strong>+{money(r.propertyFlows.publicRent)}</strong></div>}
+      {r.propertyFlows.interest > 0 && <div className="budget-line income"><span>Juros recebidos de financiamentos</span><strong>+{money(r.propertyFlows.interest)}</strong></div>}
       {r.recycling > 0 && <div className="budget-line income"><span>Reciclagem</span><strong>+{money(r.recycling)}</strong></div>}
       <div className="budget-line total income"><span>Arrecadação total</span><strong>+{money(r.income)}</strong></div>
 
@@ -103,6 +108,7 @@ function WideBudget({ onClose }: { onClose: () => void }) {
 function BudgetBody({ onClose }: { onClose: () => void }) {
   const info = useAtomValue(budgetAtom);
   const game = useAtomValue(gameAtom);
+  const demography = useOverlay('demography');
   if (!info) return null;
   const incomeTaxPerWorker = info.minimumWage * info.incomeTaxRate / 100;
   const worker = livingCosts(info.minimumWage - incomeTaxPerWorker, info.costTaxRates);
@@ -118,6 +124,7 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
           </svg>
         </button>
       </header>
+      <button type="button" className="secondary-button" onClick={demography.show}>Abrir Política Demográfica</button>
 
       {info.taxes && (
         <div className="tax-chest">
@@ -182,17 +189,16 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
       <div className="budget-card">
         <div className="budget-line"><span>Alimentação importada · valor fixo</span><strong>{money(BASE_COSTS.food)}</strong></div>
         {COST_KINDS.map((kind) => {
-          const tax = BASE_COSTS[kind] * info.costTaxRates[kind] / 100;
           const balance = info.forecast.costBalances[kind];
           return <label className="tax budget-tax-item" key={kind}>
-            <span className="budget-line"><span>{costLabels[kind]} · conta {money(BASE_COSTS[kind])}</span><strong>{info.costTaxRates[kind]}% · −{money(tax)}</strong></span>
+            <span className="budget-line"><span>{costLabels[kind]} · {kind === 'housing' || kind === 'water' || kind === 'energy' ? 'média atual' : 'conta'} {money(balance.billPerResident)}</span><strong>{info.costTaxRates[kind]}% · −{money(balance.billPerResident * info.costTaxRates[kind] / 100)}</strong></span>
             <input type="range" min={0} max={100} step={1} value={info.costTaxRates[kind]}
               aria-label={`Imposto sobre ${costLabels[kind]}`} onChange={(e) => game?.setCostTaxRate(kind, Number(e.target.value))} />
-            <span className="tax-hint">Total da conta: {money(BASE_COSTS[kind] + tax)}/mês por pessoa</span>
+            <span className="tax-hint">Total estimado: {money(balance.billPerResident * (1 + info.costTaxRates[kind] / 100))}/mês por pessoa. Moradia, água e energia variam conforme o edifício e a ocupação.</span>
             <span className={`tax-hint ${balance.net < 0 ? 'warn-text' : ''}`}>Governo: arrecada {money(balance.revenue)}, custa {money(balance.upkeep)}, saldo {money(balance.net)}/mês.</span>
           </label>;
         })}
-        <div className="budget-line total"><span>Custo básico por pessoa</span><strong>{money(worker.base)}/mês</strong></div>
+        <div className="budget-line total"><span>Cesta de referência por pessoa</span><strong>{money(worker.base)}/mês</strong></div>
         <div className="budget-line"><span>Impostos das contas por pessoa</span><strong>{money(worker.categoryTax)}/mês</strong></div>
       </div>
 
@@ -238,6 +244,24 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
 
       <h3 className="budget-heading">Próximo mês (previsão)</h3>
       <Lines r={info.forecast} />
+      <h3 className="budget-heading">Mercado imobiliário e financiamentos</h3>
+      <div className="budget-card">
+        <div className="budget-line"><span>Imóveis inadimplentes</span><strong>{info.forecast.propertyFlows.delinquent}</strong></div>
+        <div className="budget-line"><span>Dívida privada acumulada</span><strong>{money(info.forecast.propertyFlows.debt)}</strong></div>
+        <div className="budget-line"><span>Financiamentos ativos</span><strong>{info.forecast.propertyFlows.activeLoans}</strong></div>
+        <div className="budget-line"><span>Total já emprestado</span><strong>{money(info.forecast.propertyFlows.loanedTotal)}</strong></div>
+        <div className="budget-line"><span>Total recuperado</span><strong>{money(info.forecast.propertyFlows.recoveredTotal)}</strong></div>
+        <div className="budget-line"><span>Perdas por inadimplência</span><strong>{money(info.forecast.propertyFlows.losses)}</strong></div>
+        {info.last && <>
+          <div className="budget-line income"><span>Principal recuperado no último mês</span><strong>+{money(info.last.propertyFlows.principal)}</strong></div>
+          <div className="budget-line income"><span>Juros recebidos no último mês</span><strong>+{money(info.last.propertyFlows.interest)}</strong></div>
+          <div className="budget-line income"><span>Principal quitado antecipadamente</span><strong>+{money(info.last.propertyFlows.earlyPrincipal)}</strong></div>
+          <div className="budget-line income"><span>Juros quitados antecipadamente</span><strong>+{money(info.last.propertyFlows.earlyInterest)}</strong></div>
+          <div className="budget-line"><span>Empréstimos concedidos no último mês</span><strong>−{money(info.last.propertyFlows.loansIssued)}</strong></div>
+          <div className="budget-line"><span>Imóveis adquiridos no último mês</span><strong>−{money(info.last.propertyFlows.acquisitions)}</strong></div>
+          <div className="budget-line total"><span>Variação de caixa no fechamento anterior</span><strong>{money(info.last.cashNet)}</strong></div>
+        </>}
+      </div>
       <p className="tax-hint">A manutenção de energia e água já aparece nos saldos por conta acima. Outras infraestruturas continuam no resultado geral.</p>
       {info.last && (
         <p className="tax-hint">

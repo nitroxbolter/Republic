@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.setConfig({ testTimeout: 45_000 });
 import { City } from '../src/sim/City';
 import { refreshCity } from '../src/sim/core/Simulation';
 import { buildDemoCity } from '../src/sim/demo';

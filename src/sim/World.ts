@@ -33,6 +33,7 @@ export class World {
   /** Building instance id covering each tile, −1 if none. */
   readonly building: Int32Array;
   readonly buildings = new Map<number, BuildingInstance>();
+  onRemoveBuilding?: (building: BuildingInstance) => void;
   private nextBuildingId = 1;
 
   constructor(width: number, height: number, seed: number) {
@@ -103,6 +104,7 @@ export class World {
   removeBuilding(id: number, w: number, h: number) {
     const b = this.buildings.get(id);
     if (!b) return;
+    this.onRemoveBuilding?.(b);
     for (let y = b.y; y < b.y + h; y++) for (let x = b.x; x < b.x + w; x++) this.building[this.index(x, y)] = -1;
     this.buildings.delete(id);
   }

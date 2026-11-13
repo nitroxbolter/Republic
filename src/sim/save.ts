@@ -14,6 +14,8 @@ import { PRESET_IDS, type PresetId, type TerrainSettings } from './terrain/prese
 import { Decor, Terrain } from './terrain/types';
 import type { World } from './World';
 import { ZoneType } from './zones';
+import { initialProperty, type PropertyState } from './systems/realEstate';
+import { initialDemography, type DemographicPolicy, type PermitLimits } from './systems/demography';
 
 /**
  * The save format (docs/specs/saving.md, D-034): only what can't be recomputed. Terrain is
@@ -57,6 +59,8 @@ const FLAG = { grown: 1, abandoned: 2 } as const;
 
 export interface SavedCity {
   readonly funds: number;
+  readonly propertyLedger?: City['propertyLedger'];
+  readonly demography?: DemographicPolicy;
   readonly day: number;
   readonly clock: number;
   readonly taxRate: number;
@@ -66,7 +70,7 @@ export interface SavedCity {
   readonly costTaxRates?: CostTaxRates;
   /** Older saves used a fraction of minimum wage; loaded once as a fixed amount. */
   readonly pensionShare?: number;
-  readonly society?: { readonly sick: number; readonly prisoners: number; readonly deaths: number; readonly recentDeaths: number; readonly untreatedDeaths: number; readonly prisonOverflow: number };
+  readonly society?: { readonly sick: number; readonly prisoners: number; readonly deaths: number; readonly recentDeaths: number; readonly untreatedDeaths: number; readonly prisonOverflow: number; readonly naturalDeathCarry?: number };
   /** Highest stage reached and whether stages lock buildings (D-086); absent in older saves. */
   readonly stage?: number;
   readonly locked?: boolean;
@@ -129,6 +133,8 @@ export interface SaveData {
   readonly city: SavedCity;
   readonly layers: SavedLayers;
   readonly buildings: readonly SavedBuilding[];
+  /** Residential finance keyed by building-array index; absent in older saves. */
+  readonly properties?: Readonly<Record<string, PropertyState>>;
   /** Tile-indexed building ownership snapshot: `"x,y"` → building array index. */
   readonly buildingTiles?: Readonly<Record<string, number>>;
   readonly sim?: SavedSimState;
@@ -158,8 +164,10 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
   for (let i = 0; i < cleared.length; i++) cleared[i] = w.tree[i] === 0 && w.decor[i] === Decor.None ? 1 : 0;
   const buildings: SavedBuilding[] = [];
   const buildingIndex = new Map<number, number>();
+  const properties: Record<string, PropertyState> = {};
   for (const b of w.buildings.values()) {
     buildingIndex.set(b.id, buildings.length);
+    if (b.property) properties[buildings.length] = b.property;
     const core: SavedBuildingCore = [
       b.def,
       b.x,
@@ -198,7 +206,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -213,6 +221,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
       overAxis: encodeLayer(w.overAxis),
     },
     buildings,
+    ...(Object.keys(properties).length > 0 && { properties }),
     buildingTiles,
     ...(sim && { sim: saveSimState(sim) }),
   };
@@ -281,9 +290,14 @@ export function deserialize(data: SaveData): City {
   }
   // Footprints are rebuilt from the building records; buildingTiles is only a cross-check
   // (verifySave), so a skipped building can never make the whole city unloadable.
-  for (const s of data.buildings) addSavedBuilding(world, s);
+  for (let i = 0; i < data.buildings.length; i++) {
+    const b = addSavedBuilding(world, data.buildings[i]);
+    if (b && data.properties?.[i]) b.property = data.properties[i];
+  }
 
   const city = new City(world, data.city.funds);
+  if (data.city.propertyLedger) city.propertyLedger = { ...data.city.propertyLedger };
+  if (data.city.demography) city.demography = { ...data.city.demography, permitLimits: { ...data.city.demography.permitLimits }, permitUsed: { ...data.city.demography.permitUsed } };
   city.day = data.city.day;
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
@@ -292,7 +306,7 @@ export function deserialize(data: SaveData): City {
   city.minimumWage = data.city.costTaxRates ? data.city.minimumWage ?? BALANCE.defaultMinimumWage : BALANCE.defaultMinimumWage;
   city.pensionPerSenior = data.city.costTaxRates ? data.city.pensionPerSenior ?? BALANCE.defaultPensionPerSenior : BALANCE.defaultPensionPerSenior;
   city.costTaxRates = data.city.costTaxRates ?? defaultCostTaxRates();
-  if (data.city.society) city.society = { ...data.city.society };
+  if (data.city.society) city.society = { ...city.society, ...data.city.society };
   // Cities saved before stages existed keep everything they could build (user call, D-086).
   city.locked = data.city.locked ?? false;
   city.collectsTaxes = data.city.collectsTaxes ?? false;
@@ -365,6 +379,7 @@ function addSavedBuilding(world: World, s: SavedBuilding) {
   b.lifeDays = Math.max(-BALANCE.lifeDays, Math.min(BALANCE.lifeDays, Math.round(lifeDays)));
   b.garbage = Math.max(0, garbage);
   b.filled = Math.max(0, filled);
+  return b;
 }
 
 // ---------------------------------------------------------------- verify (before writing)
@@ -506,6 +521,8 @@ export function parseSave(json: unknown): SaveData {
     terrain,
     city: {
       funds: num(c, 'funds'),
+      ...parsePropertyLedger(c.propertyLedger),
+      ...parseDemography(c.demography),
       day: num(c, 'day', 0),
       clock: num(c, 'clock', 0),
       taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
@@ -518,6 +535,7 @@ export function parseSave(json: unknown): SaveData {
         sick: social.sick as number, prisoners: social.prisoners as number, deaths: social.deaths as number,
         recentDeaths: isFiniteNumber(social.recentDeaths) && social.recentDeaths >= 0 ? social.recentDeaths : 0,
         untreatedDeaths: social.untreatedDeaths as number, prisonOverflow: social.prisonOverflow as number,
+        naturalDeathCarry: isFiniteNumber(social.naturalDeathCarry) && social.naturalDeathCarry >= 0 && social.naturalDeathCarry < 1 ? social.naturalDeathCarry : 0,
       } }),
       ...(isFiniteNumber(c.stage) && isStage(c.stage) && { stage: c.stage }),
       ...(typeof c.locked === 'boolean' && { locked: c.locked }),
@@ -540,10 +558,70 @@ export function parseSave(json: unknown): SaveData {
       ...(typeof l.over === 'string' && typeof l.overAxis === 'string' && { over: l.over, overAxis: l.overAxis }),
     },
     buildings,
+    ...parseProperties(json.properties, buildings),
     ...(buildingTiles && { buildingTiles }),
     ...parseSimState(json.sim),
     ...(isFiniteNumber(json.savedAt) && { savedAt: json.savedAt }),
   };
+}
+
+function parsePropertyLedger(value: unknown): { propertyLedger?: City['propertyLedger'] } {
+  if (!isObj(value)) return {};
+  const fields = ['loaned', 'recovered', 'writtenOff', 'issuedThisMonth', 'acquiredThisMonth', 'repaidEarlyThisMonth'] as const;
+  if (!fields.every((field) => isFiniteNumber(value[field]) && value[field] >= 0)) return {};
+  return { propertyLedger: { ...Object.fromEntries(fields.map((field) => [field, value[field]])) as Omit<City['propertyLedger'], 'earlyInterestThisMonth'>, earlyInterestThisMonth: isFiniteNumber(value.earlyInterestThisMonth) && value.earlyInterestThisMonth >= 0 ? value.earlyInterestThisMonth : 0 } };
+}
+
+function parseDemography(value: unknown): { demography?: DemographicPolicy } {
+  if (!isObj(value)) return {};
+  const defaults = initialDemography();
+  const limits = (v: unknown, fallback: PermitLimits): PermitLimits => {
+    if (!isObj(v)) return { ...fallback };
+    return Object.fromEntries((['r', 'c', 'o', 'i'] as const).map((key) => [key, isFiniteNumber(v[key]) && v[key] >= 0 && v[key] <= 9999 ? Math.floor(v[key]) : fallback[key]])) as PermitLimits;
+  };
+  const nonnegative = (key: keyof DemographicPolicy, fallback: number) => isFiniteNumber(value[key]) && value[key] >= 0 ? value[key] : fallback;
+  return { demography: {
+    strategy: value.strategy === 'stimulate' || value.strategy === 'slow' ? value.strategy : 'balanced',
+    annualTarget: isFiniteNumber(value.annualTarget) ? Math.max(0, Math.min(10, value.annualTarget)) : defaults.annualTarget,
+    incentivesEnabled: typeof value.incentivesEnabled === 'boolean' ? value.incentivesEnabled : defaults.incentivesEnabled,
+    housingSubsidy: isFiniteNumber(value.housingSubsidy) ? Math.max(0, Math.min(BALANCE.demographicMaxHousingSubsidy, value.housingSubsidy)) : 0,
+    permitLimits: limits(value.permitLimits, defaults.permitLimits), permitUsed: limits(value.permitUsed, defaults.permitUsed),
+    incentiveLevel: isFiniteNumber(value.incentiveLevel) ? Math.max(0, Math.min(1, value.incentiveLevel)) : 0,
+    slowLevel: isFiniteNumber(value.slowLevel) ? Math.max(0, Math.min(1, value.slowLevel)) : 0,
+    yearStartPopulation: nonnegative('yearStartPopulation', 0), yearStartDay: nonnegative('yearStartDay', 0),
+    monthImmigration: nonnegative('monthImmigration', 0), monthEmigration: nonnegative('monthEmigration', 0),
+    monthBirths: nonnegative('monthBirths', 0), monthDeaths: nonnegative('monthDeaths', 0),
+    lastImmigration: nonnegative('lastImmigration', 0), lastEmigration: nonnegative('lastEmigration', 0),
+    lastBirths: nonnegative('lastBirths', 0), lastDeaths: nonnegative('lastDeaths', 0),
+    birthCarry: isFiniteNumber(value.birthCarry) ? Math.max(0, Math.min(1, value.birthCarry)) : 0,
+  } };
+}
+
+function parseProperties(value: unknown, buildings: readonly SavedBuilding[]): { properties?: Readonly<Record<string, PropertyState>> } {
+  if (!isObj(value)) return {};
+  const properties: Record<string, PropertyState> = {};
+  for (const [key, raw] of Object.entries(value)) {
+    const index = Number(key);
+    if (!Number.isInteger(index) || index < 0 || index >= buildings.length || !isObj(raw)) continue;
+    const def = buildings[index][0];
+    if (BUILDINGS[def].category !== 'residential') continue;
+    const fallback = initialProperty({ def } as Parameters<typeof initialProperty>[0]);
+    const nonnegative = (v: unknown, defaultValue: number) => isFiniteNumber(v) && v >= 0 ? v : defaultValue;
+    const loanRaw = raw.loan;
+    const loan = isObj(loanRaw) && ['principal', 'interestRate', 'term', 'payment', 'balance', 'paid', 'interestReceived', 'late', 'months'].every((field) => isFiniteNumber(loanRaw[field]) && loanRaw[field] >= 0)
+      ? { principal: Number(loanRaw.principal), interestRate: Number(loanRaw.interestRate), term: Number(loanRaw.term), payment: Number(loanRaw.payment), balance: Number(loanRaw.balance), paid: Number(loanRaw.paid), interestReceived: Number(loanRaw.interestReceived), late: Number(loanRaw.late), lateInterest: nonnegative(loanRaw.lateInterest, 0), months: Number(loanRaw.months) }
+      : null;
+    properties[key] = {
+      reserve: nonnegative(raw.reserve, fallback.reserve), debt: nonnegative(raw.debt, 0),
+      delinquentMonths: Math.floor(nonnegative(raw.delinquentMonths, 0)),
+      status: ['regular', 'loss', 'delinquent', 'critical', 'recovery', 'financed', 'bankrupt'].includes(String(raw.status)) ? raw.status as PropertyState['status'] : 'regular',
+      publicOwned: raw.publicOwned === true, loan,
+      lastMonth: isFiniteNumber(raw.lastMonth) ? Math.floor(raw.lastMonth) : -1,
+      lastRent: nonnegative(raw.lastRent, 0), lastCost: nonnegative(raw.lastCost, 0),
+      lastResult: isFiniteNumber(raw.lastResult) ? raw.lastResult : 0,
+    };
+  }
+  return Object.keys(properties).length ? { properties } : {};
 }
 
 function parseCostTaxRates(value: unknown): CostTaxRates | null {

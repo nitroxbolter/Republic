@@ -58,6 +58,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
   const city = useAtomValue(cityAtom);
   const game = useAtomValue(gameAtom);
   const budget = useOverlay('budget');
+  const demography = useOverlay('demography');
   const muted = useAtomValue(mutedAtom);
   const dayNight = useAtomValue(dayNightAtom);
   const trafficView = useAtomValue(trafficViewAtom);
@@ -92,6 +93,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
       </header>
 
       <button type="button" className="primary-button" onClick={budget.show}>Orçamento, salário mínimo e aposentadorias</button>
+      <button type="button" className="secondary-button" onClick={demography.show}>Política Demográfica</button>
 
       <div className="more-stats">
         <span className="more-stat"><span className="air-dot" style={{ background: '#7b8da4' }} aria-hidden="true" /><span>

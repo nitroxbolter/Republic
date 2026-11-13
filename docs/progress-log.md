@@ -554,3 +554,11 @@ Newest first. One entry per work session.
 - Created docs: vision, architecture, roadmap, UI/UX, specs (terrain, roads, buildings), decision log.
 - Open decisions D-001 (name), D-002 (iso vs top-down) and D-003 (rotation) need sign-off.
 - **Next:** Phase 1, engine foundation (scaffold, iso grid, camera, picking, debug overlay).
+
+# 2026-11-13 — Imóveis e política demográfica
+
+Integração de aluguel, água e energia por edifício, balanço do proprietário, empréstimos públicos, falência, painéis financeiros, política demográfica gradual, licenças por zona, subsídios, migração e nascimentos. Saves antigos continuam compatíveis. Testes focados adicionados em `tests/realEstate.test.ts` e `tests/demography.test.ts`.
+
+## 2026-11-13 — Crescimento sem empregos
+
+Casas vagas agora atraem moradores mesmo sem vagas de trabalho; empregos contribuem com até 10% da ocupação e da demanda residencial. Impostos extremos param novas chegadas e falta de hospitais após seu desbloqueio causa estagnação e mais mortes. O saldo fracionário da mortalidade é salvo para manter a continuidade da cidade.

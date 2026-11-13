@@ -19,6 +19,7 @@ import { nextStage, stageFor } from '../stages';
 import { GrowthSystem } from '../systems/growth';
 import { cityStats, PopulationSystem } from '../systems/population';
 import { societyDay } from '../systems/society';
+import { advanceDemographicPolicy, closeDemographicMonth, demographicBirthDay } from '../systems/demography';
 import { TrafficSystem } from '../systems/traffic';
 import { UtilitiesSystem, updateUtilities, type UtilityReport } from '../systems/utilities';
 import type { World } from '../World';
@@ -107,6 +108,7 @@ export class Simulation {
     const out = emptyOutcome();
     const t = this.timings;
     this.city.day++;
+    t.run('demography.policy', () => advanceDemographicPolicy(this.city));
     this.climbStage(out);
     t.run('materials.day', () => this.materials.onDay());
     t.run('growth.day', () => this.growth.onDay(out));
@@ -123,11 +125,13 @@ export class Simulation {
     t.run('trains.day', () => this.trains.onDay());
     t.run('incidents.day', () => this.incidents.onDay());
     t.run('society.day', () => societyDay(this.city, this.incidents.takeSocietyEvents(), this.streams.fire.next));
+    t.run('demography.births', () => demographicBirthDay(this.city));
     t.run('research.day', () => {
       out.research = researchDay(this.city);
     });
     if (this.city.day % BALANCE.daysPerMonth === 0) {
       t.run('budget.month', () => this.budget.onMonth(out));
+      closeDemographicMonth(this.city);
       t.run('garbage.month', () => this.garbage.onMonth());
       this.incidents.onMonth();
     }

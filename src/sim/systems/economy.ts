@@ -4,6 +4,7 @@ import type { World } from '../World';
 import { isActive } from './access';
 import { hasUtilities } from './utilities';
 import { defaultCostTaxRates, livingCosts, type CostTaxRates } from './livingCosts';
+import { propertyBills } from './realEstate';
 
 export interface HouseholdPolicy {
   minimumWage: number;
@@ -53,17 +54,40 @@ export function householdPurchasingPower(taxRate: number, policy?: HouseholdPoli
  */
 export function economyReport(world: World, taxRate: number = BALANCE.baseTaxRate, policy?: HouseholdPolicy): EconomyReport {
   let residents = 0;
+  let disposable = 0;
+  let baselineDisposable = 0;
   let commerceCapacity = 0;
   let industrialCapacity = 0;
+  const rates = policy?.costTaxRates ?? defaultCostTaxRates();
+  const noTax = defaultCostTaxRates();
   for (const b of world.buildings.values()) {
     if (!isActive(b) || b.abandoned || b.construction > 0 || !hasUtilities(b)) continue;
     const d = BUILDINGS[b.def];
-    if (d.category === 'residential') residents += b.occupants;
+    if (d.category === 'residential') {
+      residents += b.occupants;
+      if (policy && b.occupants > 0) {
+        // A first occupant should not be treated as if they alone will pay all common-area costs forever.
+        const expectedOccupants = Math.max(b.occupants, Math.ceil(d.capacity * 0.65));
+        const bill = propertyBills(b, policy?.costTaxRates.housing ?? 0, expectedOccupants);
+        const subsidy = policy && 'demography' in policy ? (policy as import('../City').City).demography.housingSubsidy : 0;
+        const bills = { food: BALANCE.foodBill, transport: BALANCE.transportBill, housing: bill.rent * (1 - subsidy) / expectedOccupants, energy: bill.energy / expectedOccupants, water: bill.water / expectedOccupants, surcharge: bill.surcharge / expectedOccupants };
+        const wage = (policy?.minimumWage ?? BALANCE.defaultMinimumWage) * BALANCE.lifestyleWage[b.lifestyle] * (1 - (policy?.incomeTaxRate ?? 0) / 100);
+        const monthlyDue = bills.food + bills.transport + bills.housing + bills.energy + bills.water + bills.surcharge
+          + bills.housing * rates.housing / 100 + bills.energy * rates.energy / 100 + bills.water * rates.water / 100 + bills.transport * rates.transport / 100;
+        disposable += b.occupants * (0.87 * Math.max(0, wage - monthlyDue) + 0.13 * Math.max(0, (policy?.pensionPerSenior ?? BALANCE.defaultPensionPerSenior) - monthlyDue));
+        const baselineBills = { ...bills, surcharge: 0 };
+        const baselineDue = baselineBills.food + baselineBills.transport + baselineBills.housing + baselineBills.energy + baselineBills.water;
+        baselineDisposable += b.occupants * (0.87 * Math.max(0, BALANCE.defaultMinimumWage * BALANCE.lifestyleWage[b.lifestyle] - baselineDue) + 0.13 * Math.max(0, BALANCE.defaultPensionPerSenior - baselineDue));
+      }
+    }
     else if (d.category === 'commercial') commerceCapacity += d.capacity;
     else if (d.category === 'industrial') industrialCapacity += d.capacity;
   }
 
-  const purchasingPower = householdPurchasingPower(taxRate, policy);
+  const reference = 0.87 * livingCosts(BALANCE.defaultMinimumWage, noTax).disposable + 0.13 * livingCosts(BALANCE.defaultPensionPerSenior, noTax).disposable;
+  const companyFactor = (1 - 0.6 * taxRate / 100) / (1 - 0.6 * BALANCE.baseTaxRate / 100);
+  const housingFactor = residents > 0 ? Math.max(0.85, Math.min(1.08, 1 + 0.05 * (baselineDisposable / Math.max(1, residents * reference) - 1))) : 1;
+  const purchasingPower = policy && residents > 0 ? Math.max(MIN_PURCHASING_POWER, Math.min(1.15, disposable / Math.max(1, baselineDisposable) * companyFactor * housingFactor)) : householdPurchasingPower(taxRate, policy);
   const targetShopJobs = residents * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs;
   const marketCoverage = commerceCapacity <= 0 ? 0 : Math.min(1, commerceCapacity / Math.max(1, targetShopJobs));
   const householdSpending = Math.round(residents * BALANCE.monthlyShopSpendPerResident * purchasingPower);

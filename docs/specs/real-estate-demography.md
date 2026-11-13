@@ -1,0 +1,21 @@
+# Imóveis e política demográfica
+
+Implementado sobre `budget`, `livingCosts`, `population`, `growth` e o fechamento mensal existente. Não há relógio financeiro paralelo.
+
+## Imóveis
+
+- `BALANCE.propertyRent` guarda o aluguel mensal do edifício inteiro. Cada morador paga sua fração `aluguel / ocupantes`, além do imposto de moradia. O aluguel é privado; só o imposto chega ao governo. O subsídio habitacional, se ativado, diminui a parte paga pelo morador e vira despesa pública, preservando a receita nominal do proprietário.
+- Água e energia têm uma parte comum proporcional à raiz da capacidade e uma parte variável por ocupante. O fator de escala reduz o consumo individual de grandes edifícios; o padrão de vida multiplica o consumo. Serviço indisponível não gera conta.
+- `livingCosts` retira imposto de renda antes de ser chamado e paga aluguel, adicional temporário, energia, água, alimentação, transporte e impostos até o limite da renda. Trabalhadores sem emprego não geram pagamento; idosos usam apenas a aposentadoria. A receita pública separa tarifa-base das estatais, impostos e recebimentos de financiamentos.
+- Cada residência mantém reservas, dívida, meses de inadimplência e estado. O fechamento do mês usa `lastMonth` para impedir a mesma perda ou parcela duas vezes. O custo operacional é `aluguel × propertyOperatingShare + capacidade × 0,5`, inclusive sem ocupantes. Superávits pagam dívidas privadas antes de aumentar reservas.
+- Após seis meses inadimplentes e com dívida, a cidade pode emprestar o saldo. O principal sai imediatamente do caixa e substitui a dívida privada. A parcela fixa é `principal × juros / (1 − (1 + juros)^(-prazo))`; o saldo cai apenas com principal recebido. Juros atrasados são mantidos separadamente. O adicional de aluguel fica limitado a 30% da renda líquida de cada grupo, é separado do aluguel-base e deixa de ser cobrado com a quitação.
+- Aos 12 meses inadimplentes o imóvel entra em falência, sem demolição automática. O jogador pode financiar, adquirir, recuperar por venda privada ou demolir. A remoção do edifício usa o fluxo existente de terreno e registra saldos de empréstimo perdidos.
+- O orçamento mostra resultado operacional, recuperação de principal, empréstimos e aquisições separadamente. O save guarda finanças por índice do edifício e migra saves sem esses campos com valores iniciais.
+
+## Crescimento populacional
+
+- O modo equilibrado conserva a migração natural. Estimular aumenta gradualmente a taxa de entrada, com retornos reduzidos por pressão de infraestrutura, meta atingida e falta de caixa. Desacelerar diminui gradualmente a taxa de entrada e de emissão de licenças; nunca retira moradores por mudança de política.
+- A meta anual entre 0% e 10% ajusta o incentivo, não a população. Os incentivos e subsídios passam pelo orçamento mensal. Licenças por zona limitam novas obras e melhorias a cada mês; terrenos retidos exibem o motivo.
+- Nascimentos naturais são acumulados por frações diárias e ocupam vagas em moradias existentes. Migração, emigração, nascimentos e mortes são contados separadamente no painel. O relatório de infraestrutura agrega ocupação, cobertura de hospital e escola, água, energia, segurança, transporte e empregos.
+- A oferta de empregos contribui com até 10% da ocupação e da demanda residencial; casas vagas continuam atraindo moradores sem empregos. Desemprego também afeta renda, comércio e satisfação. A imigração recua gradualmente sob impostos empresariais, de renda ou das contas muito altos; quando esses encargos são extremos, novas chegadas param sem expulsar residentes. Após o estágio Cidade pequena (quando hospitais são desbloqueados), a imigração acompanha a cobertura hospitalar. A falta de atendimento eleva gradualmente a mortalidade dos idosos; a fração de mortes pendentes persiste no save para resultados determinísticos.
+- O estado da política, contadores e limites persistem no save. Saves antigos usam o modo equilibrado, incentivo zero e licenças sem limite.

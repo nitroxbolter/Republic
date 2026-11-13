@@ -51,6 +51,7 @@ bun run typecheck && bun run lint
 | [specs/energy.md](specs/energy.md) | Power plants, day/night demand, batteries, the tick clock |
 | [specs/transport.md](specs/transport.md) | Road hierarchy, wide roads, flyovers, bridges, public transport, parks |
 | [specs/evolution.md](specs/evolution.md) | City stages and unlocks, lifestyle tiers, hospital, university, garbage |
+| [specs/real-estate-demography.md](specs/real-estate-demography.md) | Building rent, utilities, property loans and demographic policy |
 | [deploy.md](deploy.md) | Docker image, environment settings, production checklist |
 | [decisions.md](decisions.md) | Decision log (why we chose X over Y) |
 | [progress-log.md](progress-log.md) | Dated log of what got done each session |

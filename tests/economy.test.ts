@@ -12,6 +12,7 @@ import { NeedsSystem } from '../src/sim/systems/needs';
 import { deserialize, parseSave, serialize } from '../src/sim/save';
 import { presetSettings } from '../src/sim/terrain/presets';
 import { street } from './support/street';
+import { propertyBills } from '../src/sim/systems/realEstate';
 
 /** Budget, garbage and shop demand: money in, money out, and what the city makes. */
 
@@ -94,7 +95,7 @@ describe('budget', () => {
     rates.energy = 0;
     rates.housing = 10;
     const housing = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates);
-    expect(housing.residentTaxRevenue).toBeGreaterThan(energy.residentTaxRevenue);
+    expect(housing.residentTaxRevenue).toBeGreaterThan(base.residentTaxRevenue);
     rates.housing = 100;
     rates.transport = 100;
     const pension = livingCosts(100, rates);
@@ -123,16 +124,19 @@ describe('budget', () => {
     bus.occupants = 20;
     const rates = { energy: 5, water: 2, housing: 2, transport: 2 };
     const report = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates);
-    expect(report.costBalances.water).toMatchObject({ residents: 80, nominalBase: 4_800, nominalTax: 96, baseRevenue: 4_800, taxRevenue: 96, revenue: 4_896 });
-    expect(report.costBalances.energy).toMatchObject({ residents: 80, baseRevenue: 6_400, taxRevenue: 320, revenue: 6_720 });
-    expect(report.costBalances.housing).toMatchObject({ baseRevenue: 0, taxRevenue: 720, upkeep: 0 });
+    const bills = propertyBills(homes[0], rates.housing);
+    expect(report.costBalances.water.residents).toBe(80);
+    expect(report.costBalances.water.nominalBase).toBeCloseTo(bills.water * 4);
+    expect(report.costBalances.water.baseRevenue).toBe(Math.round(bills.water * 4));
+    expect(report.costBalances.energy.nominalBase).toBeCloseTo(bills.energy * 4);
+    expect(report.costBalances.housing).toMatchObject({ baseRevenue: 0, taxRevenue: Math.round(bills.housingTax * 4), upkeep: 0 });
     expect(report.costBalances.transport).toMatchObject({ baseRevenue: 0, taxRevenue: 320 });
     expect(report.costBalances.transport.upkeep).toBeGreaterThan(0);
     expect(report.breakdown.transport).toBe(report.costBalances.transport.upkeep);
     expect(report.costBalances.water.net).toBe(report.costBalances.water.revenue - report.costBalances.water.upkeep);
     expect(report.costBalances.energy.net).toBe(report.costBalances.energy.revenue - report.costBalances.energy.upkeep);
     expect(report.utilityRevenue).toBe(report.costBalances.water.baseRevenue + report.costBalances.energy.baseRevenue);
-    expect(report.residentTaxRevenue).toBe(rates.energy * 64 + 96 + 720 + 320);
+    expect(report.residentTaxRevenue).toBe(report.incomeTaxRevenue + Object.values(report.costBalances).reduce((sum, b) => sum + b.taxRevenue, 0));
     expect(report.income).toBe(report.businessTaxRevenue + Object.values(report.costBalances).reduce((sum, b) => sum + b.revenue, 0) + report.recycling);
 
     t.world.rail[t.world.index(3, 20)] = 1;
@@ -146,8 +150,9 @@ describe('budget', () => {
     expect(limited.costBalances.water.revenue).toBeGreaterThan(0);
     expect(limited.costBalances.water.revenue).toBeLessThan(limited.costBalances.water.nominalBase + limited.costBalances.water.nominalTax);
     const poor = monthlyBudget(t.world, BALANCE.baseTaxRate, 0, 500, rates);
-    expect(poor.costBalances.water.revenue).toBe(0);
-    expect(poor.costBalances.water.nominalBase).toBe(3_600);
+    expect(poor.costBalances.water.revenue).toBeGreaterThan(0);
+    expect(poor.costBalances.water.revenue).toBeLessThan(poor.costBalances.water.nominalBase + poor.costBalances.water.nominalTax);
+    expect(poor.costBalances.water.nominalBase).toBeCloseTo(bills.water * 3);
   });
 
   it('upkeep: every road tile, every bridge tile at the bridge rate, every civic building by group', () => {

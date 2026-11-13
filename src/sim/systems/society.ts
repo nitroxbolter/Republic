@@ -4,6 +4,9 @@ import type { City } from '../City';
 import type { World } from '../World';
 import type { IncidentEvent } from './incidents';
 import { isWorking } from './utilities';
+import { recordDeaths } from './demography';
+import { hospitalCoverage } from './demography';
+import { Stage } from '../stages';
 
 /** Cohorts are aggregate counts, so cities with many residents remain cheap to simulate. */
 export function demographics(population: number) {
@@ -69,11 +72,21 @@ export function societyDay(city: City, events: readonly IncidentEvent[], random:
   // The saved simulation stream makes the daily mortality draw repeatable across reloads.
   const cared = [...city.world.buildings.values()].some((b) => (b.def === 'clinic' || b.def === 'hospital') && isWorking(b));
   const expectedDeaths = state.sick * (cared ? 0.001 : 0.004);
-  let deaths = Math.min(state.sick, Math.floor(expectedDeaths) + (state.sick > 0 && random() < expectedDeaths % 1 ? 1 : 0));
-  state.sick -= deaths;
+  const illnessDeaths = Math.min(state.sick, Math.floor(expectedDeaths) + (state.sick > 0 && random() < expectedDeaths % 1 ? 1 : 0));
+  state.sick -= illnessDeaths;
+  const coverage = city.stage >= Stage.Town ? hospitalCoverage(city) : 1;
+  if (city.stage >= Stage.Town) {
+    const annualRate = BALANCE.annualSeniorMortalityCared + (BALANCE.annualSeniorMortalityNoHospital - BALANCE.annualSeniorMortalityCared) * (1 - coverage);
+    state.naturalDeathCarry += report.seniors * annualRate / 360;
+  }
+  const naturalDeaths = Math.min(Math.max(0, report.adults + report.seniors - illnessDeaths), Math.floor(state.naturalDeathCarry));
+  state.naturalDeathCarry -= naturalDeaths;
+  let deaths = illnessDeaths + naturalDeaths;
   state.deaths += deaths;
+  recordDeaths(city, deaths);
   state.recentDeaths += deaths;
-  if (!cared) state.untreatedDeaths += deaths;
+  if (!cared) state.untreatedDeaths += illnessDeaths;
+  if (coverage === 0) state.untreatedDeaths += naturalDeaths;
   for (const home of city.world.buildings.values()) {
     if (deaths <= 0) break;
     if (BUILDINGS[home.def].category !== 'residential' || home.occupants <= 0) continue;

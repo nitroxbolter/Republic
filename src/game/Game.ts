@@ -22,6 +22,7 @@ import { lifestyleReport } from '../sim/systems/lifestyle';
 import { currentTech, researchRate, TECHS } from '../sim/research';
 import { materialStorage } from '../sim/systems/materials';
 import { collectTaxes, townHall } from '../sim/systems/budget';
+import { acquireProperty, financeProperty, privateRecoverProperty, repayPropertyLoan } from '../sim/systems/realEstate';
 import { inspectInfo } from './inspect';
 import { aqiBand } from '../sim/systems/air';
 import { isWaterTerrain } from '../render/transitions';
@@ -32,6 +33,7 @@ import { PAVEMENTS, ROAD_SPECS } from '../sim/roadTypes';
 import { cityStats } from '../sim/systems/population';
 import { economyReport } from '../sim/systems/economy';
 import { societyReport } from '../sim/systems/society';
+import { demographicReport, infrastructurePressure, type DemographicStrategy, type PermitZone } from '../sim/systems/demography';
 import type { Traffic } from '../sim/systems/traffic';
 import { happinessColor, type OverlayTile } from '../render/Renderer';
 import { rectTiles, RoadType, roadMask, type BuildableRoad, type TilePos } from '../sim/roads';
@@ -558,6 +560,13 @@ export class Game {
     if (out.changed.length === 0) this.refreshDataView();
     const r = out.budget;
     if (r) {
+      for (const months of [BALANCE.propertyAlertMonths, BALANCE.propertyFinanceMonths, BALANCE.propertyCriticalMonths, BALANCE.propertyBankruptcyMonths]) {
+        const affected = r.propertyFlows.milestones.filter((m) => m.months === months);
+        if (affected.length === 0) continue;
+        const names = affected.slice(0, 3).map((m) => { const b = this.world.buildings.get(m.id); return b ? `${BUILDINGS[b.def].name} (${b.x}, ${b.y})` : `imóvel ${m.id}`; });
+        const phase = months === BALANCE.propertyBankruptcyMonths ? 'em falência' : months === BALANCE.propertyCriticalMonths ? 'em situação crítica' : months === BALANCE.propertyFinanceMonths ? 'aptos a financiamento' : 'inadimplentes';
+        this.notify('error', `${affected.length} imóvel(is) ${phase}: ${names.join(', ')}${affected.length > 3 ? '…' : ''}.`, `property-${months}`);
+      }
       this.events.emit('funds', this.city.funds);
       const month = MONTH_NAMES[(this.city.date.month + 11) % 12];
       const sign = r.net >= 0 ? '+' : '−';
@@ -862,6 +871,39 @@ export class Game {
     this.emitCity();
   }
 
+  setDemographicStrategy(strategy: DemographicStrategy) {
+    this.city.demography.strategy = strategy;
+    this.edits++; this.emitCity(); this.emitBudget();
+  }
+
+  setAnnualGrowthTarget(target: number) {
+    this.city.demography.annualTarget = Math.max(0, Math.min(10, target));
+    this.edits++; this.emitCity(); this.emitBudget();
+  }
+
+  setMigrationIncentives(enabled: boolean) {
+    this.city.demography.incentivesEnabled = enabled;
+    this.edits++; this.emitCity(); this.emitBudget();
+  }
+
+  setHousingSubsidy(percent: number) {
+    this.city.demography.housingSubsidy = Math.max(0, Math.min(BALANCE.demographicMaxHousingSubsidy, percent / 100));
+    this.edits++; this.emitCity(); this.emitBudget();
+  }
+
+  setPermitLimit(zone: PermitZone, limit: number) {
+    this.city.demography.permitLimits[zone] = Math.max(0, Math.min(9999, Math.round(limit)));
+    this.edits++; this.emitCity(); this.emitBudget();
+  }
+
+  applyExpansionPlan() {
+    const pressure = infrastructurePressure(this.city).score;
+    const limit = pressure < 0.5 ? 1 : pressure < 0.75 ? 2 : 4;
+    this.city.demography.permitLimits = { r: limit, c: limit, o: limit, i: limit };
+    this.edits++; this.emitCity(); this.emitBudget();
+    this.notify('info', `Plano de expansão aplicado: até ${limit} novas obras por zona a cada mês.`);
+  }
+
   /** Budget panel data: the tax rate, last month's report and what next month looks like now. */
   emitBudget() {
     const u = this.sim.utilities.report;
@@ -939,6 +981,7 @@ export class Game {
       ...s,
       economy: economyReport(this.world, this.city.taxRate, this.city),
       society: societyReport(this.city),
+      demography: demographicReport(this.city),
       demand: this.sim.growth.demand(),
       demandWhy: this.sim.growth.explainWithDiagnostics(diagnostics),
       traffic: this.sim.commute.report,
@@ -1049,6 +1092,37 @@ export class Game {
   }
 
   /** Bulldoze a whole building (from the info panel). */
+  financeProperty(id: number) {
+    const b = this.world.buildings.get(id);
+    if (!b || !financeProperty(this.city, b)) { this.notify('error', 'Financiamento indisponível: verifique dívida, prazo e caixa público.'); return; }
+    this.notify('info', 'Dívida quitada com financiamento público. As parcelas serão cobradas mensalmente.');
+    this.events.emit('funds', this.city.funds);
+    this.emitBudget(); this.emitInspect(); this.emitCity();
+  }
+
+  acquireProperty(id: number) {
+    const b = this.world.buildings.get(id);
+    if (!b || !acquireProperty(this.city, b)) { this.notify('error', 'Aquisição indisponível para este imóvel ou sem recursos.'); return; }
+    this.notify('info', 'Imóvel adquirido pela cidade. Aluguel e manutenção entram no orçamento público.');
+    this.events.emit('funds', this.city.funds);
+    this.emitBudget(); this.emitInspect(); this.emitCity();
+  }
+
+  privateRecoverProperty(id: number) {
+    const b = this.world.buildings.get(id);
+    if (!b || !privateRecoverProperty(b)) return;
+    this.notify('info', 'O imóvel foi vendido a um novo proprietário privado.');
+    this.emitBudget(); this.emitInspect();
+  }
+
+  repayPropertyLoan(id: number) {
+    const b = this.world.buildings.get(id);
+    if (!b || !repayPropertyLoan(this.city, b)) { this.notify('error', 'As reservas do imóvel ainda não cobrem a quitação.'); return; }
+    this.notify('info', 'Financiamento quitado com as reservas do imóvel.');
+    this.events.emit('funds', this.city.funds);
+    this.emitBudget(); this.emitInspect(); this.emitCity();
+  }
+
   demolish(id: number) {
     const b = this.world.buildings.get(id);
     if (!b) return;

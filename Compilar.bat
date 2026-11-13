@@ -22,9 +22,9 @@ if errorlevel 1 (
 )
 
 echo Atualizando Iniciar.exe...
-"%BUN_EXE%" build --compile --asset ./dist ./scripts/local-launcher.mjs --outfile ./Iniciar.exe
+powershell -NoProfile -ExecutionPolicy Bypass -File "%CD%\scripts\replace-exe.ps1" -BunExe "%BUN_EXE%"
 if errorlevel 1 (
-  echo Falha ao atualizar Iniciar.exe. Feche o jogo se ele estiver aberto e tente novamente.
+  echo Falha ao atualizar Iniciar.exe. O executavel anterior foi preservado.
   exit /b 1
 )
 

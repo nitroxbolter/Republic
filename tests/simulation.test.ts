@@ -57,20 +57,20 @@ describe('population and jobs', () => {
     expect(isolated.occupants).toBe(0);
   });
 
-  it('homes stop part-full when jobs run short; adding jobs lets them fill', () => {
+  it('homes fill without jobs; adding jobs improves employment without removing residents', () => {
     const { w, city } = town();
     // Six walk-ups want more workers than the power plant and water tower employ.
     for (let x = 1; x <= 6; x++) place(city, 'walkup', x, 4);
     refresh(w);
     for (let d = 0; d < 60; d++) simulateDay(w);
     const before = cityStats(w).population;
-    expect(before).toBeLessThan(cityStats(w).housing * 0.85);
+    expect(before).toBeGreaterThan(cityStats(w).housing * 0.65);
 
     place(city, 'small_office', 8, 4);
     place(city, 'small_office', 9, 4);
     refresh(w);
     for (let d = 0; d < 60; d++) simulateDay(w);
-    expect(cityStats(w).population).toBeGreaterThan(before);
+    expect(cityStats(w).population).toBeGreaterThanOrEqual(before);
     const stats = cityStats(w);
     expect(stats.workers).toBeGreaterThan(0);
     expect(stats.workers).toBeLessThanOrEqual(Math.floor(stats.population * BALANCE.workforceShare));

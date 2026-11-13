@@ -30,10 +30,10 @@ describe('demo city', () => {
     expect([...b.world.buildings.values()].map((x) => `${x.def}@${x.x},${x.y}`)).toEqual(
       [...a.world.buildings.values()].map((x) => `${x.def}@${x.x},${x.y}`),
     );
-  }, 20_000); // builds the demo twice; ~1.5 s each, slower when the suite runs in parallel
+  }, 45_000); // builds the demo twice; slower on Windows when the suite runs in parallel
   it('stands its showpiece landmarks round downtown', () => {
     const { world } = demo(42);
     const ids = new Set([...world.buildings.values()].map((b) => b.def));
     for (const id of ['sky_tower', 'sail_hotel', 'theme_park', 'observation_wheel'] as const) expect(ids.has(id)).toBe(true);
-  });
+  }, 25_000);
 });

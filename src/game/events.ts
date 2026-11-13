@@ -16,6 +16,8 @@ import type { MaterialsReport } from '../sim/systems/materials';
 import type { EconomyReport } from '../sim/systems/economy';
 import type { societyReport } from '../sim/systems/society';
 import type { ToolId } from './tools';
+import type { PropertyStatus } from '../sim/systems/realEstate';
+import type { demographicReport } from '../sim/systems/demography';
 
 /** Typed event bus: the game emits, the UI bridge / renderer listen. Nothing polls. */
 export interface GameEventMap {
@@ -68,6 +70,7 @@ export type DayNightMode = 'cycle' | 'day' | 'night';
 
 export interface CityInfo {
   population: number;
+  demography: ReturnType<typeof demographicReport>;
   housing: number;
   jobs: number;
   workers: number;
@@ -138,6 +141,7 @@ export type Provides =
 
 export interface InspectInfo {
   id: number;
+  property: { status: PropertyStatus; rent: number; rentPerResident: number; energyPerResident: number; waterPerResident: number; housingTax: number; surchargePerResident: number; operatingCost: number; lastRent: number; lastResult: number; debt: number; reserve: number; delinquentMonths: number; publicOwned: boolean; loan: { payment: number; balance: number; late: number; lateInterest: number; interestRate: number; months: number; term: number } | null; canFinance: boolean; canAcquire: boolean; canPrivateRecover: boolean } | null;
   name: string;
   category: string;
   level: number;

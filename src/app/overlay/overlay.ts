@@ -16,7 +16,8 @@ export type OverlayId =
   /** Phones: the sheet with everything the slim top bar leaves out. */
   | 'more'
   /** The budget and taxes panel (from the funds button). */
-  | 'budget';
+  | 'budget'
+  | 'demography';
 
 export const overlayAtom = atom<OverlayId | null>(null);
 

@@ -597,6 +597,18 @@ kbd {
 }
 
 /* ---------- Top bar stats & speed ---------- */
+.top-population-button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 3px 5px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.top-population-button:hover,
+.top-population-button[aria-expanded="true"] {
+  background: var(--bg-panel-hover);
+}
 .stat {
   display: inline-flex;
   align-items: center;
