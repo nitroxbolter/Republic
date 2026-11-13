@@ -13,6 +13,8 @@ export class City {
   day = 0;
   /** Tax rate in percent (BALANCE.minTaxRate … BALANCE.maxTaxRate). */
   taxRate: number = BALANCE.baseTaxRate;
+  /** Percent withheld from workers' gross wages; pensions are exempt. */
+  incomeTaxRate = 0;
   minimumWage: number = BALANCE.defaultMinimumWage;
   /** Monthly government payment per senior, independent of the minimum wage. */
   pensionPerSenior: number = BALANCE.defaultPensionPerSenior;

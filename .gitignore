@@ -1,5 +1,7 @@
 node_modules
 dist
+/Iniciar.exe
+/Jogar-Republica-PT-Imposto-Renda.exe
 /Openpolis-Local.exe
 /Jogar-Openpolis.exe
 /Jogar-Openpolis-PT.exe

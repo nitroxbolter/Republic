@@ -28,7 +28,11 @@ export interface LivingCosts {
   /** The tax share of governmentPaid, excluding the basic utility bills. */
   taxesPaid: number;
   utilityPaid: number;
+  /** Actual government receipts by bill after utility availability and income limits. */
+  charges: Readonly<Record<CostKind, GovernmentCharge>>;
 }
+
+export interface GovernmentCharge { base: number; tax: number }
 
 export interface SuppliedUtilities { energy: boolean; water: boolean }
 
@@ -44,6 +48,14 @@ export function livingCosts(
   const governmentDue = utilityBase + categoryTax;
   const governmentPaid = Math.min(governmentDue, Math.max(0, gross - privateBase));
   const paidShare = governmentDue > 0 ? governmentPaid / governmentDue : 0;
+  const charge = (kind: CostKind): GovernmentCharge => {
+    const suppliedHere = (kind !== 'energy' || supplied.energy) && (kind !== 'water' || supplied.water);
+    return {
+      base: suppliedHere && (kind === 'energy' || kind === 'water') ? BASE_COSTS[kind] * paidShare : 0,
+      tax: suppliedHere ? BASE_COSTS[kind] * rates[kind] / 100 * paidShare : 0,
+    };
+  };
+  const charges = { energy: charge('energy'), water: charge('water'), housing: charge('housing'), transport: charge('transport') };
   const base = privateBase + utilityBase;
   const total = base + categoryTax;
   return {
@@ -53,5 +65,6 @@ export function livingCosts(
     governmentPaid,
     taxesPaid: categoryTax * paidShare,
     utilityPaid: utilityBase * paidShare,
+    charges,
   };
 }

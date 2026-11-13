@@ -8,6 +8,29 @@ import { presetSettings } from '../src/sim/terrain/presets';
 import { street } from './support/street';
 
 describe('sociedade e política salarial', () => {
+  it('fecha adultos = empregados + desempregados + afastados e tributa só empregados', () => {
+    const t = street();
+    const home = t.place('walkup', 4, 11);
+    const shop = t.place('corner_shop', 7, 11);
+    t.refresh();
+    home.occupants = 20;
+    shop.occupants = 5;
+    t.city.society.sick = 2;
+    t.city.society.prisoners = 1;
+    t.city.incomeTaxRate = 20;
+    const report = t.sim.budget.forecast();
+    expect(report.workers).toBe(17);
+    expect(report.employed).toBe(5);
+    expect(report.unemployed).toBe(10);
+    expect(report.unavailable).toBe(2);
+    expect(report.workers).toBe(report.employed + report.unemployed + report.unavailable);
+    expect(report.incomeTaxRevenue).toBe(5 * t.city.minimumWage * 0.2);
+    expect(cityStats(t.world, t.city.taxRate, t.city.society, t.city).unemployed).toBe(report.unemployed);
+    expect(report.income).toBe(report.businessTaxRevenue + report.residentTaxRevenue + report.utilityRevenue + report.recycling);
+    expect(report.expenses).toBe(Object.values(report.breakdown).reduce((sum, cost) => sum + cost, 0));
+    expect(report.net).toBe(report.income - report.expenses);
+  });
+
   it('13% são idosos e os demais recebem salário; aposentadoria depende do benefício', () => {
     const t = street();
     const home = t.place('walkup', 4, 11);
@@ -24,11 +47,13 @@ describe('sociedade e política salarial', () => {
     expect(t.sim.budget.forecast().breakdown.pensions).toBe(ages.seniors * t.city.pensionPerSenior);
     expect(economyReport(t.world, t.city.taxRate, t.city).purchasingPower).toBeLessThan(economy.purchasingPower);
     t.city.pensionPerSenior = 25;
+    t.city.incomeTaxRate = 20;
     t.city.costTaxRates.housing = 15;
     const saved = serialize(t.city, presetSettings('plains', 5, 64), 'Teste');
     const loaded = deserialize(parseSave(JSON.parse(JSON.stringify(saved))));
     expect(loaded.minimumWage).toBe(500);
     expect(loaded.pensionPerSenior).toBe(25);
+    expect(loaded.incomeTaxRate).toBe(20);
     expect(loaded.costTaxRates.housing).toBe(15);
     const retiredFoodRate = JSON.parse(JSON.stringify(saved));
     retiredFoodRate.city.costTaxRates.food = 80;
@@ -36,10 +61,15 @@ describe('sociedade e política salarial', () => {
     expect(monthlyBudget(t.world, t.city.taxRate, loaded.pensionPerSenior).breakdown.pensions).toBe(ages.seniors * 25);
     const older = JSON.parse(JSON.stringify(saved));
     delete older.city.costTaxRates;
+    delete older.city.incomeTaxRate;
     delete older.city.pensionPerSenior;
     older.city.pensionShare = 0.2;
     expect(deserialize(parseSave(older)).pensionPerSenior).toBe(1_100);
     expect(deserialize(parseSave(older)).minimumWage).toBe(1_200);
+    expect(deserialize(parseSave(older)).incomeTaxRate).toBe(0);
+    const invalidRate = JSON.parse(JSON.stringify(saved));
+    invalidRate.city.incomeTaxRate = 101;
+    expect(deserialize(parseSave(invalidRate)).incomeTaxRate).toBe(0);
   });
 
   it('doença pode causar morte e crimes sem vaga aumentam a pressão criminal', () => {

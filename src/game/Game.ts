@@ -834,6 +834,13 @@ export class Game {
     this.emitCity();
   }
 
+  setIncomeTaxRate(rate: number) {
+    this.city.incomeTaxRate = Math.max(0, Math.min(100, Math.round(rate)));
+    this.edits++;
+    this.emitBudget();
+    this.emitCity();
+  }
+
   setMinimumWage(amount: number) {
     this.city.minimumWage = Math.max(BALANCE.minMinimumWage, Math.min(BALANCE.maxMinimumWage, Math.round(amount)));
     this.edits++;
@@ -860,6 +867,7 @@ export class Game {
     const u = this.sim.utilities.report;
     this.events.emit('budget', {
       taxRate: this.city.taxRate,
+      incomeTaxRate: this.city.incomeTaxRate,
       minimumWage: this.city.minimumWage,
       pensionPerSenior: this.city.pensionPerSenior,
       costTaxRates: { ...this.city.costTaxRates },

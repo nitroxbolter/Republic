@@ -10,6 +10,7 @@
     "dev:web": "vite",
     "dev:server": "bun --watch server/index.ts",
     "build": "tsc --noEmit && vite build",
+    "build:exe": "cmd /c Compilar.bat",
     "start": "NODE_ENV=production bun server/index.ts",
     "preview": "vite preview",
     "test": "vitest run",

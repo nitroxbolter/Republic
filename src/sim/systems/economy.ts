@@ -9,6 +9,7 @@ export interface HouseholdPolicy {
   minimumWage: number;
   pensionPerSenior: number;
   costTaxRates: CostTaxRates;
+  incomeTaxRate?: number;
 }
 
 /** A compact estimate of household purchasing power and the private economy. */
@@ -33,7 +34,8 @@ const MIN_COMMERCE_ACTIVITY = 0.1;
 /** Household spending follows disposable income, with a small floor for essential purchases. */
 export function householdPurchasingPower(taxRate: number, policy?: HouseholdPolicy): number {
   const rates = policy?.costTaxRates ?? defaultCostTaxRates();
-  const worker = livingCosts(policy?.minimumWage ?? BALANCE.defaultMinimumWage, rates);
+  const workerGross = policy?.minimumWage ?? BALANCE.defaultMinimumWage;
+  const worker = livingCosts(workerGross * (1 - (policy?.incomeTaxRate ?? 0) / 100), rates);
   const senior = livingCosts(policy?.pensionPerSenior ?? BALANCE.defaultPensionPerSenior, rates);
   const baseWorker = livingCosts(BALANCE.defaultMinimumWage, defaultCostTaxRates());
   const baseSenior = livingCosts(BALANCE.defaultPensionPerSenior, defaultCostTaxRates());

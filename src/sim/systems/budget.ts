@@ -6,8 +6,8 @@ import { BridgeAxis, RoadType } from '../roads';
 import { roadSpec } from '../roadTypes';
 import type { World } from '../World';
 import { cityStats } from './population';
-import { demographics } from './society';
-import { defaultCostTaxRates, livingCosts, type CostTaxRates } from './livingCosts';
+import { demographics, workingAge } from './society';
+import { BASE_COSTS, COST_KINDS, defaultCostTaxRates, livingCosts, type CostKind, type CostTaxRates } from './livingCosts';
 import { economyReport } from './economy';
 import type { DayOutcome, SimSystem } from '../core/System';
 
@@ -19,16 +19,38 @@ export interface BudgetReport {
   net: number;
   /** Company tax rate (percent) used for this report. */
   taxRate: number;
-  breakdown: { roads: number; services: number; utilities: number; parks: number; pensions: number };
+  incomeTaxRate: number;
+  breakdown: { roads: number; transport: number; services: number; utilities: number; parks: number; pensions: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
   taxRevenue: number;
   businessTaxRevenue: number;
   residentTaxRevenue: number;
+  incomeTaxRevenue: number;
   businessTurnover: number;
+  /** Estimated company turnover after the company tax, before other business costs. */
+  businessTurnoverAfterTax: number;
   utilityRevenue: number;
+  costBalances: Readonly<Record<CostKind, CostBalance>>;
+  /** All adults, including unemployed and temporarily unavailable residents. */
   workers: number;
+  employed: number;
+  unemployed: number;
+  unavailable: number;
   seniors: number;
+}
+
+export interface CostBalance {
+  residents: number;
+  billPerResident: number;
+  taxRate: number;
+  nominalBase: number;
+  nominalTax: number;
+  baseRevenue: number;
+  taxRevenue: number;
+  revenue: number;
+  upkeep: number;
+  net: number;
 }
 
 const SERVICE_UPKEEP_SHARE: Readonly<Partial<Record<ServiceKind, number>>> = {
@@ -110,71 +132,119 @@ export function monthlyBudget(
   pensionPerSenior: number = BALANCE.defaultPensionPerSenior,
   minimumWage: number = BALANCE.defaultMinimumWage,
   costTaxRates: CostTaxRates = defaultCostTaxRates(),
+  incomeTaxRate = 0,
+  society?: City['society'],
 ): BudgetReport {
-  const s = cityStats(world);
+  const s = cityStats(world, taxRate, society, { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate });
+  const ages = demographics(s.population);
+  const availableWorkers = workingAge(s.population, society?.sick, society?.prisoners);
+  const employed = Math.min(availableWorkers, s.workers);
+  const unemployed = availableWorkers - employed;
+  const unavailable = ages.adults - availableWorkers;
+  const employedShare = ages.adults > 0 ? employed / ages.adults : 0;
   let recycled = 0;
-  let taxesPaid = 0;
-  let utilityBillsPaid = 0;
+  let incomeTaxesPaid = 0;
+  const charged: Record<CostKind, { residents: number; base: number; tax: number }> = {
+    energy: { residents: 0, base: 0, tax: 0 },
+    water: { residents: 0, base: 0, tax: 0 },
+    housing: { residents: 0, base: 0, tax: 0 },
+    transport: { residents: 0, base: 0, tax: 0 },
+  };
   let residentsCounted = 0;
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
     if (d.category === 'residential' && b.construction === 0 && !b.abandoned) {
       const seniors = demographics(residentsCounted + b.occupants).seniors - demographics(residentsCounted).seniors;
-      const workers = b.occupants - seniors;
+      const adults = b.occupants - seniors;
+      const paidWorkers = adults * employedShare;
       residentsCounted += b.occupants;
       const supplied = { energy: b.powered, water: b.watered };
-      const workerCosts = livingCosts(minimumWage * BALANCE.lifestyleWage[b.lifestyle], costTaxRates, supplied);
+      const grossWage = minimumWage * BALANCE.lifestyleWage[b.lifestyle];
+      incomeTaxesPaid += paidWorkers * grossWage * incomeTaxRate / 100;
+      const workerCosts = livingCosts(grossWage * (1 - incomeTaxRate / 100), costTaxRates, supplied);
       const seniorCosts = livingCosts(pensionPerSenior, costTaxRates, supplied);
-      taxesPaid += workers * workerCosts.taxesPaid + seniors * seniorCosts.taxesPaid;
-      const householdUtilityPaid = workers * workerCosts.utilityPaid + seniors * seniorCosts.utilityPaid;
-      utilityBillsPaid += householdUtilityPaid;
+      for (const kind of COST_KINDS) {
+        if (kind === 'energy' && !supplied.energy || kind === 'water' && !supplied.water) continue;
+        const row = charged[kind];
+        row.residents += b.occupants;
+        row.base += paidWorkers * workerCosts.charges[kind].base + seniors * seniorCosts.charges[kind].base;
+        row.tax += paidWorkers * workerCosts.charges[kind].tax + seniors * seniorCosts.charges[kind].tax;
+      }
     }
     // Recycling centres count this month's tons in `filled` (sim/systems/garbage.ts).
     if (d.garbage?.recycles) recycled += b.filled * d.garbage.recycles;
   }
   const recycling = Math.round(recycled * BALANCE.recyclePrice);
-  const ages = demographics(s.population);
-  const residentTaxRevenue = Math.round(taxesPaid);
-  const businessTurnover = economyReport(world, taxRate, { minimumWage, pensionPerSenior, costTaxRates }).businessTurnover;
+  const businessTurnover = economyReport(world, taxRate, { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate }).businessTurnover;
   const businessTaxRevenue = Math.round(businessTurnover * taxRate / 100);
-  const taxRevenue = residentTaxRevenue + businessTaxRevenue;
-  const utilityRevenue = Math.round(utilityBillsPaid);
-  const income = taxRevenue + utilityRevenue + recycling;
+  const businessTurnoverAfterTax = businessTurnover - businessTaxRevenue;
   let roads = 0;
+  let transport = 0;
   for (let i = 0; i < world.road.length; i++) {
     const r = world.road[i];
     if (r === RoadType.None) continue;
     const spec = roadSpec(r);
     roads += world.bridge[i] !== BridgeAxis.None ? (spec?.bridgeUpkeep ?? BALANCE.bridgeUpkeep) : (spec?.upkeep ?? BALANCE.roadUpkeep);
   }
-  // Rail track (E7b) is paid with the roads.
-  for (let i = 0; i < world.rail.length; i++) if (world.rail[i] !== 0) roads += BALANCE.railUpkeep;
+  // Rail track (E7b) belongs to public transport maintenance.
+  for (let i = 0; i < world.rail.length; i++) if (world.rail[i] !== 0) transport += BALANCE.railUpkeep;
   let services = 0;
   let utilities = 0;
   let parks = 0;
+  const categoryUpkeep: Record<CostKind, number> = { energy: 0, water: 0, housing: 0, transport };
   const context: UpkeepContext = { population: s.population, serviceResidents: serviceResidentLoads(world) };
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
     const upkeep = monthlyUpkeep(world, b, context);
     if (d.group === 'services') services += upkeep;
-    else if (d.group === 'utilities') utilities += upkeep;
+    else if (d.group === 'utilities') {
+      utilities += upkeep;
+      if (d.supplies?.water) categoryUpkeep.water += upkeep;
+      else if (d.energy || d.substation || d.supplies?.power) categoryUpkeep.energy += upkeep;
+    }
+    else if (d.group === 'transport') { transport += upkeep; categoryUpkeep.transport += upkeep; }
     else parks += upkeep;
   }
+  const balanceFor = (kind: CostKind): CostBalance => {
+    const row = charged[kind];
+    const baseRevenue = Math.round(row.base);
+    const taxRevenue = Math.round(row.tax);
+    const revenue = baseRevenue + taxRevenue;
+    const upkeep = categoryUpkeep[kind];
+    return {
+      residents: row.residents, billPerResident: BASE_COSTS[kind], taxRate: costTaxRates[kind],
+      nominalBase: row.residents * BASE_COSTS[kind], nominalTax: row.residents * BASE_COSTS[kind] * costTaxRates[kind] / 100,
+      baseRevenue, taxRevenue, revenue, upkeep, net: revenue - upkeep,
+    };
+  };
+  const costBalances = { energy: balanceFor('energy'), water: balanceFor('water'), housing: balanceFor('housing'), transport: balanceFor('transport') };
+  const incomeTaxRevenue = Math.round(incomeTaxesPaid);
+  const residentTaxRevenue = incomeTaxRevenue + COST_KINDS.reduce((sum, kind) => sum + costBalances[kind].taxRevenue, 0);
+  const taxRevenue = residentTaxRevenue + businessTaxRevenue;
+  const utilityRevenue = costBalances.energy.baseRevenue + costBalances.water.baseRevenue;
+  const income = taxRevenue + utilityRevenue + recycling;
   const pensions = ages.seniors * pensionPerSenior;
-  const expenses = Math.round(roads + services + utilities + parks + pensions);
+  const expenses = Math.round(roads + transport + services + utilities + parks + pensions);
   return {
     income,
     expenses,
     net: income - expenses,
     taxRate,
-    breakdown: { roads: Math.round(roads), services, utilities, parks, pensions },
+    incomeTaxRate,
+    breakdown: { roads: Math.round(roads), transport, services, utilities, parks, pensions },
     recycling,
     taxRevenue,
     businessTaxRevenue,
     residentTaxRevenue,
+    incomeTaxRevenue,
     businessTurnover,
+    businessTurnoverAfterTax,
     utilityRevenue,
+    costBalances,
     workers: ages.adults,
+    employed,
+    unemployed,
+    unavailable,
     seniors: ages.seniors,
   };
 }
@@ -191,7 +261,7 @@ export interface HeldTaxes {
 
 /** Apply a month's budget to the city: upkeep from the funds, taxes to the funds or the Town Hall's chest. */
 export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | null } {
-  const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates);
+  const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society);
   if (!city.collectsTaxes) {
     city.funds += r.net;
     return { ...r, held: null };
@@ -243,6 +313,6 @@ export class BudgetSystem implements SimSystem {
   }
   /** Next month at today's numbers. */
   forecast(): BudgetReport {
-    return monthlyBudget(this.city.world, this.city.taxRate, this.city.pensionPerSenior, this.city.minimumWage, this.city.costTaxRates);
+    return monthlyBudget(this.city.world, this.city.taxRate, this.city.pensionPerSenior, this.city.minimumWage, this.city.costTaxRates, this.city.incomeTaxRate, this.city.society);
   }
 }

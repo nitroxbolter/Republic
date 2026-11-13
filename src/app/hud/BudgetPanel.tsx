@@ -14,30 +14,34 @@ const money = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toLocaleString
 const costLabels: Record<CostKind, string> = { energy: 'Energia', water: 'Água', housing: 'Moradia / aluguel', transport: 'Transporte' };
 
 function Lines({ r }: { r: BudgetReport }) {
-  const rows: [string, number][] = [
+  const costs: [string, number][] = [
     ['Vias', r.breakdown.roads],
+    ['Transporte público e trilhos', r.breakdown.transport],
     ['Serviços', r.breakdown.services],
     ['Infraestrutura', r.breakdown.utilities],
-    ['Parques e serviços públicos', r.breakdown.parks],
+    ['Parques e outros prédios públicos', r.breakdown.parks],
     ['Aposentadorias', r.breakdown.pensions],
   ];
   return (
-    <div className="budget-lines">
-      <div className="budget-line income">
-        <span>Imposto sobre empresas</span>
-        <strong>+{money(r.businessTaxRevenue)}</strong>
-      </div>
-      <div className="budget-line income"><span>Impostos dos habitantes</span><strong>+{money(r.residentTaxRevenue)}</strong></div>
+    <div className="budget-card budget-lines">
+      <h4 className="budget-heading">Arrecadação</h4>
+      <div className="budget-line income"><span>Imposto sobre empresas</span><strong>+{money(r.businessTaxRevenue)}</strong></div>
+      <div className="budget-line income"><span>Imposto de renda</span><strong>+{money(r.incomeTaxRevenue)}</strong></div>
+      <div className="budget-line income"><span>Impostos das contas dos habitantes</span><strong>+{money(r.residentTaxRevenue - r.incomeTaxRevenue)}</strong></div>
       <div className="budget-line income"><span>Contas de energia e água</span><strong>+{money(r.utilityRevenue)}</strong></div>
       {r.recycling > 0 && <div className="budget-line income"><span>Reciclagem</span><strong>+{money(r.recycling)}</strong></div>}
-      {rows.map(([label, v]) => (
+      <div className="budget-line total income"><span>Arrecadação total</span><strong>+{money(r.income)}</strong></div>
+
+      <h4 className="budget-heading">Custos</h4>
+      {costs.map(([label, v]) => (
         <div key={label} className="budget-line">
           <span>{label}</span>
           <span>−{money(v)}</span>
         </div>
       ))}
+      <div className="budget-line total"><span>Custo total</span><strong>−{money(r.expenses)}</strong></div>
       <div className={`budget-line total ${r.net >= 0 ? 'gain' : 'loss'}`}>
-        <span>Resultado mensal</span>
+        <span>Arrecadação − custo = resultado previsto</span>
         <strong>
           {r.net >= 0 ? '+' : ''}
           {money(r.net)}
@@ -100,8 +104,10 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
   const info = useAtomValue(budgetAtom);
   const game = useAtomValue(gameAtom);
   if (!info) return null;
-  const worker = livingCosts(info.minimumWage, info.costTaxRates);
+  const incomeTaxPerWorker = info.minimumWage * info.incomeTaxRate / 100;
+  const worker = livingCosts(info.minimumWage - incomeTaxPerWorker, info.costTaxRates);
   const senior = livingCosts(info.pensionPerSenior, info.costTaxRates);
+  const pensionGap = info.forecast.incomeTaxRevenue - info.forecast.breakdown.pensions;
   return (
     <>
       <header className="info-header">
@@ -137,14 +143,18 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
           <input type="range" min={BALANCE.minTaxRate} max={BALANCE.maxTaxRate} step={1}
             value={info.taxRate} aria-label="Imposto sobre empresas" onChange={(e) => game?.setTaxRate(Number(e.target.value))} />
         </label>
-        <div className="budget-line dim"><span>Faturamento estimado</span><strong>{money(info.forecast.businessTurnover)}/mês</strong></div>
+        <div className="budget-line dim"><span>Faturamento bruto estimado</span><strong>{money(info.forecast.businessTurnover)}/mês</strong></div>
         <div className="budget-line income"><span>Imposto previsto das empresas</span><strong>{money(info.forecast.businessTaxRevenue)}/mês</strong></div>
-        <p className="tax-hint">Cobrado das lojas, escritórios e indústrias. Alíquotas altas reduzem a atividade, os empregos e o poder de compra.</p>
+        <div className="budget-line total"><span>Faturamento estimado após imposto</span><strong>{money(info.forecast.businessTurnoverAfterTax)}/mês</strong></div>
+        <p className="tax-hint">O valor após imposto acompanha a alíquota. As vendas brutas dependem da atividade e do poder de compra; impostos altos também reduzem empregos.</p>
       </div>
 
       <h3 className="budget-heading">Salários e aposentadorias</h3>
       <div className="budget-card">
-        <div className="budget-line"><span>Trabalhadores (87%)</span><strong>{info.forecast.workers.toLocaleString('pt-BR')}</strong></div>
+        <div className="budget-line"><span>Adultos em idade de trabalhar (87%)</span><strong>{info.forecast.workers.toLocaleString('pt-BR')}</strong></div>
+        <div className="budget-line"><span>Empregados</span><strong>{info.forecast.employed.toLocaleString('pt-BR')}</strong></div>
+        <div className="budget-line"><span>Desempregados</span><strong>{info.forecast.unemployed.toLocaleString('pt-BR')}</strong></div>
+        <div className="budget-line dim"><span>Afastados por doença ou prisão</span><strong>{info.forecast.unavailable.toLocaleString('pt-BR')}</strong></div>
         <div className="budget-line"><span>Idosos (13%)</span><strong>{info.forecast.seniors.toLocaleString('pt-BR')}</strong></div>
         <label className="tax">
           <span className="budget-line"><span>Salário mínimo mensal</span><strong>{money(info.minimumWage)}</strong></span>
@@ -152,11 +162,20 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
             value={info.minimumWage} onChange={(e) => game?.setMinimumWage(Number(e.target.value))} />
         </label>
         <label className="tax">
+          <span className="budget-line"><span>Imposto de renda sobre salários</span><strong>{info.incomeTaxRate}% · −{money(incomeTaxPerWorker)}</strong></span>
+          <input type="range" min={0} max={100} step={1} value={info.incomeTaxRate}
+            aria-label="Imposto de renda sobre salários" onChange={(e) => game?.setIncomeTaxRate(Number(e.target.value))} />
+        </label>
+        <p className="tax-hint">Descontado do salário bruto dos empregados. Desempregados, afastados e aposentados não pagam imposto de renda.</p>
+        <label className="tax">
           <span className="budget-line"><span>Aposentadoria por idoso</span><strong>{money(info.pensionPerSenior)}/mês</strong></span>
           <input type="range" min={BALANCE.minPensionPerSenior} max={BALANCE.maxPensionPerSenior} step={1}
             value={info.pensionPerSenior} onChange={(e) => game?.setPensionPerSenior(Number(e.target.value))} />
         </label>
         <div className="budget-line dim"><span>Total de aposentadorias</span><strong>{money(info.forecast.breakdown.pensions)}/mês</strong></div>
+        <div className="budget-line income"><span>Imposto de renda arrecadado</span><strong>{money(info.forecast.incomeTaxRevenue)}/mês</strong></div>
+        <div className={`budget-line total ${pensionGap >= 0 ? 'gain' : 'loss'}`}><span>Imposto de renda − aposentadorias</span><strong>{money(pensionGap)}/mês</strong></div>
+        <p className="tax-hint">Comparação para planejar a previdência; a arrecadação entra no caixa geral da cidade.</p>
       </div>
 
       <h3 className="budget-heading">Descontos mensais dos habitantes</h3>
@@ -164,15 +183,43 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
         <div className="budget-line"><span>Alimentação importada · valor fixo</span><strong>{money(BASE_COSTS.food)}</strong></div>
         {COST_KINDS.map((kind) => {
           const tax = BASE_COSTS[kind] * info.costTaxRates[kind] / 100;
+          const balance = info.forecast.costBalances[kind];
           return <label className="tax budget-tax-item" key={kind}>
             <span className="budget-line"><span>{costLabels[kind]} · conta {money(BASE_COSTS[kind])}</span><strong>{info.costTaxRates[kind]}% · −{money(tax)}</strong></span>
             <input type="range" min={0} max={100} step={1} value={info.costTaxRates[kind]}
               aria-label={`Imposto sobre ${costLabels[kind]}`} onChange={(e) => game?.setCostTaxRate(kind, Number(e.target.value))} />
             <span className="tax-hint">Total da conta: {money(BASE_COSTS[kind] + tax)}/mês por pessoa</span>
+            <span className={`tax-hint ${balance.net < 0 ? 'warn-text' : ''}`}>Governo: arrecada {money(balance.revenue)}, custa {money(balance.upkeep)}, saldo {money(balance.net)}/mês.</span>
           </label>;
         })}
         <div className="budget-line total"><span>Custo básico por pessoa</span><strong>{money(worker.base)}/mês</strong></div>
-        <div className="budget-line"><span>Impostos por pessoa</span><strong>{money(worker.categoryTax)}/mês</strong></div>
+        <div className="budget-line"><span>Impostos das contas por pessoa</span><strong>{money(worker.categoryTax)}/mês</strong></div>
+      </div>
+
+      <h3 className="budget-heading">Resultado mensal de cada conta</h3>
+      <div className="budget-card">
+        {COST_KINDS.map((kind) => {
+          const b = info.forecast.costBalances[kind];
+          const publicBill = kind === 'energy' || kind === 'water';
+          return <details className="budget-category-balance" key={kind} open={publicBill}>
+            <summary className={`budget-line ${b.net >= 0 ? 'income' : ''}`}>
+              <strong>{costLabels[kind]}</strong><strong>{b.net >= 0 ? '+' : ''}{money(b.net)}/mês</strong>
+            </summary>
+            <div className="budget-line dim"><span>Moradores cobrados</span><strong>{b.residents.toLocaleString('pt-BR')}</strong></div>
+            <div className="budget-line dim"><span>{b.residents.toLocaleString('pt-BR')} × {money(b.billPerResident)} de conta base</span><strong>{money(b.nominalBase)}</strong></div>
+            <div className="budget-line dim"><span>Taxa prevista de {b.taxRate}%</span><strong>{money(b.nominalTax)}</strong></div>
+            {publicBill ? <div className="budget-line income"><span>Conta base recebida</span><strong>+{money(b.baseRevenue)}</strong></div>
+              : <p className="tax-hint">A conta base é paga a terceiros; não entra na receita do governo.</p>}
+            <div className="budget-line income"><span>Taxa efetivamente recebida</span><strong>+{money(b.taxRevenue)}</strong></div>
+            <div className="budget-line"><span>Arrecadação do governo</span><strong>{money(b.revenue)}</strong></div>
+            <div className="budget-line"><span>Manutenção pública</span><strong>−{money(b.upkeep)}</strong></div>
+            {b.residents > 0 && b.upkeep > 0 && <div className="budget-line dim"><span>Custo por morador cobrado</span><strong>{money(b.upkeep / b.residents)}</strong></div>}
+            <div className={`budget-line total ${b.net >= 0 ? 'gain' : 'loss'}`}><span>Arrecadação − manutenção</span><strong>{money(b.net)}</strong></div>
+            {(b.taxRevenue < b.nominalTax - 1 || (publicBill && b.revenue < b.nominalBase + b.nominalTax - 1))
+              ? <p className="tax-hint warn-text">A arrecadação ficou abaixo da cobrança nominal por renda insuficiente.</p> : null}
+          </details>;
+        })}
+        <p className="tax-hint">Alimentação importada: {money(BASE_COSTS.food)} por morador; sem imposto ou receita pública. Energia e água só são cobradas de moradias abastecidas.</p>
       </div>
 
       <div className="budget-card budget-income-cards">
@@ -184,13 +231,14 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
       <div className="budget-card budget-tax-totals">
         <strong>Impostos totais previstos por mês</strong>
         <div className="budget-line"><span>Empresas</span><strong>{money(info.forecast.businessTaxRevenue)}</strong></div>
-        <div className="budget-line"><span>Habitantes</span><strong>{money(info.forecast.residentTaxRevenue)}</strong></div>
+        <div className="budget-line"><span>Renda dos trabalhadores</span><strong>{money(info.forecast.incomeTaxRevenue)}</strong></div>
+        <div className="budget-line"><span>Contas dos habitantes</span><strong>{money(info.forecast.residentTaxRevenue - info.forecast.incomeTaxRevenue)}</strong></div>
+        <div className="budget-line total"><span>Total dos habitantes</span><strong>{money(info.forecast.residentTaxRevenue)}</strong></div>
       </div>
 
       <h3 className="budget-heading">Próximo mês (previsão)</h3>
       <Lines r={info.forecast} />
-      <div className="budget-line"><span>Saldo da infraestrutura</span><strong>{money(info.forecast.utilityRevenue - info.forecast.breakdown.utilities)}</strong></div>
-      <p className="tax-hint">Energia e água geram receita com as contas dos moradores. A manutenção das usinas e torres aparece em infraestrutura.</p>
+      <p className="tax-hint">A manutenção de energia e água já aparece nos saldos por conta acima. Outras infraestruturas continuam no resultado geral.</p>
       {info.last && (
         <p className="tax-hint">
           Mês anterior: {info.last.net >= 0 ? '+' : ''}

@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { resolve, sep } from 'node:path';
 import { createLocalApi } from './local-api.mjs';
 
-// The dist directory is embedded by build-local-exe.ps1 when this file is compiled.
+// The dist directory is embedded by Compilar.bat when this file is compiled.
 const distDir = resolve(import.meta.dir, '../dist');
 const embeddedFiles = new Map(Bun.embeddedFiles.map((file) => [file.name.replaceAll('\\', '/'), file]));
 
@@ -36,7 +36,7 @@ function contentType(path) {
 }
 
 if (!indexFile) {
-  console.error('Arquivos do jogo não encontrados dentro do executável. Recompile com scripts/build-local-exe.ps1.');
+  console.error('Arquivos do jogo não encontrados dentro do executável. Recompile com Compilar.bat.');
   process.exit(1);
 }
 

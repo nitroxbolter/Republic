@@ -110,7 +110,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
             <strong>
               {city.workers.toLocaleString()} / {city.jobs.toLocaleString()}
             </strong>
-            <small>trabalhadores / empregos · {city.unemployed.toLocaleString()} desempregados</small>
+            <small>empregados / vagas · {city.unemployed.toLocaleString()} desempregados · {Math.max(0, city.society.adults - city.workers - city.unemployed).toLocaleString()} afastados</small>
           </span>
         </span>
         <span className="more-stat">

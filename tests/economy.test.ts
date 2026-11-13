@@ -41,9 +41,30 @@ describe('budget', () => {
     expect(base.businessTaxRevenue).toBeGreaterThan(0);
     expect(base.residentTaxRevenue).toBe(0);
     expect(high.businessTaxRevenue).toBeGreaterThan(base.businessTaxRevenue);
+    expect(zero.businessTurnoverAfterTax).toBe(zero.businessTurnover);
+    expect(base.businessTurnoverAfterTax).toBe(base.businessTurnover - base.businessTaxRevenue);
+    expect(high.businessTurnoverAfterTax).toBeLessThan(base.businessTurnoverAfterTax);
+    expect(monthlyBudget(t.world, 100).businessTurnoverAfterTax).toBe(0);
     expect(high.residentTaxRevenue).toBe(0);
     expect(base.taxRevenue).toBe(base.businessTaxRevenue + base.residentTaxRevenue);
     expect(livingCosts(BALANCE.defaultMinimumWage, defaultCostTaxRates()).disposable).toBe(210);
+  });
+
+  it('withholds income tax from workers, exempts pensions and lowers purchasing power', () => {
+    const { t } = taxed();
+    const rate = 20;
+    const before = monthlyBudget(t.world, BALANCE.baseTaxRate);
+    const after = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, defaultCostTaxRates(), rate);
+    expect(after.incomeTaxRate).toBe(rate);
+    expect(after.incomeTaxRevenue).toBe(after.employed * BALANCE.defaultMinimumWage * rate / 100);
+    expect(after.breakdown.pensions).toBe(before.breakdown.pensions);
+    expect(after.residentTaxRevenue).toBe(after.incomeTaxRevenue);
+    expect(after.businessTurnover).toBeLessThan(before.businessTurnover);
+    expect(householdPurchasingPower(BALANCE.baseTaxRate, { minimumWage: BALANCE.defaultMinimumWage, pensionPerSenior: BALANCE.defaultPensionPerSenior, costTaxRates: defaultCostTaxRates(), incomeTaxRate: rate }))
+      .toBeLessThan(householdPurchasingPower(BALANCE.baseTaxRate));
+    const full = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, defaultCostTaxRates(), 100);
+    expect(full.incomeTaxRevenue).toBe(full.employed * BALANCE.defaultMinimumWage);
+    expect(full.costBalances.housing.residents).toBe(80);
   });
 
   it('construction sites and abandoned homes do not contribute to bills or taxes', () => {
@@ -83,6 +104,50 @@ describe('budget', () => {
     const disconnected = livingCosts(1_200, { ...defaultCostTaxRates(), energy: 100, water: 100 }, { energy: false, water: false });
     expect(disconnected.utilityPaid).toBe(0);
     expect(disconnected.categoryTax).toBe(0);
+  });
+
+  it('shows each bill, tax, upkeep and government balance without counting private bills as revenue', () => {
+    const t = street();
+    const homes = [4, 5, 6, 7].map((x) => t.place('walkup', x, 11));
+    const plant = t.place('power_plant', 12, 8);
+    const tower = t.place('water_tower', 10, 9);
+    const bus = t.place('bus_station', 20, 7);
+    t.refresh();
+    for (const home of homes) {
+      home.occupants = 20;
+      home.powered = true;
+      home.watered = true;
+    }
+    plant.occupants = 40;
+    tower.occupants = 10;
+    bus.occupants = 20;
+    const rates = { energy: 5, water: 2, housing: 2, transport: 2 };
+    const report = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates);
+    expect(report.costBalances.water).toMatchObject({ residents: 80, nominalBase: 4_800, nominalTax: 96, baseRevenue: 4_800, taxRevenue: 96, revenue: 4_896 });
+    expect(report.costBalances.energy).toMatchObject({ residents: 80, baseRevenue: 6_400, taxRevenue: 320, revenue: 6_720 });
+    expect(report.costBalances.housing).toMatchObject({ baseRevenue: 0, taxRevenue: 720, upkeep: 0 });
+    expect(report.costBalances.transport).toMatchObject({ baseRevenue: 0, taxRevenue: 320 });
+    expect(report.costBalances.transport.upkeep).toBeGreaterThan(0);
+    expect(report.breakdown.transport).toBe(report.costBalances.transport.upkeep);
+    expect(report.costBalances.water.net).toBe(report.costBalances.water.revenue - report.costBalances.water.upkeep);
+    expect(report.costBalances.energy.net).toBe(report.costBalances.energy.revenue - report.costBalances.energy.upkeep);
+    expect(report.utilityRevenue).toBe(report.costBalances.water.baseRevenue + report.costBalances.energy.baseRevenue);
+    expect(report.residentTaxRevenue).toBe(rates.energy * 64 + 96 + 720 + 320);
+    expect(report.income).toBe(report.businessTaxRevenue + Object.values(report.costBalances).reduce((sum, b) => sum + b.revenue, 0) + report.recycling);
+
+    t.world.rail[t.world.index(3, 20)] = 1;
+    const withRail = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates);
+    expect(withRail.costBalances.transport.upkeep).toBe(report.costBalances.transport.upkeep + BALANCE.railUpkeep);
+    expect(withRail.breakdown.roads).toBe(report.breakdown.roads);
+
+    homes[0].watered = false;
+    expect(monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates).costBalances.water.residents).toBe(60);
+    const limited = monthlyBudget(t.world, BALANCE.baseTaxRate, 900, 900, rates);
+    expect(limited.costBalances.water.revenue).toBeGreaterThan(0);
+    expect(limited.costBalances.water.revenue).toBeLessThan(limited.costBalances.water.nominalBase + limited.costBalances.water.nominalTax);
+    const poor = monthlyBudget(t.world, BALANCE.baseTaxRate, 0, 500, rates);
+    expect(poor.costBalances.water.revenue).toBe(0);
+    expect(poor.costBalances.water.nominalBase).toBe(3_600);
   });
 
   it('upkeep: every road tile, every bridge tile at the bridge rate, every civic building by group', () => {

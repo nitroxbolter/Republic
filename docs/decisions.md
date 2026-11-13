@@ -8,6 +8,21 @@ Format: **ID — Title** · Status · Date. Reason in one or two lines.
 
 ## Accepted
 
+- **D-107 — Reconcile adults, employment and pension funding.** 2026-11-12.
+  The budget distinguishes all working-age adults from people employed in job buildings, unemployed adults and those unavailable because of sickness or imprisonment. Only employed adults contribute wage income tax and wage-funded bill payments. The monthly forecast groups revenues and costs and shows their separate totals before net result.
+
+- **D-106 — Show the company estimate after tax.** 2026-11-12.
+  The enterprise slider presents gross estimated turnover, the public tax receipt and turnover remaining after tax. The last amount is a transparent estimate before other business costs and changes directly with the rate.
+
+- **D-105 — One local executable name.** 2026-11-12.
+  `Compilar.bat` is the Windows build entry point. It builds the local web assets with Bun and compiles directly to `Iniciar.exe`; a later successful run replaces that file. The older PowerShell entry point delegates to the batch file, and the generated executable is ignored by Git.
+
+- **D-104 — Wage income tax funds the general budget.** 2026-11-12.
+  An independent 0–100% rate starts at 0%, is withheld from workers' gross wages and leaves pensions exempt. The tax enters resident revenue and reduces disposable income and commercial demand. The budget compares its receipts with pension expense without reserving them in a separate fund. Older saves load at 0%.
+
+- **D-103 — Show public balance for every household bill.** 2026-11-12.
+  The budget splits each bill into nominal per-resident charges, money actually collected, attributable upkeep and net balance. Energy and water base charges fund the government; rent and transport base charges remain private, while their taxes are public. Transport upkeep includes stations and rails, classified separately from roads and parks. Unserved homes and limited income reduce collections.
+
 - **D-102 — Divide residents among overlapping public services.** 2026-11-12.
   Each police, fire, clinic, school, hospital and university keeps its own fixed upkeep. Its population-related upkeep uses only occupied homes in reach, splitting each home's residents equally among working units of the same service. This avoids billing the same residents twice for overlapping coverage; hospitals and trauma centres share one service pool.
 

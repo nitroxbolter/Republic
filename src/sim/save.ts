@@ -60,6 +60,7 @@ export interface SavedCity {
   readonly day: number;
   readonly clock: number;
   readonly taxRate: number;
+  readonly incomeTaxRate?: number;
   readonly minimumWage?: number;
   readonly pensionPerSenior?: number;
   readonly costTaxRates?: CostTaxRates;
@@ -197,7 +198,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -286,6 +287,7 @@ export function deserialize(data: SaveData): City {
   city.day = data.city.day;
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
+  city.incomeTaxRate = data.city.incomeTaxRate ?? 0;
   // Older policy amounts predate the $990 household basket and would leave almost everyone unable to pay it.
   city.minimumWage = data.city.costTaxRates ? data.city.minimumWage ?? BALANCE.defaultMinimumWage : BALANCE.defaultMinimumWage;
   city.pensionPerSenior = data.city.costTaxRates ? data.city.pensionPerSenior ?? BALANCE.defaultPensionPerSenior : BALANCE.defaultPensionPerSenior;
@@ -507,6 +509,7 @@ export function parseSave(json: unknown): SaveData {
       day: num(c, 'day', 0),
       clock: num(c, 'clock', 0),
       taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
+      ...(isFiniteNumber(c.incomeTaxRate) && c.incomeTaxRate >= 0 && c.incomeTaxRate <= 100 && { incomeTaxRate: c.incomeTaxRate }),
       ...(isFiniteNumber(c.minimumWage) && c.minimumWage >= BALANCE.minMinimumWage && c.minimumWage <= BALANCE.maxMinimumWage && { minimumWage: c.minimumWage }),
       ...(isFiniteNumber(c.pensionPerSenior) && c.pensionPerSenior >= BALANCE.minPensionPerSenior && c.pensionPerSenior <= BALANCE.maxPensionPerSenior && { pensionPerSenior: c.pensionPerSenior }),
       ...(parsedCostTaxRates && { costTaxRates: parsedCostTaxRates }),

@@ -23,6 +23,7 @@ bun run sim:run --scenario demo --years 1   # headless sim: history CSV + per-sy
 bun run bench        # the same on /demo with the budget report
 bun run test         # unit tests (server tests use in-process PGlite: no Docker needed)
 bun run typecheck && bun run lint
+# Windows: execute Compilar.bat para reconstruir e substituir Iniciar.exe
 ```
 
 ## Index

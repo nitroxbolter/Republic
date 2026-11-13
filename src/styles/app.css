@@ -1269,6 +1269,25 @@ button.funds:hover {
   width: 100%;
   min-height: 24px;
 }
+.budget-category-balance {
+  border-top: 1px solid var(--border-panel);
+  padding-top: 9px;
+}
+.budget-category-balance summary {
+  cursor: pointer;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.budget-category-balance summary::before {
+  content: '▸';
+  color: var(--text-dim);
+}
+.budget-category-balance[open] summary::before {
+  content: '▾';
+}
+.budget-category-balance > .budget-line {
+  margin: 5px 0;
+}
 .budget-income-cards {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1310,6 +1329,16 @@ button.funds:hover {
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+.budget-lines .budget-heading:not(:first-child) {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-panel);
+}
+.budget-lines > .budget-line:last-child {
+  margin-top: 10px;
+  padding-top: 10px;
+  font-weight: 700;
 }
 .budget-line {
   display: flex;

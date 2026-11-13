@@ -112,6 +112,7 @@ export interface ProgressInfo {
 export interface BudgetInfo {
   /** Percent. */
   taxRate: number;
+  incomeTaxRate: number;
   minimumWage: number;
   pensionPerSenior: number;
   costTaxRates: CostTaxRates;

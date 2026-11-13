@@ -2,6 +2,41 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-12: Empregados e previsão mensal reconciliados (D-107)
+
+- O orçamento separa adultos, empregados, desempregados e afastados; os três últimos somam os adultos. O topo e o menu Mais identificam empregados / vagas em vez de chamar empregados de todos os trabalhadores.
+- Imposto de renda e pagamentos baseados em salários passam a considerar apenas empregados; desempregados e afastados não geram salário na previsão.
+- A previsão do próximo mês mostra primeiro receitas e arrecadação total, depois custos e custo total, terminando em arrecadação menos custo.
+- Testes verificam a reconciliação dos números, o imposto apenas sobre empregados e os totais do orçamento.
+- Verificados typecheck, lint e 36 testes de economia, sociedade e simulação; `Compilar.bat` atualizou o mesmo `Iniciar.exe`.
+
+## 2026-11-12: Previsão empresarial após imposto (D-106)
+
+- O painel empresarial mostra faturamento bruto estimado, imposto recolhido e faturamento restante após imposto; a última linha acompanha imediatamente a alíquota.
+- O teste de orçamento confirma que 0% preserva o faturamento bruto e 100% deixa zero após o imposto.
+
+## 2026-11-12: Compilador único para Windows (D-105)
+
+- Criado `Compilar.bat` na raiz do projeto. Ele compila os arquivos web locais e gera sempre `Iniciar.exe`, substituindo o arquivo anterior.
+- O script PowerShell anterior agora chama o mesmo `.bat`; removido o uso de npm e do nome antigo. `Iniciar.exe` ficou fora do Git.
+- Executado o `.bat` duas vezes com sucesso; na segunda execução, a data de modificação do mesmo `Iniciar.exe` foi atualizada.
+- O executável antigo `Jogar-Republica-PT-Imposto-Renda.exe` não pôde ser removido: o Windows confirmou que está em uso por outro processo. Foi ignorado pelo Git; o compilador não o modifica nem cria novas cópias.
+
+## 2026-11-12: Imposto de renda dos trabalhadores (D-104)
+
+- Adicionada alíquota independente de 0% a 100%, inicialmente 0%, sobre o salário bruto dos trabalhadores; aposentadorias permanecem isentas.
+- A receita entra nos impostos dos habitantes. O painel mostra desconto por trabalhador, arrecadação mensal e comparação com o gasto total das aposentadorias.
+- O salário líquido alimenta o cálculo do custo de vida e poder de compra, afetando as vendas das lojas quando a alíquota sobe.
+- A nova alíquota é salva na cidade; arquivos anteriores continuam carregando com 0%.
+- Verificados typecheck, lint, 24 testes de economia e sociedade e 9 testes de salvamento (estes com limite de tempo ampliado para a cidade grande). Compilados o site local e `Jogar-Republica-PT-Imposto-Renda.exe`.
+
+## 2026-11-12: Saldo por conta dos moradores (D-103)
+
+- Orçamento agora detalha energia, água, moradia e transporte: moradores cobrados, valor base, taxa prevista e recebida, manutenção atribuída e saldo do governo. As linhas resumidas ao lado dos controles mostram arrecadação, custo e resultado em tempo real.
+- Energia e água somam conta base e imposto realmente pagos; moradores sem fornecimento não são cobrados. Moradia e transporte mantêm as contas base privadas, enquanto os impostos entram no orçamento. Terminais e trilhos passaram para a linha própria de transporte.
+- A previsão revela quando a renda insuficiente reduz a cobrança efetiva e identifica alimentação importada como despesa privada sem arrecadação.
+- Testes verificam os totais de água, energia, moradia e transporte, falta de abastecimento, renda insuficiente e manutenção dos trilhos.
+
 ## 2026-11-12: Rateio da manutenção dos serviços públicos (D-102)
 
 - Delegacias, bombeiros, clínicas, escolas, hospitais e universidades mantêm o custo fixo por prédio. A parcela variável por moradores é dividida entre unidades ativas do mesmo serviço que alcançam cada moradia.
