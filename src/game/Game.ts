@@ -1070,6 +1070,7 @@ export class Game {
     if (this.selectedMilitaryUnit !== null) {
       const result = issueMilitaryMove(this.city, this.selectedMilitaryUnit, t.x, t.y);
       if (result === 'ok') {
+        this.selectedMilitaryUnit = null;
         this.notify('info', 'Ordem de deslocamento enviada.');
         return;
       }
