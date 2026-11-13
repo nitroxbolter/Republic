@@ -22,18 +22,22 @@ const MARGIN = 40;
 
 /**
  * Draws cars and pedestrians from sim/traffic.ts. Sprites are pooled and only
- * on-screen agents get one; the layer sorts by depth (x + y) so agents overlap
- * each other correctly. It sits under the objects layer, so trees and buildings
- * in front of a road cover the cars behind them.
+ * on-screen agents get one; each layer sorts by depth (x + y) so agents overlap
+ * each other correctly. Pedestrians have their own pass above the buildings so
+ * they remain visible while walking through built-up streets.
  */
 export class AgentRenderer {
   readonly container = new Container({ sortableChildren: true });
+  /** Pedestrians need their own pass so building sprites cannot hide them completely. */
+  readonly people = new Container({ sortableChildren: true });
   /** Trains up on overpass decks: above the objects layer, so the deck doesn't hide them. */
   readonly raised = new Container({ sortableChildren: true });
   private readonly pool: Sprite[] = [];
+  private readonly peoplePool: Sprite[] = [];
   private readonly stopPool: Sprite[] = [];
   private readonly lampPool: Sprite[] = [];
   private readonly trainPool: Sprite[] = [];
+  private peopleTint = 0xffffff;
   visible = 0;
 
   constructor(
@@ -46,6 +50,7 @@ export class AgentRenderer {
     this.drawStops(world, zoom >= MIN_ZOOM_VEHICLES ? stops : [], view);
     this.drawLights(world, zoom >= MIN_ZOOM_PEOPLE ? lights : [], view);
     let used = 0;
+    let peopleUsed = 0;
     if (zoom >= MIN_ZOOM_VEHICLES) {
       const people = zoom >= MIN_ZOOM_PEOPLE;
       for (const a of agents) {
@@ -60,20 +65,24 @@ export class AgentRenderer {
         // On a flyover deck (driving along it), a car rides up there: lifted, and drawn over the deck.
         const tile = a.t < 0.5 ? a.path[a.seg] : a.path[Math.min(a.seg + 1, a.path.length - 1)];
         const onDeck = !isPerson && world.over[tile] !== 0 && world.overAxis[tile] === (pose.dir % 2 === 1 ? 1 : 2);
-        let s = this.pool[used];
+        const pool = isPerson ? this.peoplePool : this.pool;
+        const index = isPerson ? peopleUsed : used;
+        let s = pool[index];
         if (!s) {
           s = new Sprite();
-          this.pool.push(s);
+          pool.push(s);
         }
-        const layer = onDeck ? this.raised : this.container;
+        const layer = isPerson ? this.people : onDeck ? this.raised : this.container;
         if (s.parent !== layer) layer.addChild(s);
-        used++;
         if (a.kind === 'person') {
           s.texture = this.tex.people[a.variant % this.tex.people.length][Math.floor(a.age / STEP_TIME) % 2];
           s.anchor.set(0.5, 1);
+          s.tint = this.peopleTint;
+          peopleUsed++;
         } else {
           s.texture = this.tex.vehicles[a.kind][a.variant % 6][vt.dir(pose.dir)];
           s.anchor.set(0.5, VEHICLE_ANCHOR_Y);
+          used++;
         }
         s.position.set(p.x, p.y - (onDeck ? DECK_LIFT : 0));
         s.zIndex = vp.x + vp.y;
@@ -81,7 +90,14 @@ export class AgentRenderer {
       }
     }
     for (let k = used; k < this.pool.length; k++) this.pool[k].visible = false;
-    this.visible = used;
+    for (let k = peopleUsed; k < this.peoplePool.length; k++) this.peoplePool[k].visible = false;
+    this.visible = used + peopleUsed;
+  }
+
+  /** Pedestrians render outside the multiply layer, so apply the city's daylight tint directly. */
+  setDaylight(color: number) {
+    this.peopleTint = color;
+    for (const person of this.peoplePool) person.tint = color;
   }
 
   /** Train cars (sim/systems/trains.ts), sorted with everything else by depth. */

@@ -182,7 +182,7 @@ function paintGantry(iso: IsoFrame, axis: RoadAxis) {
 
 /**
  * Foot overbridge across a highway: a stair tower on each verge, a covered deck between them
- * and a slim pier on the median. Cars pass underneath (agents draw below the objects layer).
+ * and a slim pier on the median. Cars pass underneath (vehicle agents draw below the objects layer).
  */
 function paintOverbridge(iso: IsoFrame, axis: RoadAxis) {
   const Z = 18;

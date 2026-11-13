@@ -65,9 +65,10 @@ const ZONE_ALPHA = 0.45;
  *   stage
  *   └─ worldRoot (camera transform)
  *      ├─ terrain  (slab, dual-grid ground masked to the map, roads, grid; rebuilt on rotation)
- *      ├─ agents   (cars, pedestrians; under objects so buildings in front cover them)
+ *      ├─ agents   (cars; below buildings)
  *      ├─ daylight (multiply: night darkens the ground and traffic)
  *      ├─ objects  (trees, decorations, buildings, lit windows; night is a per-sprite tint here)
+ *      ├─ pedestrians (above objects so buildings don't hide people on the streets)
  *      ├─ ambient lower, rotors, smoke, fx (tinted for night)
  *      ├─ ambient upper (beacons, birds)
  *      └─ overlay  (tool ghosts, hover, warning badges)
@@ -264,6 +265,7 @@ export class Renderer {
       this.agents.container,
       this.daylight,
       this.objects,
+      this.agents.people,
       this.agents.raised,
       this.ambient.lower,
       this.rotors.container,
@@ -356,6 +358,7 @@ export class Renderer {
     this.daylight.visible = color !== 0xffffff;
     if (color === this.daylightColor) return;
     this.daylightColor = color;
+    this.agents.setDaylight(color);
     this.ground.setNight(color);
     for (const c of [this.border.backObjects, this.border.frontObjects, this.ambient.lower, this.rotors.container, this.smoke.container, this.effects.container]) c.tint = color;
   }
