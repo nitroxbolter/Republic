@@ -14,6 +14,7 @@ import { garageAnnex, paintFence, paintSmokestack, stackHeight, stackPositions }
 import { paintMass } from './massing';
 import { ART, type BuildingArt, type CustomArtId, type RecipeId } from './recipes';
 import { paintRooftop } from './rooftop';
+import { paintMilitaryAsset } from './militaryAssets';
 
 export { BUILDING_ROTATIONS, type BuildingRotation } from '../core';
 export type { SmokeSource } from '../civic/lot';
@@ -141,6 +142,11 @@ export function paintBuilding(ctx: CanvasRenderingContext2D, id: BuildingId, var
   const { w, h } = BUILDINGS[id].size;
   const o = new Orient(rot, w, h);
   const marks: FrameMark[] | null = opts.record ? [] : null;
+  const frame = buildingFrameSize(id, variant);
+  if (paintMilitaryAsset(ctx, id, frame.w, frame.h)) {
+    if (marks) markRegistry.set(frameKey(id, variant % buildingVariantCount(id), rot), marks);
+    return;
+  }
   const iso = new IsoFrame(ctx, GROUND_PAD + o.vh * HALF_W, GROUND_PAD + buildingHeadroom(id, variant), marks);
   const rng = mulberry32(8000 + variant * 101 + id.length * 7 + id.charCodeAt(0));
   if (isCustom(id)) {

@@ -17,6 +17,7 @@ import { HEIGHT_STEP, TILE_W } from '../shared/constants';
 import { surfaceHeight } from '../sim/terrain/elevation';
 import { ChunkRenderer } from './ChunkRenderer';
 import { buildTerrainTextures, type TerrainTextures } from './atlas/tiles';
+import { loadMilitaryAssets } from './atlas/buildings/militaryAssets';
 import { mapWorldBounds, tileToWorld, worldToTileFloat } from './iso';
 import { HoverHighlight } from './overlays/HoverHighlight';
 import { ToolPreview } from './overlays/ToolPreview';
@@ -156,6 +157,7 @@ export class Renderer {
     });
     const r = new Renderer(app, world);
     try {
+      await loadMilitaryAssets().catch(() => undefined);
       await stage?.('art');
       r.setupArt();
       await stage?.('map');
