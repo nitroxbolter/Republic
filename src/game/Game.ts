@@ -21,6 +21,7 @@ import { stageRequirements } from '../sim/progression';
 import { lifestyleReport } from '../sim/systems/lifestyle';
 import { currentTech, researchRate, TECHS } from '../sim/research';
 import { materialStorage } from '../sim/systems/materials';
+import { enlistSoldiers, purchaseMilitary, type MilitaryPurchase, type MilitaryActionResult } from '../sim/systems/military';
 import { collectTaxes, townHall } from '../sim/systems/budget';
 import { acquireProperty, financeProperty, privateRecoverProperty, repayPropertyLoan } from '../sim/systems/realEstate';
 import { inspectInfo } from './inspect';
@@ -897,6 +898,23 @@ export class Game {
       this.city.demography.permitLimits[zone] = Math.max(0, Math.min(9999, Math.round(limits[zone])));
     }
     this.edits++; this.emitCity(); this.emitBudget();
+  }
+
+  enlistMilitary(quantity: number): MilitaryActionResult {
+    return this.finishMilitaryAction(enlistSoldiers(this.city, quantity));
+  }
+
+  purchaseMilitary(item: MilitaryPurchase, quantity: number): MilitaryActionResult {
+    return this.finishMilitaryAction(purchaseMilitary(this.city, item, quantity));
+  }
+
+  private finishMilitaryAction(result: MilitaryActionResult): MilitaryActionResult {
+    if (result.ok) {
+      this.edits++;
+      this.events.emit('funds', this.city.funds);
+      this.emitBudget();
+    }
+    return result;
   }
 
   investAtBank(amount: number, months: number): BankResult {

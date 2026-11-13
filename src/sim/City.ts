@@ -7,6 +7,7 @@ import type { World } from './World';
 import { defaultCostTaxRates, type CostTaxRates } from './systems/livingCosts';
 import { initialDemography, type DemographicPolicy } from './systems/demography';
 import { initialBank, type BankState } from './systems/bank';
+import { emptyMilitary, type MilitaryState } from './systems/military';
 
 /** City-wide state that isn't per-tile: money and the calendar. */
 export class City {
@@ -24,6 +25,8 @@ export class City {
   propertyLedger = { loaned: 0, recovered: 0, writtenOff: 0, issuedThisMonth: 0, acquiredThisMonth: 0, repaidEarlyThisMonth: 0, earlyInterestThisMonth: 0 };
   demography: DemographicPolicy = initialDemography();
   bank: BankState = initialBank();
+  /** Troops and equipment owned by the city; facility storage limits are derived from its buildings. */
+  military: MilitaryState = emptyMilitary();
   /** Aggregate social state; individual residents are represented by their homes. */
   society = { sick: 0, prisoners: 0, deaths: 0, recentDeaths: 0, untreatedDeaths: 0, prisonOverflow: 0, naturalDeathCarry: 0 };
   /**

@@ -5,6 +5,7 @@ import type { NeedKind } from '../../sim/systems/needs';
 import type { InspectInfo, StationInfo } from '../../game/events';
 import { gameAtom, inspectAtom, zoneInspectAtom } from '../atoms';
 import { aqiBand } from '../../sim/systems/air';
+import { useOverlay } from '../overlay/overlay';
 
 const NEED_LABEL: Readonly<Record<NeedKind, string>> = {
   jobs: 'Jobs',
@@ -153,6 +154,7 @@ export function InfoPanel() {
   const info = useAtomValue(inspectAtom);
   const zone = useAtomValue(zoneInspectAtom);
   const game = useAtomValue(gameAtom);
+  const military = useOverlay('military');
   if (!info && zone) return (
     <aside className="panel info-panel" aria-label={`Detalhes de ${zone.name}`}>
       <header className="info-header">
@@ -172,6 +174,7 @@ export function InfoPanel() {
   const alert = alertFor(info);
   const needs = info.needs ? [...info.needs.scores].sort((a, b) => a.score - b.score) : [];
   const canRepair = info.condition !== null && (info.repairDays > 0 || info.condition < 1);
+  const selectedDefinition = game?.city.world.buildings.get(info.id)?.def;
 
   return (
     <aside className="panel info-panel" aria-label={`Detalhes de ${info.name}`}>
@@ -189,6 +192,9 @@ export function InfoPanel() {
       </header>
 
       <div className="info-actions">
+        {selectedDefinition === 'military_base' && (
+          <button type="button" className="primary-button" disabled={info.constructionDays > 0} onClick={military.show}>Abrir Centro de Comando</button>
+        )}
         <button
           type="button"
           className="primary-button"

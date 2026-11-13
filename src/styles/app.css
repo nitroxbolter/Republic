@@ -1280,6 +1280,30 @@ button.funds:hover {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.035);
 }
+.military-purchase {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-panel);
+}
+.military-purchase > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.military-purchase > div span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.military-stock .meter {
+  margin: 4px 0 6px;
+}
+.military-panel .budget-card {
+  gap: 8px;
+}
 .bank-field {
   display: flex;
   flex-direction: column;

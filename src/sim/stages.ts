@@ -52,6 +52,7 @@ const UNLOCKS: Readonly<Partial<Record<BuildingId, Stage>>> = {
   bus_station: Stage.Town,
   barracks: Stage.Town,
   military_garage: Stage.Town,
+  military_depot: Stage.Town,
   armory: Stage.City,
   military_base: Stage.City,
   training_ground: Stage.City,

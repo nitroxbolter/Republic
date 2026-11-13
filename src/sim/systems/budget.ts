@@ -12,6 +12,7 @@ import { economyReport } from './economy';
 import { propertyBills, forecastPropertyFlows, settleProperties, type PropertyFlows, type PropertyPayment } from './realEstate';
 import { demographicMonthlyCost } from './demography';
 import { forecastBankMonth, settleBankMonth, type BankFlow } from './bank';
+import { militaryMonthlyPayroll } from './military';
 import type { DayOutcome, SimSystem } from '../core/System';
 
 /** Monthly company and resident taxes, utility bills and recycling against upkeep and pensions. */
@@ -25,7 +26,7 @@ export interface BudgetReport {
   /** Company tax rate (percent) used for this report. */
   taxRate: number;
   incomeTaxRate: number;
-  breakdown: { roads: number; transport: number; services: number; defense: number; utilities: number; parks: number; pensions: number; demographicIncentives: number; housingSubsidies: number; constructionGrants: number };
+  breakdown: { roads: number; transport: number; services: number; defense: number; militaryPayroll: number; utilities: number; parks: number; pensions: number; demographicIncentives: number; housingSubsidies: number; constructionGrants: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
   taxRevenue: number;
@@ -282,7 +283,8 @@ export function monthlyBudget(
   const pensions = ages.seniors * pensionPerSenior;
   const demographicIncentives = policyCity ? demographicMonthlyCost(policyCity, true) : 0;
   const constructionGrants = policyCity?.demography.monthConstructionGrants ?? 0;
-  const expenses = Math.round(roads + transport + services + defense + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating) + bankFlow.loanInterest;
+  const militaryPayroll = policyCity ? militaryMonthlyPayroll(policyCity) : 0;
+  const expenses = Math.round(roads + transport + services + defense + militaryPayroll + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating) + bankFlow.loanInterest;
   return {
     income,
     expenses,
@@ -292,7 +294,7 @@ export function monthlyBudget(
       : income - expenses + forecastFlows.principal + bankFlow.investmentPrincipal - bankFlow.loanPrincipal,
     taxRate,
     incomeTaxRate,
-    breakdown: { roads: Math.round(roads), transport, services, defense, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants },
+    breakdown: { roads: Math.round(roads), transport, services, defense, militaryPayroll, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants },
     recycling,
     taxRevenue,
     businessTaxRevenue,

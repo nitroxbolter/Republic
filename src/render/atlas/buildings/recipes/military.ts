@@ -27,6 +27,17 @@ export const military_garage: readonly BuildingArt[] = variants(
   { wall: '#b6b99f', facade: 'bands', extras: ['garagedoor', 'garage', 'fence', 'antenna'] },
 );
 
+export const military_depot: readonly BuildingArt[] = variants(
+  {
+    floorH: 10,
+    masses: [one(1, 0.1, 'industrial')],
+    wall: '#aaa58f', trim: '#69745f',
+    roof: 'flat', roofColor: '#52614c', facade: 'industrial',
+    ground: 'paved', extras: ['loadingdock', 'crates', 'fence'], sign: 'SUPRIMENTOS', signColor: '#455640',
+  },
+  { wall: '#b9b49b', roof: 'gable', roofH: 8, roofColor: '#59654e', extras: ['loadingdock', 'crates'] },
+);
+
 export const armory: readonly BuildingArt[] = variants(
   {
     floorH: 10,

@@ -555,25 +555,31 @@ export const BUILDINGS = {
   barracks: {
     name: 'Quartel', category: 'civic', zone: null, density: null, level: 0,
     size: { w: 2, h: 2 }, cost: 12000, capacity: 80,
-    description: 'Alojamento e sede do efetivo municipal. Emprega pessoal e gera manutenção; não comanda unidades nem inicia combates.',
+    description: 'Aloja até 80 soldados. O efetivo recebe soldo mensal e precisa de fuzil e munição para ser alistado no Centro de Comando.',
     group: 'defense', upkeep: 420,
   },
   military_garage: {
     name: 'Garagem militar', category: 'civic', zone: null, density: null, level: 0,
     size: { w: 2, h: 2 }, cost: 8500, capacity: 28,
-    description: 'Garagem e oficina para veículos de serviço. Estrutura pública visual, sem frota militar funcional.',
+    description: 'Garagem para até 28 viaturas. Veículos comprados no Centro de Comando ocupam vagas até o limite das garagens concluídas.',
     group: 'defense', upkeep: 240,
+  },
+  military_depot: {
+    name: 'Depósito militar', category: 'civic', zone: null, density: null, level: 0,
+    size: { w: 2, h: 2 }, cost: 9500, capacity: 24,
+    description: 'Armazena suprimentos de campanha. Cada depósito concluído acrescenta 2.000 unidades ao limite de estoque.',
+    group: 'defense', upkeep: 260,
   },
   armory: {
     name: 'Paiol', category: 'civic', zone: null, density: null, level: 0,
     size: { w: 2, h: 2 }, cost: 7000, capacity: 18,
-    description: 'Depósito municipal cercado para equipamentos. Não armazena itens nem fornece armas na simulação atual.',
+    description: 'Paiol para fuzis e munição. Cada paiol concluído armazena até 120 fuzis e 20.000 cartuchos.',
     group: 'defense', upkeep: 180,
   },
   military_base: {
     name: 'Base militar', category: 'civic', zone: null, density: null, level: 0,
     size: { w: 3, h: 3 }, cost: 28000, capacity: 120,
-    description: 'Complexo administrativo com pátio, alojamento e portaria. Representa uma instalação municipal; não há guerra entre cidades.',
+    description: 'Centro de Comando: abre a interface de recrutamento, compra de veículos, armas e suprimentos. O complexo comporta até 120 soldados.',
     group: 'defense', upkeep: 900,
   },
   training_ground: {

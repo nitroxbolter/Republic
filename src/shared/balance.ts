@@ -104,6 +104,21 @@ export const BALANCE = {
   monthlyShopSpendPerResident: 300,
   /** Public-service upkeep adds one base cost per this many residents served. */
   upkeepResidentsPerBase: 1_000,
+  /** Military purchasing, storage and payroll (sim/systems/military.ts). */
+  military: {
+    monthlySoldierPay: 450,
+    enlistmentCost: 600,
+    rifleCost: 1_200,
+    riflesPerArmory: 120,
+    ammoCrateCost: 1_000,
+    roundsPerAmmoCrate: 1_000,
+    ammoPerArmory: 20_000,
+    supplyCrateCost: 2_500,
+    suppliesPerCrate: 100,
+    suppliesPerDepot: 2_000,
+    vehicleCosts: { patrol: 25_000, transport: 40_000, armored: 90_000, helicopter: 150_000 },
+    roundsPerSoldier: 120,
+  },
   /** Monthly upkeep per road tile. */
   roadUpkeep: 1,
   highwayUpkeep: 6,

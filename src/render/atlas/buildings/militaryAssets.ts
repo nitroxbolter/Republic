@@ -1,5 +1,6 @@
 import militaryBaseUrl from './military-assets/military_base.png';
 import militaryGarageUrl from './military-assets/military_garage.png';
+import militaryDepotUrl from './military-assets/military_depot.png';
 import armoryUrl from './military-assets/armory.png';
 import barracksUrl from './military-assets/barracks.png';
 import trainingGroundUrl from './military-assets/training_ground.png';
@@ -10,6 +11,7 @@ import { GROUND_PAD } from '../geometry';
 const SOURCES = {
   military_base: militaryBaseUrl,
   military_garage: militaryGarageUrl,
+  military_depot: militaryDepotUrl,
   armory: armoryUrl,
   barracks: barracksUrl,
   training_ground: trainingGroundUrl,

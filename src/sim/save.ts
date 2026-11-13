@@ -17,6 +17,7 @@ import { ZoneType } from './zones';
 import { initialProperty, type PropertyState } from './systems/realEstate';
 import { initialDemography, type DemographicPolicy, type PermitLimits } from './systems/demography';
 import { BANK_MAX_TERM, investmentRate, loanRate, type BankState, type BankInvestment, type BankLoan } from './systems/bank';
+import type { MilitaryState } from './systems/military';
 
 /**
  * The save format (docs/specs/saving.md, D-034): only what can't be recomputed. Terrain is
@@ -63,6 +64,8 @@ export interface SavedCity {
   readonly propertyLedger?: City['propertyLedger'];
   readonly demography?: DemographicPolicy;
   readonly bank?: BankState;
+  /** Troops and warehouse stocks; absent in earlier saves. */
+  readonly military?: MilitaryState;
   readonly day: number;
   readonly clock: number;
   readonly taxRate: number;
@@ -208,7 +211,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, bank: { nextId: city.bank.nextId, investments: city.bank.investments.map((item) => ({ ...item })), loans: city.bank.loans.map((item) => ({ ...item })) }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, bank: { nextId: city.bank.nextId, investments: city.bank.investments.map((item) => ({ ...item })), loans: city.bank.loans.map((item) => ({ ...item })) }, military: { ...city.military, vehicles: { ...city.military.vehicles } }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -301,6 +304,7 @@ export function deserialize(data: SaveData): City {
   if (data.city.propertyLedger) city.propertyLedger = { ...data.city.propertyLedger };
   if (data.city.demography) city.demography = { ...data.city.demography, permitLimits: { ...data.city.demography.permitLimits }, permitUsed: { ...data.city.demography.permitUsed } };
   if (data.city.bank) city.bank = { nextId: data.city.bank.nextId, investments: data.city.bank.investments.map((item) => ({ ...item })), loans: data.city.bank.loans.map((item) => ({ ...item })) };
+  if (data.city.military) city.military = { ...data.city.military, vehicles: { ...data.city.military.vehicles } };
   city.day = data.city.day;
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
@@ -527,6 +531,7 @@ export function parseSave(json: unknown): SaveData {
       ...parsePropertyLedger(c.propertyLedger),
       ...parseDemography(c.demography),
       ...parseBank(c.bank),
+      ...parseMilitary(c.military),
       day: num(c, 'day', 0),
       clock: num(c, 'clock', 0),
       taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
@@ -588,6 +593,21 @@ function parseBank(value: unknown): { bank?: BankState } {
   const maxId = Math.max(0, ...investments.map((item) => item.id), ...loans.map((item) => item.id));
   const nextId = Number.isSafeInteger(value.nextId) && isFiniteNumber(value.nextId) && value.nextId > maxId ? value.nextId : maxId + 1;
   return { bank: { nextId, investments, loans } };
+}
+
+function parseMilitary(value: unknown): { military?: MilitaryState } {
+  if (!isObj(value) || !isObj(value.vehicles)) return {};
+  const vehicles = value.vehicles;
+  const keys = ['patrol', 'transport', 'armored', 'helicopter'] as const;
+  const counts = [value.soldiers, value.rifles, value.ammunition, value.supplies, ...keys.map((key) => vehicles[key])];
+  if (!counts.every((count) => Number.isSafeInteger(count) && isFiniteNumber(count) && count >= 0 && count <= 1_000_000_000)) return {};
+  return { military: {
+    soldiers: value.soldiers as number,
+    rifles: value.rifles as number,
+    ammunition: value.ammunition as number,
+    supplies: value.supplies as number,
+    vehicles: Object.fromEntries(keys.map((key) => [key, vehicles[key]])) as MilitaryState['vehicles'],
+  } };
 }
 
 function parsePropertyLedger(value: unknown): { propertyLedger?: City['propertyLedger'] } {
