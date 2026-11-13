@@ -33,7 +33,7 @@ import { PAVEMENTS, ROAD_SPECS } from '../sim/roadTypes';
 import { cityStats } from '../sim/systems/population';
 import { economyReport } from '../sim/systems/economy';
 import { societyReport } from '../sim/systems/society';
-import { demographicReport, infrastructurePressure, type DemographicStrategy, type PermitZone } from '../sim/systems/demography';
+import { demographicReport, infrastructurePressure, suggestedPermitLimit, type DemographicStrategy, type PermitZone } from '../sim/systems/demography';
 import type { Traffic } from '../sim/systems/traffic';
 import { happinessColor, type OverlayTile } from '../render/Renderer';
 import { rectTiles, RoadType, roadMask, type BuildableRoad, type TilePos } from '../sim/roads';
@@ -898,7 +898,7 @@ export class Game {
 
   applyExpansionPlan() {
     const pressure = infrastructurePressure(this.city).score;
-    const limit = pressure < 0.5 ? 1 : pressure < 0.75 ? 2 : 4;
+    const limit = suggestedPermitLimit(pressure);
     this.city.demography.permitLimits = { r: limit, c: limit, o: limit, i: limit };
     this.edits++; this.emitCity(); this.emitBudget();
     this.notify('info', `Plano de expansão aplicado: até ${limit} novas obras por zona a cada mês.`);

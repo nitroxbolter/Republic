@@ -5,6 +5,7 @@ import { SLIM_BAR, useMedia } from '../mobile/useMedia';
 import { useDismiss, useOverlay } from '../overlay/overlay';
 import { Sheet } from './Sheet';
 import type { DemographicStrategy, PermitZone } from '../../sim/systems/demography';
+import { suggestedPermitLimit } from '../../sim/systems/demography';
 
 const strategyNames: Record<DemographicStrategy, string> = { stimulate: 'Estimular crescimento', balanced: 'Crescimento equilibrado', slow: 'Desacelerar crescimento' };
 const zoneNames: Record<PermitZone, string> = { r: 'Moradias', c: 'Lojas', o: 'Escritórios', i: 'Indústrias' };
@@ -26,6 +27,7 @@ function Body({ onClose }: { onClose: () => void }) {
   if (!city) return null;
   const p = city.demography;
   const measures = p.infrastructure;
+  const suggestedLimit = suggestedPermitLimit(measures.score);
   const monthly = p.monthImmigration + p.monthEmigration + p.monthBirths + p.monthDeaths > 0;
   const migration = monthly ? [p.monthImmigration, p.monthEmigration, p.monthBirths, p.monthDeaths] : [p.lastImmigration, p.lastEmigration, p.lastBirths, p.lastDeaths];
   const pressureRows: [string, number][] = [['Moradias livres', measures.housing], ['Hospitais', measures.hospital], ['Escolas', measures.school], ['Água', measures.water], ['Energia', measures.energy], ['Segurança', measures.security], ['Transporte', measures.transport], ['Empregos', measures.employment]];
@@ -58,9 +60,9 @@ function Body({ onClose }: { onClose: () => void }) {
     </div>
     <div className="budget-card">
       <h3 className="budget-heading">Licenças e plano de expansão</h3>
-      <p className="tax-hint">Limites mensais por zona. Obras já iniciadas continuam; moradores ainda podem ocupar casas existentes.</p>
+      <p className="tax-hint">As seleções são aplicadas imediatamente. O botão abaixo substitui todos os limites escolhidos pela sugestão automática, calculada pela infraestrutura. Obras iniciadas continuam.</p>
       {(Object.keys(zoneNames) as PermitZone[]).map((zone) => <label key={zone} className="budget-line"><span>{zoneNames[zone]} · {p.permitUsed[zone]} usadas</span><select value={p.permitLimits[zone]} onChange={(e) => game?.setPermitLimit(zone, Number(e.target.value))}><option value={9999}>Sem limite</option>{[0, 1, 2, 4, 8, 16].map((v) => <option value={v} key={v}>{v} por mês</option>)}</select></label>)}
-      <button type="button" className="secondary-button" onClick={() => game?.applyExpansionPlan()}>Aplicar plano conforme a infraestrutura</button>
+      <button type="button" className="secondary-button" onClick={() => game?.applyExpansionPlan()}>Substituir por sugestão automática: {suggestedLimit}/mês por zona</button>
     </div>
   </>;
 }

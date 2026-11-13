@@ -73,6 +73,11 @@ export interface InfrastructurePressure {
   alerts: string[];
 }
 
+/** Default monthly construction cap suggested for the city's current infrastructure score. */
+export function suggestedPermitLimit(score: number): number {
+  return score < 0.5 ? 1 : score < 0.75 ? 2 : 4;
+}
+
 /** Read-only, aggregate infrastructure signal; 1 means fully served, 0 means none. */
 export function infrastructurePressure(city: City): InfrastructurePressure {
   let population = 0, capacity = 0, hospital = 0, school = 0, water = 0, energy = 0, security = 0, transport = 0, employed = 0;
