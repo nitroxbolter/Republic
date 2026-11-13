@@ -1,11 +1,12 @@
 import { useAtomValue } from 'jotai';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { cityAtom, gameAtom } from '../atoms';
 import { SLIM_BAR, useMedia } from '../mobile/useMedia';
 import { useDismiss, useOverlay } from '../overlay/overlay';
 import { Sheet } from './Sheet';
-import type { DemographicStrategy, PermitZone } from '../../sim/systems/demography';
+import type { DemographicStrategy, PermitLimits, PermitZone } from '../../sim/systems/demography';
 import { suggestedPermitLimit } from '../../sim/systems/demography';
+import { BALANCE } from '../../shared/balance';
 
 const strategyNames: Record<DemographicStrategy, string> = { stimulate: 'Estimular crescimento', balanced: 'Crescimento equilibrado', slow: 'Desacelerar crescimento' };
 const zoneNames: Record<PermitZone, string> = { r: 'Moradias', c: 'Lojas', o: 'Escritórios', i: 'Indústrias' };
@@ -24,10 +25,12 @@ export function DemographyPanel() {
 function Body({ onClose }: { onClose: () => void }) {
   const city = useAtomValue(cityAtom);
   const game = useAtomValue(gameAtom);
+  const [selectedLimits, setSelectedLimits] = useState<PermitLimits>(() => ({ ...(city?.demography.permitLimits ?? { r: 9999, c: 9999, o: 9999, i: 9999 }) }));
   if (!city) return null;
   const p = city.demography;
   const measures = p.infrastructure;
   const suggestedLimit = suggestedPermitLimit(measures.score);
+  const limitsChanged = (Object.keys(zoneNames) as PermitZone[]).some((zone) => selectedLimits[zone] !== p.permitLimits[zone]);
   const monthly = p.monthImmigration + p.monthEmigration + p.monthBirths + p.monthDeaths > 0;
   const migration = monthly ? [p.monthImmigration, p.monthEmigration, p.monthBirths, p.monthDeaths] : [p.lastImmigration, p.lastEmigration, p.lastBirths, p.lastDeaths];
   const pressureRows: [string, number][] = [['Moradias livres', measures.housing], ['Hospitais', measures.hospital], ['Escolas', measures.school], ['Água', measures.water], ['Energia', measures.energy], ['Segurança', measures.security], ['Transporte', measures.transport], ['Empregos', measures.employment]];
@@ -43,8 +46,9 @@ function Body({ onClose }: { onClose: () => void }) {
       <div className="budget-line"><span>Crescimento anual observado</span><strong>{p.annualGrowth.toFixed(1)}%</strong></div>
       <div className="budget-line"><span>Intensidade atual dos incentivos</span><strong>{Math.round(p.incentiveLevel * 100)}%</strong></div>
       <label className="budget-line"><span>Programas de atração de moradores</span><input type="checkbox" checked={p.incentivesEnabled} onChange={(e) => game?.setMigrationIncentives(e.target.checked)} /></label>
-      <label className="tax"><span className="budget-line"><span>Subsídio habitacional</span><strong>{Math.round(p.housingSubsidy * 100)}%</strong></span><input type="range" min={0} max={20} step={1} value={Math.round(p.housingSubsidy * 100)} onChange={(e) => game?.setHousingSubsidy(Number(e.target.value))} /><span className="tax-hint">Reduz o aluguel dos moradores; o governo paga a diferença ao proprietário.</span></label>
+      <label className="tax"><span className="budget-line"><span>Subsídio habitacional</span><strong>{Math.round(p.housingSubsidy * 100)}%</strong></span><input type="range" min={0} max={20} step={1} value={Math.round(p.housingSubsidy * 100)} onChange={(e) => game?.setHousingSubsidy(Number(e.target.value))} /><span className="tax-hint">Incentiva novas moradias mesmo sem demanda normal. Cada obra iniciada recebe um apoio único de até 20% do custo; o desconto no aluguel é pago mensalmente. Ambos saem do caixa no fechamento. Exige terreno, via, materiais e licença.</span></label>
       <div className="budget-line total"><span>Custo estimado dos incentivos</span><strong>{money(p.monthlyCost)}/mês</strong></div>
+      <div className="budget-line"><span>Apoio a obras iniciado neste mês</span><strong>{money(p.monthConstructionGrants)}</strong></div>
     </div>
     <div className="budget-card">
       <h3 className="budget-heading">Movimento populacional {monthly ? 'neste mês' : 'no último mês'}</h3>
@@ -60,9 +64,13 @@ function Body({ onClose }: { onClose: () => void }) {
     </div>
     <div className="budget-card">
       <h3 className="budget-heading">Licenças e plano de expansão</h3>
-      <p className="tax-hint">As seleções são aplicadas imediatamente. O botão abaixo substitui todos os limites escolhidos pela sugestão automática, calculada pela infraestrutura. Obras iniciadas continuam.</p>
-      {(Object.keys(zoneNames) as PermitZone[]).map((zone) => <label key={zone} className="budget-line"><span>{zoneNames[zone]} · {p.permitUsed[zone]} usadas</span><select value={p.permitLimits[zone]} onChange={(e) => game?.setPermitLimit(zone, Number(e.target.value))}><option value={9999}>Sem limite</option>{[0, 1, 2, 4, 8, 16].map((v) => <option value={v} key={v}>{v} por mês</option>)}</select></label>)}
-      <button type="button" className="secondary-button" onClick={() => game?.applyExpansionPlan()}>Substituir por sugestão automática: {suggestedLimit}/mês por zona</button>
+      <p className="tax-hint">Escolha quantas novas obras ou melhorias podem começar por zona a cada mês e clique em Aplicar limites. As {BALANCE.constructionDays} jornadas de construção não mudam; o subsídio pode criar demanda residencial, mas via e materiais também precisam estar disponíveis.</p>
+      {(Object.keys(zoneNames) as PermitZone[]).map((zone) => <label key={zone} className="budget-line"><span>{zoneNames[zone]} · {p.permitUsed[zone]} usadas{p.permitLimits[zone] < 9999 ? ` · ${Math.max(0, p.permitLimits[zone] - p.permitUsed[zone])} restantes` : ''}</span><select value={selectedLimits[zone]} onChange={(e) => setSelectedLimits((current) => ({ ...current, [zone]: Number(e.target.value) }))}><option value={9999}>Sem limite</option>{[0, 1, 2, 4, 8, 16].map((v) => <option value={v} key={v}>{v} por mês</option>)}</select></label>)}
+      <div className="info-actions">
+        <button type="button" className="primary-button" disabled={!limitsChanged} onClick={() => game?.setPermitLimits(selectedLimits)}>Aplicar limites escolhidos</button>
+        <button type="button" className="secondary-button" onClick={() => setSelectedLimits({ r: suggestedLimit, c: suggestedLimit, o: suggestedLimit, i: suggestedLimit })}>Preencher sugestão: {suggestedLimit}/mês por zona</button>
+      </div>
+      {limitsChanged && <p className="tax-hint">Seleção pendente. Clique em Aplicar limites escolhidos para confirmar.</p>}
     </div>
   </>;
 }

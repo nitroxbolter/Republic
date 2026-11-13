@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CityInfo, DayNightMode } from '../../game/events';
-import { airViewAtom, happinessViewAtom, trafficViewAtom, cityAtom, clockAtom, dayNightAtom, fundsAtom, gameAtom, mutedAtom, rotationAtom, inboxAtom } from '../atoms';
+import { airViewAtom, happinessViewAtom, trafficViewAtom, budgetAtom, cityAtom, clockAtom, dayNightAtom, fundsAtom, gameAtom, mutedAtom, rotationAtom, inboxAtom } from '../atoms';
 import { AccountButton } from '../account/AccountButton';
 import { compactNumber } from '../format';
 import { SLIM_BAR, useMedia } from '../mobile/useMedia';
@@ -314,19 +314,24 @@ interface TopBarProps {
 /** The funds, which open the budget. Phones show a short amount. */
 function Funds({ short }: { short?: boolean }) {
   const funds = useAtomValue(fundsAtom);
+  const budgetInfo = useAtomValue(budgetAtom);
+  const monthChange = budgetInfo?.forecast.cashNet;
+  const trend = monthChange === undefined ? null : monthChange > 0 ? 'up' : monthChange < 0 ? 'down' : 'flat';
+  const trendLabel = monthChange === undefined ? '' : ` Fechamento previsto do caixa: ${monthChange >= 0 ? '+' : '−'}$${Math.abs(monthChange).toLocaleString()}.`;
   const flash = useFlash(funds);
   const budget = useOverlay('budget');
   return (
     <button
       type="button"
       className={`funds ${flash ? `flash-${flash === 'down' ? 'spend' : 'gain'}` : ''}`}
-      title={`$${funds.toLocaleString()} · Abrir orçamento, salário mínimo e aposentadorias`}
-      aria-label={`Saldo de $${funds.toLocaleString()}. Abrir orçamento, salário mínimo e aposentadorias`}
+      title={`$${funds.toLocaleString()} · ${trendLabel.trim()} Abrir orçamento, salário mínimo e aposentadorias`}
+      aria-label={`Saldo de $${funds.toLocaleString()}.${trendLabel} Abrir orçamento, salário mínimo e aposentadorias`}
       aria-expanded={budget.open}
       onClick={budget.toggle}
     >
       <span className="funds-sign">$</span>
       {short ? compactNumber(funds) : funds.toLocaleString()}
+      {trend && <span className={`funds-trend ${trend}`} aria-hidden="true">{trend === 'up' ? '▲' : trend === 'down' ? '▼' : '●'}</span>}
     </button>
   );
 }

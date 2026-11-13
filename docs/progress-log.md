@@ -566,3 +566,11 @@ Casas vagas agora atraem moradores mesmo sem vagas de trabalho; empregos contrib
 ## 2026-11-13 — Capacidades e Wiki do jogador
 
 Casas, apartamentos e escritórios podem iniciar obras sem exigir trabalhadores prévios. A demanda por obras residenciais considera moradores e capacidade já construída; a demanda por escritórios usa moradias, mercado e formados. Prédio de apartamentos, conjunto e torre residencial comportam respectivamente 35, 200 e 380 pessoas. O orçamento mostra médias de aluguel e imposto por classe. Adicionados guia do jogador, rota `/wiki`, acesso nas duas telas iniciais, catálogo pesquisável com miniaturas reais, simulador de contas e cenários interativos.
+
+## 2026-11-13 — Fechamento do caixa e licenças
+
+O saldo no topo indica a variação prevista do caixa no fechamento. Corrigida a previsão e o relatório do fechamento em cidades com coleta manual: receitas regulares continuam no cofre, enquanto custos, incentivos e subsídios saem do saldo no fim do mês. O orçamento diferencia resultado operacional, saldo de caixa e receita acumulada no cofre. A política demográfica agora aplica explicitamente os limites escolhidos; a sugestão apenas preenche os campos. O painel informa licenças usadas e restantes e distingue início de obra da duração da construção. Testes de acúmulo do cofre e débito dos subsídios adicionados.
+
+## 2026-11-13 — Subsídio impulsiona novas moradias
+
+O subsídio habitacional agora cria demanda residencial adicional mesmo quando a procura normal zerou, limitada pelo estoque de moradias prontas ou em construção. Cada obra iniciada sob a política acumula um apoio único proporcional ao custo do prédio, cobrado no fechamento mensal e mostrado em linha própria do orçamento. O desconto recorrente no aluguel permanece separado. O valor pendente persiste no save e zera após o fechamento. Teste confirma início forçado, respeito à licença mensal, débito da despesa e persistência.

@@ -170,6 +170,8 @@ function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): 
   const openJobs = housing * BALANCE.workforceShare * BALANCE.jobSlack - structuralJobs;
   const city = policy && 'demography' in policy ? policy as City : undefined;
   const outlook = migrationOutlook(city, taxRate, economy.purchasingPower);
+  const subsidyStrength = (city?.demography.housingSubsidy ?? 0) / BALANCE.demographicMaxHousingSubsidy;
+  const subsidizedHousing = subsidyStrength * Math.max(BALANCE.seedHousing, population * BALANCE.demographicSubsidizedHousingReserve);
   return {
     population,
     housing,
@@ -177,7 +179,7 @@ function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): 
     offices,
     industrial,
     openJobs,
-    wantR: (population * BALANCE.housingSlack + BALANCE.seedHousing) * outlook,
+    wantR: (population * BALANCE.housingSlack + BALANCE.seedHousing) * outlook + subsidizedHousing,
     wantShops: (housing * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs) * economy.purchasingPower,
     wantOffices: BALANCE.seedOfficeJobs + housing * BALANCE.officeJobsPerHousingResident * economy.purchasingPower + graduates * BALANCE.graduateOfficeJobs,
     wantI: industrial + openJobs * (1 - BALANCE.officeJobShare) + BALANCE.seedIndustrialJobs,
@@ -203,7 +205,12 @@ export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRat
   const x = demandInputs(world, taxRate, policy);
   const n = (v: number) => Math.round(Math.abs(v)).toLocaleString();
   const purchasingPower = economyReport(world, taxRate, policy).purchasingPower;
-  const outlook = migrationOutlook(policy && 'demography' in policy ? policy as City : undefined, taxRate, purchasingPower);
+  const city = policy && 'demography' in policy ? policy as City : undefined;
+  const outlook = migrationOutlook(city, taxRate, purchasingPower);
+  const ordinaryHousing = (x.population * BALANCE.housingSlack + BALANCE.seedHousing) * outlook;
+  const subsidyNote = city?.demography.housingSubsidy
+    ? ` O subsídio habitacional de ${Math.round(city.demography.housingSubsidy * 100)}% incentiva a construção de moradias e será pago no orçamento mensal quando houver aluguel de moradores.`
+    : '';
   const taxNote = purchasingPower < 0.98
     ? ` O poder de compra está em ${Math.round(purchasingPower * 100)}% do nível de referência; impostos e custo de vida reduzem as vendas.`
     : taxRate !== BALANCE.baseTaxRate
@@ -212,11 +219,13 @@ export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRat
   const tooManyJobs = `A cidade já tem ${n(x.openJobs)} empregos a mais que trabalhadores. Moradias atraem trabalhadores.`;
   return {
     r:
-      (outlook <= 0
-        ? 'A imigração está parada: faltam hospitais nas áreas residenciais ou os impostos estão extremos.'
-        : x.wantR > x.housing
-          ? `Há procura por cerca de ${n(x.wantR - x.housing)} vagas de moradia, mesmo sem novos empregos. A ocupação depende das condições da cidade.`
-          : 'As moradias prontas ou em construção já atendem à procura atual. Novos moradores podem ocupar as vagas existentes.') + taxNote,
+      (x.wantR > x.housing
+        ? ordinaryHousing <= x.housing
+          ? `O subsídio habitacional cria procura por cerca de ${n(x.wantR - x.housing)} vagas de moradia. A ocupação depende das condições da cidade.`
+          : `Há procura por cerca de ${n(x.wantR - x.housing)} vagas de moradia, mesmo sem novos empregos. A ocupação depende das condições da cidade.`
+        : outlook <= 0
+          ? 'A imigração está parada: faltam hospitais nas áreas residenciais ou os impostos estão extremos.'
+          : 'As moradias prontas ou em construção já atendem à procura atual. Novos moradores podem ocupar as vagas existentes.') + subsidyNote + taxNote,
     c:
       (x.wantShops > x.shops
         ? `Os moradores querem cerca de ${n(x.wantShops - x.shops)} novos empregos em lojas próximas.`
@@ -403,6 +412,9 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
     );
     started.push(b.id);
     if (permits && BUILDINGS[def].zone && BUILDINGS[def].density) permits.permitUsed[demandKey(zoneOf(BUILDINGS[def].zone, BUILDINGS[def].density))]++;
+    if (permits && BUILDINGS[def].category === 'residential' && permits.housingSubsidy > 0) {
+      permits.monthConstructionGrants += Math.round(BUILDINGS[def].cost * permits.housingSubsidy);
+    }
     changed.push(areaOf(b));
     return b;
   };

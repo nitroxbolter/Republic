@@ -12,6 +12,8 @@ import { Terrain } from '../src/sim/terrain/types';
 import { World } from '../src/sim/World';
 import { zoneOf, ZoneType, type ZoneTypeId } from '../src/sim/zones';
 import { refreshCity } from '../src/sim/core/Simulation';
+import { closeDemographicMonth } from '../src/sim/systems/demography';
+import { collectBudget, monthlyBudget } from '../src/sim/systems/budget';
 
 function town(size = 24) {
   const w = new World(size, size, 0);
@@ -130,6 +132,43 @@ describe('growth', () => {
     expect(d0.r).toBeGreaterThan(0);
     expect(d0.c).toBeGreaterThan(0);
     expect(d0.i).toBeGreaterThan(0);
+  });
+
+  it('housing subsidy starts residential construction after ordinary demand is satisfied', () => {
+    const { w, city } = town();
+    for (let x = 2; x < 10; x++) w.addBuilding({ def: 'family_house', x, y: 7, variant: 0, occupants: 0 }, 1, 1);
+    zone(city, 10, 7, 16, 7, ZoneType.Residential);
+    expect(zoneDemand(w, city.taxRate, city).r).toBeLessThanOrEqual(0);
+    expect(diagnoseLot(city, 10, 7)?.reason).toBe('noDemand');
+
+    city.demography.housingSubsidy = BALANCE.demographicMaxHousingSubsidy;
+    expect(zoneDemand(w, city.taxRate, city).r).toBeGreaterThan(0);
+    city.demography.permitLimits.r = 0;
+    expect(diagnoseLot(city, 10, 7)?.reason).toBe('permitLimit');
+    city.demography.permitLimits.r = 1;
+    const first = growDay(w, () => 0, city.taxRate, undefined, city);
+    expect(first.started).toHaveLength(1);
+    expect(city.demography.permitUsed.r).toBe(1);
+    const started = w.buildings.get(first.started[0]);
+    if (!started) throw new Error('expected a residential construction site');
+    const grant = Math.round(BUILDINGS[started.def].cost * city.demography.housingSubsidy);
+    expect(city.demography.monthConstructionGrants).toBe(grant);
+    const forecast = monthlyBudget(w, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
+    expect(forecast.breakdown.constructionGrants).toBe(grant);
+    city.demography.monthConstructionGrants = 0;
+    const withoutGrant = monthlyBudget(w, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
+    expect(forecast.expenses - withoutGrant.expenses).toBe(grant);
+    city.demography.monthConstructionGrants = grant;
+    expect(explainDemand(w, city.taxRate, city).r).toMatch(/subsídio habitacional/);
+    expect(growDay(w, () => 0, city.taxRate, undefined, city).started).toHaveLength(0);
+    city.collectsTaxes = true;
+    const funds = city.funds;
+    const closed = collectBudget(city);
+    expect(closed.cashNet).toBe(city.funds - funds);
+    expect(closed.cashNet).toBe(-closed.expenses);
+    expect(closed.breakdown.constructionGrants).toBe(grant);
+    closeDemographicMonth(city);
+    expect(city.demography.monthConstructionGrants).toBe(0);
   });
 
   it('zoned tiles near a road grow construction sites that finish after constructionDays', () => {

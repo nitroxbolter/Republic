@@ -585,6 +585,7 @@ function parseDemography(value: unknown): { demography?: DemographicPolicy } {
     annualTarget: isFiniteNumber(value.annualTarget) ? Math.max(0, Math.min(10, value.annualTarget)) : defaults.annualTarget,
     incentivesEnabled: typeof value.incentivesEnabled === 'boolean' ? value.incentivesEnabled : defaults.incentivesEnabled,
     housingSubsidy: isFiniteNumber(value.housingSubsidy) ? Math.max(0, Math.min(BALANCE.demographicMaxHousingSubsidy, value.housingSubsidy)) : 0,
+    monthConstructionGrants: nonnegative('monthConstructionGrants', 0),
     permitLimits: limits(value.permitLimits, defaults.permitLimits), permitUsed: limits(value.permitUsed, defaults.permitUsed),
     incentiveLevel: isFiniteNumber(value.incentiveLevel) ? Math.max(0, Math.min(1, value.incentiveLevel)) : 0,
     slowLevel: isFiniteNumber(value.slowLevel) ? Math.max(0, Math.min(1, value.slowLevel)) : 0,

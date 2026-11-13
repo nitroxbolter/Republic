@@ -9,7 +9,7 @@ import { roadPath, RoadType } from '../src/sim/roads';
 import { deserialize, parseSave, serialize } from '../src/sim/save';
 import { stageRequirements } from '../src/sim/progression';
 import { Stage, stageFor } from '../src/sim/stages';
-import { collectBudget, collectTaxes } from '../src/sim/systems/budget';
+import { collectBudget, collectTaxes, monthlyBudget } from '../src/sim/systems/budget';
 import { airScore, aqiBand } from '../src/sim/systems/air';
 import { garbageDay, garbageScore } from '../src/sim/systems/garbage';
 import { lifestyleDay } from '../src/sim/systems/lifestyle';
@@ -258,9 +258,13 @@ describe('taxes at the Town Hall (E5)', () => {
   it('month-end taxes wait in the chest while upkeep is paid; a Town Hall collects them', () => {
     const { w, city, place } = taxedTown();
     const funds = city.funds;
+    const forecast = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
+    expect(forecast.cashNet).toBe(-forecast.expenses);
     const r = collectBudget(city);
     expect(r.income).toBeGreaterThan(0);
     expect(city.funds).toBe(funds - r.expenses);
+    expect(r.cashNet).toBe(city.funds - funds);
+    expect(r.net).toBe(r.income - r.expenses);
     expect(city.uncollected).toBe(r.income);
     expect(collectTaxes(city)).toEqual({ ok: false, reason: 'no-town-hall' });
     place('town_hall', 12, 22);
@@ -282,6 +286,17 @@ describe('taxes at the Town Hall (E5)', () => {
     }
     expect(city.uncollected).toBe(income * BALANCE.chestMonths);
     expect(lost).toBe(income * 3);
+  });
+
+  it('the chest can hold several months of revenue while every month debits its costs', () => {
+    const { city } = taxedTown();
+    const openingFunds = city.funds;
+    const first = collectBudget(city);
+    const second = collectBudget(city);
+    const third = collectBudget(city);
+    expect(city.uncollected).toBe(first.income + second.income + third.income);
+    expect(city.funds).toBe(openingFunds - first.expenses - second.expenses - third.expenses);
+    expect(third.cashNet).toBe(-third.expenses);
   });
 
   it('cities that collect automatically are unchanged, and the chest survives a save', () => {

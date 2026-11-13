@@ -9,7 +9,7 @@ import { ZoneType } from '../src/sim/zones';
 import { street } from './support/street';
 import { deserialize, parseSave, serialize } from '../src/sim/save';
 import { presetSettings } from '../src/sim/terrain/presets';
-import { monthlyBudget } from '../src/sim/systems/budget';
+import { collectBudget, monthlyBudget } from '../src/sim/systems/budget';
 import { societyDay } from '../src/sim/systems/society';
 import { Stage } from '../src/sim/stages';
 import { SERVICE_KINDS } from '../src/sim/buildings/catalog';
@@ -136,10 +136,18 @@ describe('demographic policy', () => {
   it('housing subsidies reduce tenant rent and cost the government once', () => {
     const { city, home } = cityWithVacantTower();
     home.occupants = 100;
+    const unsubsidized = monthlyBudget(city.world, 9, 1100, 1200, city.costTaxRates, 0, city.society, city);
     city.demography.housingSubsidy = 0.2;
     const baseline = monthlyBudget(city.world, 9, 1100, 1200, city.costTaxRates, 0, city.society, city);
     expect(baseline.breakdown.housingSubsidies).toBe(BUILDINGS.condo_tower.capacity ? 500 : 0);
     expect(baseline.costBalances.housing.nominalBase).toBe(2000);
+    expect(baseline.expenses - unsubsidized.expenses).toBe(500);
+    city.collectsTaxes = true;
+    const before = city.funds;
+    const closed = collectBudget(city);
+    expect(closed.breakdown.housingSubsidies).toBe(500);
+    expect(closed.cashNet).toBe(city.funds - before);
+    expect(closed.cashNet).toBe(-closed.expenses);
   });
 
   it('natural births occupy vacancies, then monthly counters close', () => {
@@ -156,14 +164,16 @@ describe('demographic policy', () => {
 
   it('policy settings and counters survive reload; old saves use balanced defaults', () => {
     const { city } = cityWithVacantTower();
-    city.demography.strategy = 'slow'; city.demography.annualTarget = 4.5; city.demography.permitLimits.r = 2; city.demography.monthImmigration = 15;
+    city.demography.strategy = 'slow'; city.demography.annualTarget = 4.5; city.demography.permitLimits.r = 2; city.demography.monthImmigration = 15; city.demography.monthConstructionGrants = 123;
     const terrain = presetSettings('riverValley', 10, 64);
     const saved = serialize(city, terrain, 'Policy');
     const loaded = deserialize(parseSave(JSON.parse(JSON.stringify(saved))));
     expect(loaded.demography.strategy).toBe('slow');
     expect(loaded.demography.permitLimits.r).toBe(2);
     expect(loaded.demography.monthImmigration).toBe(15);
+    expect(loaded.demography.monthConstructionGrants).toBe(123);
     const old = deserialize(parseSave(JSON.parse(JSON.stringify({ ...saved, city: { ...saved.city, demography: undefined } }))));
     expect(old.demography.strategy).toBe('balanced');
+    expect(old.demography.monthConstructionGrants).toBe(0);
   });
 });

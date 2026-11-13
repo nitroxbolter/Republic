@@ -82,6 +82,8 @@ export const BALANCE = {
   demographicIncentivePerResident: 0.08,
   demographicInfrastructureWarning: 0.75,
   demographicMaxHousingSubsidy: 0.2,
+  /** Extra housing capacity sought at the maximum subsidy, relative to the population. */
+  demographicSubsidizedHousingReserve: 0.2,
   policeCells: 8,
   /** Migration slows only as taxation becomes severe; ordinary unemployment affects satisfaction instead. */
   migrationCompanyTaxSlow: 70,

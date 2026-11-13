@@ -12,6 +12,8 @@ export interface DemographicPolicy {
   annualTarget: number;
   incentivesEnabled: boolean;
   housingSubsidy: number;
+  /** One-time grants accrued by residential construction starts this month. */
+  monthConstructionGrants: number;
   permitLimits: PermitLimits;
   permitUsed: PermitLimits;
   incentiveLevel: number;
@@ -32,7 +34,7 @@ export interface DemographicPolicy {
 const zones = (): PermitLimits => ({ r: 9999, c: 9999, o: 9999, i: 9999 });
 const empty = (): PermitLimits => ({ r: 0, c: 0, o: 0, i: 0 });
 export function initialDemography(): DemographicPolicy {
-  return { strategy: 'balanced', annualTarget: 3, incentivesEnabled: true, housingSubsidy: 0, permitLimits: zones(), permitUsed: empty(), incentiveLevel: 0, slowLevel: 0, yearStartPopulation: 0, yearStartDay: 0, monthImmigration: 0, monthEmigration: 0, monthBirths: 0, monthDeaths: 0, lastImmigration: 0, lastEmigration: 0, lastBirths: 0, lastDeaths: 0, birthCarry: 0 };
+  return { strategy: 'balanced', annualTarget: 3, incentivesEnabled: true, housingSubsidy: 0, monthConstructionGrants: 0, permitLimits: zones(), permitUsed: empty(), incentiveLevel: 0, slowLevel: 0, yearStartPopulation: 0, yearStartDay: 0, monthImmigration: 0, monthEmigration: 0, monthBirths: 0, monthDeaths: 0, lastImmigration: 0, lastEmigration: 0, lastBirths: 0, lastDeaths: 0, birthCarry: 0 };
 }
 
 const serviceMask = (name: string) => 1 << SERVICE_KINDS.indexOf(name as (typeof SERVICE_KINDS)[number]);
@@ -185,4 +187,5 @@ export function closeDemographicMonth(city: City): void {
   const p = city.demography;
   p.lastImmigration = p.monthImmigration; p.lastEmigration = p.monthEmigration; p.lastBirths = p.monthBirths; p.lastDeaths = p.monthDeaths;
   p.monthImmigration = 0; p.monthEmigration = 0; p.monthBirths = 0; p.monthDeaths = 0;
+  p.monthConstructionGrants = 0;
 }

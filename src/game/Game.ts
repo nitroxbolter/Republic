@@ -33,7 +33,7 @@ import { PAVEMENTS, ROAD_SPECS } from '../sim/roadTypes';
 import { cityStats } from '../sim/systems/population';
 import { economyReport } from '../sim/systems/economy';
 import { societyReport } from '../sim/systems/society';
-import { demographicReport, infrastructurePressure, suggestedPermitLimit, type DemographicStrategy, type PermitZone } from '../sim/systems/demography';
+import { demographicReport, type DemographicStrategy, type PermitLimits } from '../sim/systems/demography';
 import type { Traffic } from '../sim/systems/traffic';
 import { happinessColor, type OverlayTile } from '../render/Renderer';
 import { rectTiles, RoadType, roadMask, type BuildableRoad, type TilePos } from '../sim/roads';
@@ -891,17 +891,11 @@ export class Game {
     this.edits++; this.emitCity(); this.emitBudget();
   }
 
-  setPermitLimit(zone: PermitZone, limit: number) {
-    this.city.demography.permitLimits[zone] = Math.max(0, Math.min(9999, Math.round(limit)));
+  setPermitLimits(limits: PermitLimits) {
+    for (const zone of ['r', 'c', 'o', 'i'] as const) {
+      this.city.demography.permitLimits[zone] = Math.max(0, Math.min(9999, Math.round(limits[zone])));
+    }
     this.edits++; this.emitCity(); this.emitBudget();
-  }
-
-  applyExpansionPlan() {
-    const pressure = infrastructurePressure(this.city).score;
-    const limit = suggestedPermitLimit(pressure);
-    this.city.demography.permitLimits = { r: limit, c: limit, o: limit, i: limit };
-    this.edits++; this.emitCity(); this.emitBudget();
-    this.notify('info', `Plano de expansão aplicado: até ${limit} novas obras por zona a cada mês.`);
   }
 
   /** Budget panel data: the tax rate, last month's report and what next month looks like now. */

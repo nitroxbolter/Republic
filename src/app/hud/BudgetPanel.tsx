@@ -25,6 +25,7 @@ function Lines({ r }: { r: BudgetReport }) {
     ['Manutenção de imóveis públicos', r.propertyFlows.publicOperating],
     ['Incentivos à migração', r.breakdown.demographicIncentives],
     ['Subsídios habitacionais', r.breakdown.housingSubsidies],
+    ['Apoio a novas moradias', r.breakdown.constructionGrants],
   ];
   return (
     <div className="budget-card budget-lines">
@@ -52,6 +53,10 @@ function Lines({ r }: { r: BudgetReport }) {
           {r.net >= 0 ? '+' : ''}
           {money(r.net)}
         </strong>
+      </div>
+      <div className={`budget-line total ${r.cashNet >= 0 ? 'gain' : 'loss'}`}>
+        <span>Variação prevista do saldo no fechamento</span>
+        <strong>{r.cashNet >= 0 ? '+' : ''}{money(r.cashNet)}</strong>
       </div>
     </div>
   );
@@ -136,7 +141,7 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
       {info.taxes && (
         <div className="tax-chest">
           <span className="budget-line">
-            <span>Receitas aguardando na Prefeitura</span>
+            <span>Receitas acumuladas no cofre da Prefeitura</span>
             <strong>{money(info.taxes.waiting)}</strong>
           </span>
           {info.taxes.hasTownHall ? (
@@ -146,7 +151,7 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
           ) : (
             <span className="tax-hint">Construa uma Prefeitura para recolher as receitas.</span>
           )}
-          <span className="tax-hint">As receitas chegam no fim do mês. O cofre comporta seis meses.</span>
+          <span className="tax-hint">Esse valor pode reunir vários meses. Os custos são debitados no fechamento; recolher transfere o acumulado ao saldo. O cofre comporta seis meses de receitas.</span>
         </div>
       )}
 
@@ -273,6 +278,7 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
 
       <h3 className="budget-heading">Próximo mês (previsão)</h3>
       <Lines r={info.forecast} />
+      {info.taxes && <p className="tax-hint">A arrecadação prevista fica no cofre até o recolhimento. A variação do saldo acima inclui os custos do mês e os recebimentos que entram diretamente no caixa.</p>}
       <h3 className="budget-heading">Mercado imobiliário e financiamentos</h3>
       <div className="budget-card">
         <div className="budget-line"><span>Imóveis inadimplentes</span><strong>{info.forecast.propertyFlows.delinquent}</strong></div>

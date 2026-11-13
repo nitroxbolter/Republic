@@ -199,6 +199,14 @@ kbd {
   opacity: 0.7;
   margin-right: 1px;
 }
+.funds-trend {
+  display: inline-block;
+  margin-left: 5px;
+  font-size: 0.7em;
+  vertical-align: middle;
+}
+.funds-trend.down { color: var(--danger); }
+.funds-trend.flat { opacity: 0.6; }
 .funds.flash-spend {
   color: var(--danger);
   transform: scale(1.08);

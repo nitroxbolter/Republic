@@ -19,11 +19,12 @@ export interface BudgetReport {
   income: number;
   expenses: number;
   net: number;
+  /** Actual change in available funds at month end; excludes revenue held for manual collection. */
   cashNet: number;
   /** Company tax rate (percent) used for this report. */
   taxRate: number;
   incomeTaxRate: number;
-  breakdown: { roads: number; transport: number; services: number; utilities: number; parks: number; pensions: number; demographicIncentives: number; housingSubsidies: number };
+  breakdown: { roads: number; transport: number; services: number; utilities: number; parks: number; pensions: number; demographicIncentives: number; housingSubsidies: number; constructionGrants: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
   taxRevenue: number;
@@ -275,15 +276,18 @@ export function monthlyBudget(
   const income = taxRevenue + utilityRevenue + recycling + Math.round(forecastFlows.interest + forecastFlows.publicRent);
   const pensions = ages.seniors * pensionPerSenior;
   const demographicIncentives = policyCity ? demographicMonthlyCost(policyCity, true) : 0;
-  const expenses = Math.round(roads + transport + services + utilities + parks + pensions + demographicIncentives + housingSubsidies + forecastFlows.publicOperating);
+  const constructionGrants = policyCity?.demography.monthConstructionGrants ?? 0;
+  const expenses = Math.round(roads + transport + services + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating);
   return {
     income,
     expenses,
     net: income - expenses,
-    cashNet: income - expenses + forecastFlows.principal,
+    cashNet: policyCity?.collectsTaxes
+      ? Math.round(forecastFlows.principal + forecastFlows.interest + forecastFlows.publicRent - expenses)
+      : income - expenses + forecastFlows.principal,
     taxRate,
     incomeTaxRate,
-    breakdown: { roads: Math.round(roads), transport, services, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies) },
+    breakdown: { roads: Math.round(roads), transport, services, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants },
     recycling,
     taxRevenue,
     businessTaxRevenue,
@@ -316,6 +320,7 @@ export interface HeldTaxes {
 
 /** Apply a month's budget to the city: upkeep from the funds, taxes to the funds or the Town Hall's chest. */
 export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | null } {
+  const openingFunds = city.funds;
   const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
   const flows = settleProperties(city.world, Math.floor(city.day / BALANCE.daysPerMonth), r.propertyPayments);
   const anticipated = r.propertyFlows;
@@ -339,9 +344,11 @@ export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | nu
   r.cashNet = r.net + flows.principal;
   if (!city.collectsTaxes) {
     city.funds += r.cashNet;
+    r.cashNet = city.funds - openingFunds;
     return { ...r, held: null };
   }
   city.funds += flows.principal + flows.interest + flows.publicRent - r.expenses;
+  r.cashNet = city.funds - openingFunds;
   const cap = Math.max(0, regularIncome) * BALANCE.chestMonths;
   const total = city.uncollected + regularIncome;
   city.uncollected = Math.min(total, Math.max(cap, city.uncollected));
