@@ -26,6 +26,7 @@ services:
       context: .
       args:
         VITE_PUBLIC_BASE: ${VITE_PUBLIC_BASE:-/}
+        VITE_PUBLIC_SITE_URL: ${VITE_PUBLIC_SITE_URL:-https://openpolis.space/}
     environment:
       DATABASE_URL: postgres://citybuilder:${POSTGRES_PASSWORD:-citybuilder}@postgres:5432/citybuilder
       # One reverse proxy (your HTTPS server) in front of the app.

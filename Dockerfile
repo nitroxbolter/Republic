@@ -4,7 +4,9 @@
 FROM oven/bun:1.4-alpine AS build
 WORKDIR /app
 ARG VITE_PUBLIC_BASE=/
+ARG VITE_PUBLIC_SITE_URL=https://openpolis.space/
 ENV VITE_PUBLIC_BASE=${VITE_PUBLIC_BASE}
+ENV VITE_PUBLIC_SITE_URL=${VITE_PUBLIC_SITE_URL}
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .

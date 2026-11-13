@@ -38,7 +38,8 @@ itself (`127.0.0.1:8787` for the app). HTTPS comes from your own reverse proxy o
 
 ### Publishing below an existing site path
 
-Set `VITE_PUBLIC_BASE=/Republic/` in the deployment `.env` before building the image. The
+Set `VITE_PUBLIC_BASE=/Republic/` and `VITE_PUBLIC_SITE_URL=https://your-domain/Republic/`
+in the deployment `.env` before building the image. The
 client then loads its assets, API, demo and wiki below that path. Put nginx in front of the app:
 
 ```nginx
