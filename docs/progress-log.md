@@ -2,6 +2,35 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-12: Rateio da manutenção dos serviços públicos (D-102)
+
+- Delegacias, bombeiros, clínicas, escolas, hospitais e universidades mantêm o custo fixo por prédio. A parcela variável por moradores é dividida entre unidades ativas do mesmo serviço que alcançam cada moradia.
+- Hospital e centro de trauma participam do mesmo rateio. Uma unidade desconectada paga só a base e não reduz a carga das unidades que atendem os moradores.
+- O custo continua sendo despesa do governo; o rateio não cria novo desconto direto nos salários ou aposentadorias.
+- Testes cobrem 1, 2 e 3 hospitais, delegacias e bombeiros, além da unidade desconectada.
+
+## 2026-11-12: Diagnóstico dos terrenos vazios
+
+- As dicas de demanda agora contam terrenos vazios por motivo real: via fora do alcance, demanda insuficiente, materiais insuficientes, nenhum edifício elegível ou fila diária normal.
+- Selecionar um terreno zoneado vazio mostra a causa daquele lote e o próximo passo. O painel se atualiza quando a cidade muda e deixa de tratar obras iniciadas como terrenos vazios.
+- A explicação das lojas menciona poder de compra reduzido por impostos e custo de vida quando isso afeta as vendas.
+- Testes de crescimento, análise de tipos e lint concluídos; versão local recompilada.
+
+## 2026-11-12: Separate company and resident taxes (D-101)
+
+- Moved the general 0–100% tax to commercial and industrial turnover. It no longer comes out of wages or pensions; its effect on purchasing power and growth comes through business activity and jobs.
+- Kept imported food at a fixed $200 without a tax slider. Energy, water, rent and transport retain independent 0–100% resident taxes. Older saves ignore the retired food-tax rate.
+- Reorganized the budget panel into company, income, household cost and monthly totals cards. Each resident slider shows both its percentage and currency deduction; the totals distinguish company and resident taxes.
+- Built `Jogar-Republica-PT-Impostos.exe` with the revised panel and tax logic; the existing `Jogar-Republica-PT-Atualizado.exe` could not be replaced because Windows returned `EPERM`.
+
+## 2026-11-12: Road and household budget rebalance
+
+- Reduced road construction to $20–$100 per tile and monthly upkeep to $1–$10, including bridge variants.
+- Modelled 13% seniors and 87% wage earners; connected salary and pension policies to monthly household costs, purchasing power, and budget revenue.
+- Added separate 0–100% taxes on energy, water, imported food, rent and transport. Residents pay utility bills; the city receives the charges for supplied energy and water while plant and tower upkeep remains an expense. Added a cost-of-living breakdown and utility balance to the budget panel.
+- Saved the new rates with cities; older saves load with all five rates at 0% and the new baseline salary and pension so households can afford the new basket.
+- Built `Jogar-Republica-PT-Atualizado.exe` with the updated local-account web assets.
+
 ## 2026-11-11: UI/UX pass: phones, overlays, loading (D-097, D-098, D-099)
 - **Unblocked startup.** `HEAD` (incidents work) crashed every city on start and failed typecheck: the new Trauma Centre had no art, the three emergency vehicles had no sizes, and `Game.showDay` read the removed `DayOutcome.burned`. Added a trauma-centre recipe (hospital family), liveries and sizes for fire trucks, ambulances and police cars, and `Game.showBurned()` reading `incidents.takeEvents()` (only `burned` is shown; the other incident events are still unused).
 - **Phones and upright tablets (D-097):** slim top bar + More sheet, five-button dock with a zone row, bottom sheets for pickers/inspect/budget, opt-in minimap on phones. Landscape phones share the slim bar (it had overflowed). Rotate prompt removed; manifest orientation `any`. Opaque panels instead of backdrop blur on small/touch screens.

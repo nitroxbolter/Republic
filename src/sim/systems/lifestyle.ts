@@ -10,7 +10,7 @@ import { hasUtilities } from './utilities';
 /**
  * Lifestyle system (docs/specs/evolution.md, E1): homes in a good city move up from Basic to
  * Comfortable to Prosperous, and better-off residents expect more (a hospital, then a
- * university) and pay more tax. A long unhappy spell moves a home back down a tier.
+ * university) and earn more. A long unhappy spell moves a home back down a tier.
  * Runs daily after the needs, so it reads today's happiness.
  */
 

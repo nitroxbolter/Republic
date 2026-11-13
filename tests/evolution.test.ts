@@ -9,7 +9,7 @@ import { roadPath, RoadType } from '../src/sim/roads';
 import { deserialize, parseSave, serialize } from '../src/sim/save';
 import { stageRequirements } from '../src/sim/progression';
 import { Stage, stageFor } from '../src/sim/stages';
-import { collectBudget, collectTaxes, monthlyBudget } from '../src/sim/systems/budget';
+import { collectBudget, collectTaxes } from '../src/sim/systems/budget';
 import { airScore, aqiBand } from '../src/sim/systems/air';
 import { garbageDay, garbageScore } from '../src/sim/systems/garbage';
 import { lifestyleDay } from '../src/sim/systems/lifestyle';
@@ -127,15 +127,13 @@ describe('lifestyle (E1)', () => {
     expect(needs?.complaint).toBe('hospital');
   });
 
-  it('Comfortable homes pay more tax; a long unhappy spell moves them back down', () => {
+  it('a long unhappy spell moves Comfortable homes back down', () => {
     const { w, city, place } = town();
     place('walkup', 4, 19);
     refreshCity(w);
     const home = only(w, 'walkup');
     home.occupants = 20;
-    const basic = monthlyBudget(w).income;
     home.lifestyle = Lifestyle.Comfortable;
-    expect(monthlyBudget(w).income).toBeGreaterThan(basic);
 
     home.happiness = 0.2;
     for (let d = 0; d < BALANCE.lifeDays; d++) lifestyleDay(city);

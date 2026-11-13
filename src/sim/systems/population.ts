@@ -3,7 +3,7 @@ import { BUILDINGS, type BuildingInstance } from '../buildings/catalog';
 import type { World } from '../World';
 import { isActive } from './access';
 import { hasUtilities } from './utilities';
-import { economyReport, effectiveJobs, employmentFactor } from './economy';
+import { economyReport, effectiveJobs, employmentFactor, type HouseholdPolicy } from './economy';
 import type { SimSystem } from '../core/System';
 import { workingAge } from './society';
 import type { City } from '../City';
@@ -28,12 +28,12 @@ export function happinessFactor(b: BuildingInstance): number {
   return BALANCE.happinessBase + BALANCE.happinessRange * b.happiness;
 }
 
-export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, society?: City['society']): CityStats {
+export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, society?: City['society'], policy?: HouseholdPolicy): CityStats {
   let population = 0;
   let housing = 0;
   let jobs = 0;
   let workers = 0;
-  const economy = economyReport(world, taxRate);
+  const economy = economyReport(world, taxRate, policy);
   for (const b of world.buildings.values()) {
     // Construction sites keep carried-over occupants for later but don't count yet; abandoned buildings are empty.
     if (b.construction > 0 || b.abandoned) continue;
@@ -54,8 +54,8 @@ export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, s
  * One in-game day. Homes with road access fill toward a target that rises with job
  * availability; job buildings take workers from the workforce in proportion to capacity.
  */
-export function simulateDay(world: World, taxRate: number = BALANCE.baseTaxRate, society?: City['society']) {
-  const before = cityStats(world, taxRate, society);
+export function simulateDay(world: World, taxRate: number = BALANCE.baseTaxRate, society?: City['society'], policy?: City) {
+  const before = cityStats(world, taxRate, society, policy);
   const workforce = workingAge(before.population, society?.sick, society?.prisoners);
   // How well jobs cover the workforce: 1 when every worker could have a job.
   const jobCover = workforce === 0 ? (before.jobs > 0 ? 1 : 0) : Math.min(1, before.jobs / workforce);
@@ -72,10 +72,10 @@ export function simulateDay(world: World, taxRate: number = BALANCE.baseTaxRate,
   }
 
   // Share the (new) workforce across job buildings by capacity.
-  const after = cityStats(world, taxRate, society);
+  const after = cityStats(world, taxRate, society, policy);
   const available = workingAge(after.population, society?.sick, society?.prisoners);
   const share = after.jobs === 0 ? 0 : Math.min(1, available / after.jobs);
-  const economy = economyReport(world, taxRate);
+  const economy = economyReport(world, taxRate, policy);
   for (const b of world.buildings.values()) {
     const d = BUILDINGS[b.def];
     if (d.category === 'residential' || b.construction > 0) continue;
@@ -90,12 +90,14 @@ export class PopulationSystem implements SimSystem {
   private readonly world: World;
   private readonly taxRate: () => number;
   private readonly society: () => City['society'] | undefined;
-  constructor(world: World, taxRate: () => number = () => BALANCE.baseTaxRate, society: () => City['society'] | undefined = () => undefined) {
+  private readonly policy: () => City | undefined;
+  constructor(world: World, taxRate: () => number = () => BALANCE.baseTaxRate, society: () => City['society'] | undefined = () => undefined, policy: () => City | undefined = () => undefined) {
     this.world = world;
     this.taxRate = taxRate;
     this.society = society;
+    this.policy = policy;
   }
   onDay() {
-    simulateDay(this.world, this.taxRate(), this.society());
+    simulateDay(this.world, this.taxRate(), this.society(), this.policy());
   }
 }

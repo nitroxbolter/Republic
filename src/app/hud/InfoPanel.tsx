@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { SERVICE_KINDS as ALL_SERVICES, type ServiceKind } from '../../sim/buildings/catalog';
 import type { NeedKind } from '../../sim/systems/needs';
 import type { InspectInfo, StationInfo } from '../../game/events';
-import { gameAtom, inspectAtom } from '../atoms';
+import { gameAtom, inspectAtom, zoneInspectAtom } from '../atoms';
 import { aqiBand } from '../../sim/systems/air';
 
 const NEED_LABEL: Readonly<Record<NeedKind, string>> = {
@@ -149,7 +149,23 @@ function StationSection({ station }: { station: StationInfo }) {
 /** Slides in when a building is clicked with the Select tool: actions first, then what matters most. */
 export function InfoPanel() {
   const info = useAtomValue(inspectAtom);
+  const zone = useAtomValue(zoneInspectAtom);
   const game = useAtomValue(gameAtom);
+  if (!info && zone) return (
+    <aside className="panel info-panel" aria-label={`Detalhes de ${zone.name}`}>
+      <header className="info-header">
+        <div>
+          <h2 className="info-title">{zone.name}</h2>
+          <span className="info-chip">Terreno {zone.x + 1}, {zone.y + 1}</span>
+        </div>
+        <button type="button" className="icon-button" aria-label="Fechar" onClick={() => game?.inspect(null)}>×</button>
+      </header>
+      <div className={`info-alert ${zone.waiting ? 'building' : 'warn'}`} role={zone.waiting ? undefined : 'status'}>
+        <strong>{zone.title}</strong>
+        <span>{zone.detail}</span>
+      </div>
+    </aside>
+  );
   if (!info) return null;
   const alert = alertFor(info);
   const needs = info.needs ? [...info.needs.scores].sort((a, b) => a.score - b.score) : [];

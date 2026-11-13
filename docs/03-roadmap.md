@@ -113,6 +113,7 @@ We focus on **one** terrain and make it look great before adding presets or menu
 - [x] Road access per building, with warning badges
 - [x] Population: homes fill over time, faster when jobs exist; jobs take workers from the workforce
 - [x] Monthly budget: taxes vs road and civic upkeep, with a toast report
+- [x] Rebalance roads ($20–$100 construction), model 13% seniors and 87% wage earners, add household living costs and four independent resident tax sliders, and book utility bills as public revenue
 - [x] Road graph routing (BFS, cached, bridge-aware)
 - [x] Cars (car, taxi, bus, truck), right-hand lanes, smooth turns, faster on highways
 - [x] Pedestrians on pavements with a walk cycle

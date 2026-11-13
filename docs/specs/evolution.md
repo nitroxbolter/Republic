@@ -12,7 +12,7 @@ toward them: one lifestyle number per home instead of full resident groups.
 Today a city at year 10 asks for the same things as a city at year 1. Evolution makes growth
 create **new, visible demands**: a good city lifts its residents' lifestyle, and better-off
 residents expect more (a hospital, then a university). Meeting those expectations pays back in
-taxes and office demand. Neglecting them stalls the climb.
+household purchasing power and office demand. Neglecting them stalls the climb.
 
 ## E0: City stages (`sim/stages.ts`)
 

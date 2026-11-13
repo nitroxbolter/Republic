@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/balance';
 import { BUILDING_IDS, BUILDINGS, buildingDef, Lifestyle, type BuildingId } from './buildings/catalog';
 import { City } from './City';
+import { COST_KINDS, defaultCostTaxRates, type CostTaxRates } from './systems/livingCosts';
 import { Simulation } from './core/Simulation';
 import { BridgeAxis, RoadType } from './roads';
 import { PAVEMENTS, roadSpec } from './roadTypes';
@@ -61,6 +62,7 @@ export interface SavedCity {
   readonly taxRate: number;
   readonly minimumWage?: number;
   readonly pensionPerSenior?: number;
+  readonly costTaxRates?: CostTaxRates;
   /** Older saves used a fraction of minimum wage; loaded once as a fixed amount. */
   readonly pensionShare?: number;
   readonly society?: { readonly sick: number; readonly prisoners: number; readonly deaths: number; readonly recentDeaths: number; readonly untreatedDeaths: number; readonly prisonOverflow: number };
@@ -195,7 +197,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, day: city.day, clock: city.clock, taxRate: city.taxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -284,8 +286,10 @@ export function deserialize(data: SaveData): City {
   city.day = data.city.day;
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
-  city.minimumWage = data.city.minimumWage ?? BALANCE.defaultMinimumWage;
-  city.pensionPerSenior = data.city.pensionPerSenior ?? (data.city.pensionShare !== undefined ? Math.round(city.minimumWage * data.city.pensionShare) : BALANCE.defaultPensionPerSenior);
+  // Older policy amounts predate the $990 household basket and would leave almost everyone unable to pay it.
+  city.minimumWage = data.city.costTaxRates ? data.city.minimumWage ?? BALANCE.defaultMinimumWage : BALANCE.defaultMinimumWage;
+  city.pensionPerSenior = data.city.costTaxRates ? data.city.pensionPerSenior ?? BALANCE.defaultPensionPerSenior : BALANCE.defaultPensionPerSenior;
+  city.costTaxRates = data.city.costTaxRates ?? defaultCostTaxRates();
   if (data.city.society) city.society = { ...data.city.society };
   // Cities saved before stages existed keep everything they could build (user call, D-086).
   city.locked = data.city.locked ?? false;
@@ -450,6 +454,7 @@ export function parseSave(json: unknown): SaveData {
     coastSides: num(t, 'coastSides', 0, 4),
   };
   const c = obj(json, 'city');
+  const parsedCostTaxRates = parseCostTaxRates(c.costTaxRates);
   const social = isObj(c.society) ? c.society : null;
   const l = obj(json, 'layers');
   if (!Array.isArray(json.buildings)) throw new SaveError('bad buildings');
@@ -504,6 +509,7 @@ export function parseSave(json: unknown): SaveData {
       taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
       ...(isFiniteNumber(c.minimumWage) && c.minimumWage >= BALANCE.minMinimumWage && c.minimumWage <= BALANCE.maxMinimumWage && { minimumWage: c.minimumWage }),
       ...(isFiniteNumber(c.pensionPerSenior) && c.pensionPerSenior >= BALANCE.minPensionPerSenior && c.pensionPerSenior <= BALANCE.maxPensionPerSenior && { pensionPerSenior: c.pensionPerSenior }),
+      ...(parsedCostTaxRates && { costTaxRates: parsedCostTaxRates }),
       ...(isFiniteNumber(c.pensionShare) && c.pensionShare >= 0.05 && c.pensionShare <= 0.3 && { pensionShare: c.pensionShare }),
       ...(social && ['sick', 'prisoners', 'deaths', 'untreatedDeaths', 'prisonOverflow'].every((key) => isFiniteNumber(social[key]) && social[key] >= 0) && { society: {
         sick: social.sick as number, prisoners: social.prisoners as number, deaths: social.deaths as number,
@@ -534,6 +540,15 @@ export function parseSave(json: unknown): SaveData {
     ...(buildingTiles && { buildingTiles }),
     ...parseSimState(json.sim),
     ...(isFiniteNumber(json.savedAt) && { savedAt: json.savedAt }),
+  };
+}
+
+function parseCostTaxRates(value: unknown): CostTaxRates | null {
+  if (!isObj(value)) return null;
+  if (!COST_KINDS.every((kind) => isFiniteNumber(value[kind]) && value[kind] >= 0 && value[kind] <= 100)) return null;
+  return {
+    energy: Number(value.energy), water: Number(value.water),
+    housing: Number(value.housing), transport: Number(value.transport),
   };
 }
 

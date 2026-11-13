@@ -27,6 +27,7 @@ import { aqiBand } from '../sim/systems/air';
 import { isWaterTerrain } from '../render/transitions';
 import { windFactor } from '../sim/systems/energy';
 import { demandFor } from '../sim/systems/growth';
+import { isZoned, ZoneType } from '../sim/zones';
 import { PAVEMENTS, ROAD_SPECS } from '../sim/roadTypes';
 import { cityStats } from '../sim/systems/population';
 import { economyReport } from '../sim/systems/economy';
@@ -122,6 +123,7 @@ export class Game {
   private buildingChoice: BuildingId = 'park';
   private speedIndex = 1;
   private inspected: number | null = null;
+  private inspectedZone: TilePos | null = null;
   private drag: ToolDrag | null = null;
   /**
    * The drag is finished but was drawn with a finger, so it waits for Build or Cancel (D-080):
@@ -566,13 +568,13 @@ export class Game {
         const lost = held.lost > 0 ? ` O cofre está cheio: $${Math.round(held.lost).toLocaleString()} foram perdidos.` : '';
         this.notify(
           held.filling || held.lost > 0 ? 'error' : 'info',
-          `${month}: manutenção de $${r.expenses.toLocaleString()} paga. $${Math.round(held.waiting).toLocaleString()} em impostos aguardando. ${where}.${lost}`,
+          `${month}: despesas de $${r.expenses.toLocaleString()} pagas. $${Math.round(held.waiting).toLocaleString()} em receitas aguardando. ${where}.${lost}`,
           'taxes',
         );
       } else {
         this.notify(
           r.net >= 0 ? 'info' : 'error',
-          `Orçamento de ${month}: ${sign}$${Math.abs(r.net).toLocaleString()} (impostos $${r.income.toLocaleString()}, manutenção $${r.expenses.toLocaleString()})`,
+          `Orçamento de ${month}: ${sign}$${Math.abs(r.net).toLocaleString()} (receitas $${r.income.toLocaleString()}, despesas $${r.expenses.toLocaleString()})`,
           'budget',
         );
       }
@@ -596,9 +598,9 @@ export class Game {
       this.notify('milestone', `Pesquisa concluída: ${out.research.name}. ${out.research.effect}.`, `research-${out.research.id}`);
     }
     if (out.lifestyle === Lifestyle.Comfortable) {
-      this.notify('milestone', 'Os moradores estão prosperando: as primeiras moradias alcançaram o nível Confortável. Pagam mais impostos e querem um hospital por perto.', 'lifestyle-1');
+      this.notify('milestone', 'Os moradores estão prosperando: as primeiras moradias alcançaram o nível Confortável. Têm renda maior e querem um hospital por perto.', 'lifestyle-1');
     } else if (out.lifestyle === Lifestyle.Prosperous) {
-      this.notify('milestone', 'As primeiras moradias alcançaram o nível Próspero! Pagam mais impostos e querem uma universidade.', 'lifestyle-2');
+      this.notify('milestone', 'As primeiras moradias alcançaram o nível Próspero! Têm renda maior e querem uma universidade.', 'lifestyle-2');
     }
   }
 
@@ -836,10 +838,18 @@ export class Game {
     this.city.minimumWage = Math.max(BALANCE.minMinimumWage, Math.min(BALANCE.maxMinimumWage, Math.round(amount)));
     this.edits++;
     this.emitBudget();
+    this.emitCity();
   }
 
   setPensionPerSenior(amount: number) {
     this.city.pensionPerSenior = Math.max(BALANCE.minPensionPerSenior, Math.min(BALANCE.maxPensionPerSenior, Math.round(amount)));
+    this.edits++;
+    this.emitBudget();
+    this.emitCity();
+  }
+
+  setCostTaxRate(kind: import('../sim/systems/livingCosts').CostKind, rate: number) {
+    this.city.costTaxRates[kind] = Math.max(0, Math.min(100, Math.round(rate)));
     this.edits++;
     this.emitBudget();
     this.emitCity();
@@ -852,6 +862,7 @@ export class Game {
       taxRate: this.city.taxRate,
       minimumWage: this.city.minimumWage,
       pensionPerSenior: this.city.pensionPerSenior,
+      costTaxRates: { ...this.city.costTaxRates },
       last: this.sim.budget.last,
       forecast: this.sim.budget.forecast(),
       power: u.power,
@@ -876,14 +887,16 @@ export class Game {
    * of that, say why and what raises the demand, at most once a month per zone kind.
    */
   private explainWaitingZones() {
-    const waiting = this.sim.growth.waiting;
+    const diagnostics = this.sim.growth.diagnostics(this.sim.materials.report.imported);
     for (const k of ['r', 'c', 'o', 'i'] as const) {
-      this.waitingDays[k] = waiting[k] > 0 ? this.waitingDays[k] + 1 : 0;
-      if (waiting[k] === 0) this.resolve(`zones-${k}`);
+      const counts = diagnostics[k];
+      const blocked = counts.noRoad + counts.noDemand + counts.materials + counts.noModel;
+      this.waitingDays[k] = blocked > 0 ? this.waitingDays[k] + 1 : 0;
+      if (blocked === 0) this.resolve(`zones-${k}`);
       if (this.waitingDays[k] < WAIT_NOTICE_DAYS || this.city.day - this.waitNoticeDay[k] < BALANCE.daysPerMonth) continue;
       this.waitNoticeDay[k] = this.city.day;
       const what = { r: 'residenciais', c: 'comerciais', o: 'de escritórios', i: 'industriais' }[k];
-      this.notify('info', `${waiting[k]} terrenos ${what} vazios não estão crescendo: ${this.sim.growth.explain()[k]}`, `zones-${k}`);
+      this.notify('info', `${blocked} terrenos ${what} vazios não estão crescendo: ${this.sim.growth.explainWithDiagnostics(diagnostics)[k]}`, `zones-${k}`);
     }
   }
 
@@ -910,15 +923,16 @@ export class Game {
 
   /** Push current city stats to listeners (also used by the UI bridge on connect). */
   emitCity() {
-    const s = cityStats(this.world, this.city.taxRate, this.city.society);
+    const s = cityStats(this.world, this.city.taxRate, this.city.society, this.city);
+    const diagnostics = this.sim.growth.diagnostics(this.sim.materials.report.imported);
     let cars = 0;
     for (const a of this.traffic.agents) if (a.kind !== 'person') cars++;
     this.events.emit('city', {
       ...s,
-      economy: economyReport(this.world, this.city.taxRate),
+      economy: economyReport(this.world, this.city.taxRate, this.city),
       society: societyReport(this.city),
       demand: this.sim.growth.demand(),
-      demandWhy: this.sim.growth.explain(),
+      demandWhy: this.sim.growth.explainWithDiagnostics(diagnostics),
       traffic: this.sim.commute.report,
       needs: this.sim.needs.report,
       power: this.sim.utilities.report.power,
@@ -930,6 +944,7 @@ export class Game {
       progress: this.progressInfo(),
       air: this.sim.air.report,
     });
+    if (this.inspectedZone) this.emitZoneInspect();
   }
 
   private progressInfo(): ProgressInfo {
@@ -964,20 +979,42 @@ export class Game {
     if (this.toolId !== 'select') return;
     const t = this.tileAt(screen);
     const id = this.world.building[this.world.index(t.x, t.y)];
-    this.inspect(id === -1 ? null : id);
+    if (id === -1 && isZoned(this.world.zone[this.world.index(t.x, t.y)])) {
+      this.inspected = null;
+      this.inspectedZone = t;
+      this.emitInspect();
+      this.emitZoneInspect();
+      this.updatePreview();
+    } else this.inspect(id === -1 ? null : id);
   }
 
   /** Open the info panel for a building (or close it with null). */
   inspect(id: number | null) {
     if (id !== null && id !== this.inspected) this.sound.play('tool');
     this.inspected = id;
+    this.inspectedZone = null;
     this.emitInspect();
+    this.events.emit('zoneInspect', null);
     this.updatePreview();
   }
 
   private emitInspect() {
     const b = this.inspected === null ? undefined : this.world.buildings.get(this.inspected);
     this.events.emit('inspect', b ? inspectInfo(this.sim, b) : null);
+  }
+
+  private emitZoneInspect() {
+    const t = this.inspectedZone;
+    const lot = t && this.sim.growth.lotAt(t.x, t.y, this.sim.materials.report.imported);
+    if (!lot) this.inspectedZone = null;
+    const name = lot && ({
+      [ZoneType.Residential]: 'Terreno residencial',
+      [ZoneType.ResidentialHigh]: 'Terreno para apartamentos',
+      [ZoneType.Commercial]: 'Terreno para lojas',
+      [ZoneType.CommercialHigh]: 'Terreno para escritórios',
+      [ZoneType.Industrial]: 'Terreno industrial',
+    } as Record<number, string>)[lot.zone];
+    this.events.emit('zoneInspect', lot ? { x: lot.x, y: lot.y, name: name ?? 'Terreno vazio', title: lot.title, detail: lot.detail, waiting: lot.reason === 'queued' } : null);
   }
 
   /** Collect the taxes waiting at the Town Hall (info panel and budget panel buttons). */

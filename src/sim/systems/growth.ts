@@ -22,7 +22,8 @@ import { isZoned, ZONE_DENSITY, ZONE_LETTER, ZONED_TYPES, zoneOf, type ZonedType
 import type { City } from '../City';
 import type { DayOutcome, SimSystem } from '../core/System';
 import { materialsFor, UNLIMITED, type MaterialStock } from './materials';
-import { economyReport, effectiveJobs, householdPurchasingPower } from './economy';
+import { techEffects } from '../research';
+import { economyReport, effectiveJobs, householdPurchasingPower, type HouseholdPolicy } from './economy';
 
 /**
  * Zoned growth: demand, new lots, construction and levelling up. Runs once per in-game day.
@@ -40,6 +41,21 @@ export interface ZoneDemand {
   /** Offices (high-density commercial). */
   readonly o: number;
   readonly i: number;
+}
+
+export type LotReason = 'noRoad' | 'noDemand' | 'materials' | 'noModel' | 'queued';
+export type LotReasonCounts = Record<LotReason, number>;
+export type ZoneDiagnostics = Record<keyof ZoneDemand, LotReasonCounts>;
+
+const emptyReasons = (): LotReasonCounts => ({ noRoad: 0, noDemand: 0, materials: 0, noModel: 0, queued: 0 });
+
+export interface LotDiagnosis {
+  x: number;
+  y: number;
+  zone: ZonedType;
+  reason: LotReason;
+  title: string;
+  detail: string;
 }
 
 /** A rectangle of world tiles. */
@@ -62,7 +78,7 @@ export interface GrowthResult {
 }
 
 /** Investor confidence rises as the city becomes prosperous, served and well occupied. */
-export function investorScore(world: World, taxRate: number = BALANCE.baseTaxRate): number {
+export function investorScore(world: World, taxRate: number = BALANCE.baseTaxRate, policy?: HouseholdPolicy): number {
   let occupied = 0;
   let capacity = 0;
   let happy = 0;
@@ -79,7 +95,7 @@ export function investorScore(world: World, taxRate: number = BALANCE.baseTaxRat
   }
   const homes = capacity === 0 ? 0 : occupied / capacity;
   const mood = happyCount === 0 ? 0 : happy / happyCount;
-  const stats = cityStats(world, taxRate);
+  const stats = cityStats(world, taxRate, undefined, policy);
   const jobs = stats.housing === 0 ? 0 : Math.min(1, stats.jobs / Math.max(1, stats.population * BALANCE.workforceShare));
   return Math.max(0, Math.min(1, homes * 0.35 + mood * 0.4 + jobs * 0.25));
 }
@@ -120,14 +136,14 @@ interface DemandInputs {
   graduates: number;
 }
 
-function demandInputs(world: World, taxRate: number): DemandInputs {
+function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): DemandInputs {
   let housing = 0;
   let shops = 0;
   let offices = 0;
   let industrial = 0;
   let civic = 0;
   let graduates = 0;
-  const economy = economyReport(world, taxRate);
+  const economy = economyReport(world, taxRate, policy);
   const university = serviceBit('university');
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
@@ -164,8 +180,8 @@ function demandInputs(world: World, taxRate: number): DemandInputs {
   };
 }
 
-export function zoneDemand(world: World, taxRate: number = BALANCE.baseTaxRate): ZoneDemand {
-  const x = demandInputs(world, taxRate);
+export function zoneDemand(world: World, taxRate: number = BALANCE.baseTaxRate, policy?: HouseholdPolicy): ZoneDemand {
+  const x = demandInputs(world, taxRate, policy);
   const adjust = (d: number) => Math.max(-1, Math.min(1, d));
   return {
     r: adjust(ratio(x.wantR, x.housing, DEMAND_FLOOR.r)),
@@ -178,14 +194,14 @@ export function zoneDemand(world: World, taxRate: number = BALANCE.baseTaxRate):
 /** One plain sentence per bar: why demand is where it is and what raises it (master plan §6.4). */
 export type DemandWhy = Readonly<Record<keyof ZoneDemand, string>>;
 
-export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRate): DemandWhy {
-  const x = demandInputs(world, taxRate);
+export function explainDemand(world: World, taxRate: number = BALANCE.baseTaxRate, policy?: HouseholdPolicy): DemandWhy {
+  const x = demandInputs(world, taxRate, policy);
   const n = (v: number) => Math.round(Math.abs(v)).toLocaleString();
-  const purchasingPower = householdPurchasingPower(taxRate);
-  const taxNote = taxRate > BALANCE.baseTaxRate
-    ? ` Com impostos de ${taxRate}%, o poder de compra é ${Math.round(purchasingPower * 100)}% do nível de referência e reduz as vendas do comércio.`
-    : taxRate < BALANCE.baseTaxRate
-      ? ` Com impostos de ${taxRate}%, o poder de compra é ${Math.round(purchasingPower * 100)}% do nível de referência.`
+  const purchasingPower = householdPurchasingPower(taxRate, policy);
+  const taxNote = purchasingPower < 0.98
+    ? ` O poder de compra está em ${Math.round(purchasingPower * 100)}% do nível de referência; impostos e custo de vida reduzem as vendas.`
+    : taxRate !== BALANCE.baseTaxRate
+      ? ` Com imposto empresarial de ${taxRate}%, o poder de compra está em ${Math.round(purchasingPower * 100)}% do nível de referência.`
       : '';
   const tooManyJobs = `A cidade já tem ${n(x.openJobs)} empregos a mais que trabalhadores. Moradias atraem trabalhadores.`;
   return {
@@ -217,6 +233,85 @@ export function demandFor(demand: ZoneDemand, zone: ZonedType): number {
   return demand[demandKey(zone)];
 }
 
+interface LotContext {
+  demand: ZoneDemand;
+  minMaterials: ReadonlyMap<ZonedType, number>;
+  availableMaterials: number;
+}
+
+function lotContext(city: City, importsUsed: number): LotContext {
+  const demand = zoneDemand(city.world, city.taxRate, city);
+  const confidence = investorScore(city.world, city.taxRate, city);
+  const minMaterials = new Map<ZonedType, number>();
+  for (const zone of ZONED_TYPES) {
+    const ids = eligibleBuildings(zonedBuildings(ZONE_LETTER[zone], ZONE_DENSITY[zone], startLevel(ZONE_LETTER[zone], ZONE_DENSITY[zone]), 1), confidence);
+    minMaterials.set(zone, ids.length === 0 ? Infinity : Math.min(...ids.map(materialsFor)) * techEffects(city).materials);
+  }
+  const availableMaterials = city.needsMaterials
+    ? city.materials + Math.max(0, BALANCE.materialsImportPerDay - importsUsed)
+    : Infinity;
+  return { demand, minMaterials, availableMaterials };
+}
+
+/** Exactly one current reason for an empty zoned tile, ordered by the first fix needed. */
+function lotReason(city: City, x: number, y: number, context: LotContext): LotReason | null {
+  const world = city.world;
+  if (!world.inBounds(x, y)) return null;
+  const i = world.index(x, y);
+  const zone = world.zone[i];
+  if (!isZoned(zone) || world.building[i] !== -1) return null;
+  if (findEntrance(world, x, y, 1, 1, BALANCE.roadAccessRange) === -1) return 'noRoad';
+  if (demandFor(context.demand, zone) <= 0) return 'noDemand';
+  const needed = context.minMaterials.get(zone) ?? Infinity;
+  if (!Number.isFinite(needed)) return 'noModel';
+  if (needed > context.availableMaterials) return 'materials';
+  return 'queued';
+}
+
+/** Counts vacant lots by their actual first blocker; the daily queue is a normal wait. */
+export function diagnoseZones(city: City, importsUsed = 0): ZoneDiagnostics {
+  const context = lotContext(city, importsUsed);
+  const result: ZoneDiagnostics = { r: emptyReasons(), c: emptyReasons(), o: emptyReasons(), i: emptyReasons() };
+  const world = city.world;
+  for (let y = 0; y < world.height; y++) {
+    for (let x = 0; x < world.width; x++) {
+      const i = world.index(x, y);
+      const zone = world.zone[i];
+      if (!isZoned(zone) || world.building[i] !== -1) continue;
+      const reason = lotReason(city, x, y, context);
+      if (reason) result[demandKey(zone)][reason]++;
+    }
+  }
+  return result;
+}
+
+/** A selected vacant lot explains its own state, not just the citywide demand bar. */
+export function diagnoseLot(city: City, x: number, y: number, importsUsed = 0): LotDiagnosis | null {
+  const context = lotContext(city, importsUsed);
+  const reason = lotReason(city, x, y, context);
+  if (!reason) return null;
+  const zone = city.world.zone[city.world.index(x, y)];
+  if (!isZoned(zone)) return null;
+  const key = demandKey(zone);
+  const title = {
+    noRoad: 'Sem via próxima',
+    noDemand: 'Sem demanda para construir',
+    materials: 'Faltam materiais de construção',
+    noModel: 'Nenhum edifício disponível',
+    queued: 'Aguardando a vez de construir',
+  }[reason];
+  const detail = reason === 'noRoad'
+    ? `Construa uma via terrestre a até ${BALANCE.roadAccessRange} quadrados deste terreno.`
+    : reason === 'noDemand'
+      ? explainDemand(city.world, city.taxRate, city)[key]
+      : reason === 'materials'
+        ? `O estoque mais a importação disponível hoje não cobre o primeiro edifício deste terreno. Produza materiais na indústria ou aguarde a reposição diária.`
+        : reason === 'noModel'
+          ? 'Ainda não há um edifício elegível para esta densidade. Melhore a ocupação, a satisfação e os empregos da cidade.'
+          : `A demanda está positiva. O jogo inicia até ${Math.ceil(demandFor(context.demand, zone) * BALANCE.growthPerDay)} novos terrenos desta zona por dia, escolhidos entre todos os terrenos aptos. Deixe o tempo avançar.`;
+  return { x, y, zone, reason, title, detail };
+}
+
 /** 0 = foundation, 1 = scaffold. Only meaningful while `construction > 0`. */
 export function constructionStage(b: BuildingInstance): 0 | 1 {
   return b.construction > BALANCE.constructionDays / 2 ? 0 : 1;
@@ -246,7 +341,7 @@ function areaOf(b: BuildingInstance): TileArea {
  * One day of growth. `stock` supplies construction materials (sim/systems/materials.ts): a new
  * lot or upgrade only starts when its materials can be had today.
  */
-export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTaxRate, stock: MaterialStock = UNLIMITED): GrowthResult {
+export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTaxRate, stock: MaterialStock = UNLIMITED, policy?: HouseholdPolicy): GrowthResult {
   const changed: TileArea[] = [];
   const started: number[] = [];
   const completed: number[] = [];
@@ -263,8 +358,8 @@ export function growDay(world: World, rng: Rng, taxRate: number = BALANCE.baseTa
     }
   }
 
-  const demand = zoneDemand(world, taxRate);
-  const confidence = investorScore(world, taxRate);
+  const demand = zoneDemand(world, taxRate, policy);
+  const confidence = investorScore(world, taxRate, policy);
   const build = (def: BuildingId, x: number, y: number, occupants = 0, lifestyle: Lifestyle = Lifestyle.Basic) => {
     const { w, h } = BUILDINGS[def].size;
     for (let ty = y; ty < y + h; ty++) {
@@ -451,16 +546,37 @@ export class GrowthSystem implements SimSystem {
     this.rng = rng;
   }
   onDay(out: DayOutcome) {
-    const g = growDay(this.city.world, this.rng, this.city.taxRate, this.stock());
+    const g = growDay(this.city.world, this.rng, this.city.taxRate, this.stock(), this.city);
     out.changed.push(...g.changed);
     out.started.push(...g.started);
     out.completed.push(...g.completed);
     this.waiting = g.waiting;
   }
   demand(): ZoneDemand {
-    return zoneDemand(this.city.world, this.city.taxRate);
+    return zoneDemand(this.city.world, this.city.taxRate, this.city);
   }
   explain(): DemandWhy {
-    return explainDemand(this.city.world, this.city.taxRate);
+    return this.explainWithDiagnostics(this.diagnostics());
+  }
+  diagnostics(importsUsed = 0): ZoneDiagnostics {
+    return diagnoseZones(this.city, importsUsed);
+  }
+  lotAt(x: number, y: number, importsUsed = 0): LotDiagnosis | null {
+    return diagnoseLot(this.city, x, y, importsUsed);
+  }
+  explainWithDiagnostics(diagnostics: ZoneDiagnostics): DemandWhy {
+    const base = explainDemand(this.city.world, this.city.taxRate, this.city);
+    const append = (key: keyof ZoneDemand) => {
+      const count = diagnostics[key];
+      const parts = [
+        count.noRoad && `${count.noRoad} sem via próxima`,
+        count.noDemand && `${count.noDemand} sem demanda`,
+        count.materials && `${count.materials} sem materiais suficientes`,
+        count.noModel && `${count.noModel} sem edifício elegível`,
+        count.queued && `${count.queued} aguardando a fila diária de construção`,
+      ].filter(Boolean);
+      return parts.length ? `${base[key]} Terrenos vazios: ${parts.join('; ')}. Selecione um terreno para ver o motivo e o que fazer.` : base[key];
+    };
+    return { r: append('r'), c: append('c'), o: append('o'), i: append('i') };
   }
 }

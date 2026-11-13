@@ -2,6 +2,7 @@ import type { SystemTiming } from '../sim/core/timings';
 import type { BuildingId, WealthTier } from '../sim/buildings/catalog';
 import type { DemandWhy, ZoneDemand } from '../sim/systems/growth';
 import type { BudgetReport } from '../sim/systems/budget';
+import type { CostTaxRates } from '../sim/systems/livingCosts';
 import type { PowerReport } from '../sim/systems/energy';
 import type { UtilityTotals } from '../sim/systems/utilities';
 import type { CommuteReport } from '../sim/systems/commute';
@@ -49,6 +50,17 @@ export interface GameEventMap {
   budget: BudgetInfo;
   /** Building shown in the info panel, or null when it's closed. */
   inspect: InspectInfo | null;
+  /** Reason an individual zoned lot is still vacant. */
+  zoneInspect: ZoneInspectInfo | null;
+}
+
+export interface ZoneInspectInfo {
+  x: number;
+  y: number;
+  name: string;
+  title: string;
+  detail: string;
+  waiting: boolean;
 }
 
 /** Day/night look: follow the clock, or stay in daylight or at night. */
@@ -102,6 +114,7 @@ export interface BudgetInfo {
   taxRate: number;
   minimumWage: number;
   pensionPerSenior: number;
+  costTaxRates: CostTaxRates;
   /** Last month's collected budget (null before the first month ends). */
   last: BudgetReport | null;
   /** Next month at today's numbers. */

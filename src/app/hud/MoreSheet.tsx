@@ -96,7 +96,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
       <div className="more-stats">
         <span className="more-stat"><span className="air-dot" style={{ background: '#7b8da4' }} aria-hidden="true" /><span>
           <strong>População por idade</strong>
-          <small>Crianças {city.society.children.toLocaleString()} · jovens {city.society.youth.toLocaleString()} · adultos {city.society.adults.toLocaleString()} · idosos {city.society.seniors.toLocaleString()}</small>
+          <small>Trabalhadores {city.society.adults.toLocaleString()} · idosos {city.society.seniors.toLocaleString()}</small>
         </span></span>
         <span className="more-stat"><span className="air-dot" style={{ background: '#d23b5a' }} aria-hidden="true" /><span>
           <strong>Saúde e segurança</strong>

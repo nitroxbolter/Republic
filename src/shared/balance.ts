@@ -2,30 +2,30 @@
 export const BALANCE = {
   /** Enough for starter services, utilities, roads and several residential zones. */
   startingFunds: 40_000,
-  /** Construction cost per road tile. The road hierarchy ranges from $200 to $800. */
-  roadCost: 200,
-  highwayCost: 650,
-  avenueCost: 350,
-  avenueBridgeCost: 450,
+  /** Construction cost per road tile: $20 to $100. */
+  roadCost: 20,
+  highwayCost: 80,
+  avenueCost: 35,
+  avenueBridgeCost: 55,
   /** Wide roads are priced per tile; one drag lays two tiles per step. */
-  boulevardCost: 500,
-  boulevardBridgeCost: 600,
-  expresswayCost: 800,
-  expresswayBridgeCost: 800,
-  rampCost: 400,
-  rampBridgeCost: 500,
-  pedestrianCost: 200,
+  boulevardCost: 55,
+  boulevardBridgeCost: 70,
+  expresswayCost: 100,
+  expresswayBridgeCost: 100,
+  rampCost: 45,
+  rampBridgeCost: 60,
+  pedestrianCost: 20,
   /** Rail track per tile, on land and over water (docs/specs/evolution.md, E7b), and its monthly upkeep. */
   railCost: 60,
   railBridgeCost: 150,
   railUpkeep: 0.8,
   /** A flyover deck over a crossing road, on top of the road's own price (docs/specs/transport.md, TX2). */
-  flyoverCost: 400,
+  flyoverCost: 80,
   /** Moving a building costs this share of its price (plus clearing the new lot). */
   moveCostShare: 0.2,
   /** Bridges replace the per-tile road cost while over water. */
-  bridgeCost: 250,
-  highwayBridgeCost: 700,
+  bridgeCost: 40,
+  highwayBridgeCost: 90,
   /** Longest water crossing, in tiles. */
   maxBridgeSpan: 12,
   /** Clearing cost per tree (a tile holds 1–3). */
@@ -45,14 +45,18 @@ export const BALANCE = {
   /** Share of the empty space in a home that fills each day (with road access). */
   moveInRate: 0.12,
   /** Share of residents who work. */
-  workforceShare: 0.6,
-  /** Stored policy value; no economic effect until wages are modelled. */
-  defaultMinimumWage: 100,
-  minMinimumWage: 20,
-  maxMinimumWage: 500,
-  defaultPensionPerSenior: 10,
+  workforceShare: 0.87,
+  defaultMinimumWage: 1_200,
+  minMinimumWage: 500,
+  maxMinimumWage: 3_000,
+  defaultPensionPerSenior: 1_100,
   minPensionPerSenior: 0,
-  maxPensionPerSenior: 150,
+  maxPensionPerSenior: 3_000,
+  energyBill: 80,
+  waterBill: 60,
+  foodBill: 200,
+  housingBill: 450,
+  transportBill: 200,
   policeCells: 8,
   /** Homes only fill to this share of capacity while there are no jobs; jobs lift it to 100%. */
   minHousingFill: 0.45,
@@ -63,16 +67,16 @@ export const BALANCE = {
   monthlyShopSpendPerResident: 300,
   /** Public-service upkeep adds one base cost per this many residents served. */
   upkeepResidentsPerBase: 1_000,
-  /** Monthly upkeep per road tile. The road hierarchy ranges from $100 to $2,000. */
-  roadUpkeep: 100,
-  highwayUpkeep: 1_200,
-  avenueUpkeep: 400,
-  boulevardUpkeep: 800,
-  expresswayUpkeep: 2_000,
-  rampUpkeep: 300,
-  pedestrianUpkeep: 100,
+  /** Monthly upkeep per road tile. */
+  roadUpkeep: 1,
+  highwayUpkeep: 6,
+  avenueUpkeep: 2,
+  boulevardUpkeep: 4,
+  expresswayUpkeep: 8,
+  rampUpkeep: 2,
+  pedestrianUpkeep: 1,
   /** Fallback monthly upkeep for bridge tiles; typed roads use their own bridgeUpkeep. */
-  bridgeUpkeep: 500,
+  bridgeUpkeep: 3,
   /** A land road within this many tiles of a footprint gives road access. */
   roadAccessRange: 3,
 
@@ -81,7 +85,7 @@ export const BALANCE = {
   // Fires, thefts and illness: sim/systems/incidents.ts (INCIDENTS).
   /** Default tax rate in percent; income scales with rate ÷ this. */
   baseTaxRate: 9,
-  minTaxRate: 5,
+  minTaxRate: 0,
   maxTaxRate: 100,
   // --- Needs & happiness (sim/systems/needs.ts, docs/specs/needs.md) ---
   /** Occupancy multiplier = happinessBase + happinessRange × happiness. */
@@ -121,7 +125,7 @@ export const BALANCE = {
   /** Jobs wanted per worker (a little over 1, so there are always a few openings). */
   jobSlack: 1.05,
   /** Housing wanted per resident the jobs could employ (> 1 so the city keeps growing). */
-  housingSlack: 1.15,
+  housingSlack: 1.2,
   /** Demand that a new town starts with: residents, shop jobs and industrial jobs. */
   seedHousing: 40,
   seedCommercialJobs: 6,
@@ -132,8 +136,8 @@ export const BALANCE = {
   lifeDays: 30,
   lifeUpLine: 0.7,
   lifeDownLine: 0.45,
-  /** Tax per resident × this, by lifestyle tier (Basic, Comfortable, Prosperous). */
-  lifestyleTax: [1, 1.5, 2.2],
+  /** Wage multiplier by lifestyle tier (Basic, Comfortable, Prosperous). */
+  lifestyleWage: [1, 1.5, 2.2],
   /** Share of Comfortable and Prosperous residents a university reaches who are graduates … */
   graduateShare: 0.12,
   /** … and the office jobs each graduate adds to office demand. */

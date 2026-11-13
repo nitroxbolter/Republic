@@ -4,7 +4,7 @@ import { mulberry32 } from '../src/shared/rng';
 import { BUILDINGS, chooseBuilding, type BuildingDef } from '../src/sim/buildings/catalog';
 import { City } from '../src/sim/City';
 import { applyClear, applyMove, applyPlace, applyRoad, applyZone, planClear, planMove, planPlace, planRoad, planZone } from '../src/sim/commands';
-import { explainDemand, growDay, zoneDemand } from '../src/sim/systems/growth';
+import { diagnoseLot, diagnoseZones, explainDemand, growDay, zoneDemand } from '../src/sim/systems/growth';
 import { findEntrance } from '../src/sim/systems/access';
 import { cityStats, simulateDay } from '../src/sim/systems/population';
 import { rectTiles, roadPath, RoadType } from '../src/sim/roads';
@@ -96,6 +96,34 @@ describe('road access range', () => {
 });
 
 describe('growth', () => {
+  it('explains the first blocker of each vacant shop lot and does not count construction as vacant', () => {
+    const { w, city } = town();
+    zone(city, 3, 3, 3, 3, ZoneType.Commercial);
+    zone(city, 4, 7, 4, 7, ZoneType.Commercial);
+    expect(diagnoseLot(city, 3, 3)?.reason).toBe('noRoad');
+    expect(diagnoseLot(city, 4, 7)?.reason).toBe('queued');
+    expect(diagnoseZones(city).c).toMatchObject({ noRoad: 1, queued: 1 });
+
+    city.needsMaterials = true;
+    city.materials = 0;
+    expect(diagnoseLot(city, 4, 7, BALANCE.materialsImportPerDay)?.reason).toBe('materials');
+    expect(diagnoseZones(city, BALANCE.materialsImportPerDay).c.materials).toBe(1);
+
+    city.needsMaterials = false;
+    growDay(w, () => 0);
+    expect(diagnoseLot(city, 4, 7)).toBeNull();
+    expect(diagnoseZones(city).c.queued).toBe(0);
+  });
+
+  it('identifies shop oversupply on an accessible vacant lot', () => {
+    const { w, city } = town();
+    zone(city, 2, 7, 9, 7, ZoneType.Commercial);
+    growDay(w, () => 0);
+    expect(zoneDemand(w, city.taxRate, city).c).toBeLessThanOrEqual(0);
+    expect(diagnoseLot(city, 9, 7)?.reason).toBe('noDemand');
+    expect(diagnoseZones(city).c.noDemand).toBeGreaterThan(0);
+  });
+
   it('a new town wants homes first, and homes create demand for jobs', () => {
     const { w } = town();
     const d0 = zoneDemand(w);

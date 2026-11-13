@@ -76,7 +76,7 @@ export class Simulation {
     this.growth = new GrowthSystem(city, this.streams.growth.next);
     this.materials = new MaterialsSystem(city);
     this.growth.stock = () => this.materials.stock;
-    this.population = new PopulationSystem(world, () => city.taxRate, () => city.society);
+    this.population = new PopulationSystem(world, () => city.taxRate, () => city.society, () => city);
     this.budget = new BudgetSystem(city);
     this.commute = new CommuteSystem(world);
     this.air = new AirSystem(world, this.commute, () => techEffects(city));

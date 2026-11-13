@@ -1239,7 +1239,7 @@ button.funds:hover {
   top: 84px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(340px, calc(100vw - 32px));
+  width: min(420px, calc(100vw - 32px));
   /* Clear of the toolbar: it scrolls inside instead of covering it. */
   max-height: calc(100dvh - 200px);
   overflow-y: auto;
@@ -1249,6 +1249,54 @@ button.funds:hover {
   flex-direction: column;
   gap: 8px;
   z-index: var(--z-sheet);
+  background: #151c25;
+}
+.budget-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--border-panel);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.budget-tax-item {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-panel);
+}
+.budget-tax-item input,
+.budget-card .tax input {
+  width: 100%;
+  min-height: 24px;
+}
+.budget-income-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.budget-income-cards > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.budget-income-cards strong {
+  color: var(--money);
+  font-size: 14px;
+}
+.budget-income-cards .tax-hint {
+  grid-column: 1 / -1;
+}
+.budget-tax-totals {
+  border-color: rgba(79, 209, 197, 0.35);
+  background: rgba(79, 209, 197, 0.08);
+}
+.budget-tax-totals > strong {
+  font-size: 12px;
+}
+.budget-tax-totals .budget-line strong {
+  color: var(--money);
 }
 .budget-heading {
   margin: 6px 0 0;

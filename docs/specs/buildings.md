@@ -114,6 +114,7 @@ Placeable showpieces in **Parks & Places**. They count as parks for happiness, e
 - **The Build tool is now "Civic"** (it only places parks and the town hall, D-042). Its panel says where houses come from and has one-click **Zone homes / Shops / Industry** buttons.
 - **While dragging a zone,** tiles that no road reaches (more than 3 tiles from a road) preview in **amber**, and the cost label adds "N tiles need a road nearby".
 - **After zoning,** a toast says how many tiles won't grow. Those lots stay **grey** until a road comes within reach, then turn their zone colour. Building or clearing a road refreshes lots up to 3 tiles away.
+- **Vacant-lot diagnosis:** the demand tips and More sheet count empty lots by their current reason: road beyond 3 tiles, no demand for that density, insufficient construction materials, no eligible building type, or waiting for the daily construction limit. Clicking an empty zoned tile with Select shows its own reason and a concrete next step. The reason refreshes as the city changes; construction sites are no longer called empty lots.
 
 ## Growth (Phase 4b, `sim/growth.ts`, once per day)
 

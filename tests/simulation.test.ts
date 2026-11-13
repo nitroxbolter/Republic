@@ -102,7 +102,7 @@ describe('budget', () => {
     const empty = monthlyBudget(w);
     expect(empty.income).toBe(0);
     expect(empty.breakdown.roads).toBe(Math.round(16 * BALANCE.roadUpkeep));
-    expect(empty.breakdown.utilities).toBe(150 + 80);
+    expect(empty.breakdown.utilities).toBe(420);
     expect(empty.expenses).toBe(empty.breakdown.roads + empty.breakdown.utilities);
     place(city, 'walkup', 3, 4);
     refresh(w);

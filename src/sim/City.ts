@@ -4,6 +4,7 @@ import type { ResearchState } from './research';
 import { emptyIncidents, type IncidentState } from './systems/incidents';
 import { Stage } from './stages';
 import type { World } from './World';
+import { defaultCostTaxRates, type CostTaxRates } from './systems/livingCosts';
 
 /** City-wide state that isn't per-tile: money and the calendar. */
 export class City {
@@ -15,6 +16,7 @@ export class City {
   minimumWage: number = BALANCE.defaultMinimumWage;
   /** Monthly government payment per senior, independent of the minimum wage. */
   pensionPerSenior: number = BALANCE.defaultPensionPerSenior;
+  costTaxRates: CostTaxRates = defaultCostTaxRates();
   /** Aggregate social state; individual residents are represented by their homes. */
   society = { sick: 0, prisoners: 0, deaths: 0, recentDeaths: 0, untreatedDeaths: 0, prisonOverflow: 0 };
   /**

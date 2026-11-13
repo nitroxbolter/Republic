@@ -58,11 +58,10 @@ Five zone tools, keys `1`–`5`:
 
 ## 5. Budget & Taxes
 
-- **Tax rate:** 5–100%, default 9%.
-  - Income = (residents × $3 + workers × $2) × rate ÷ 9%.
-  - Taxes change household spending relative to disposable income at the base rate. The household-spending factor flows through commercial sales, commercial hiring, industrial production, employment and housing demand; there is no separate tax subtraction from every zoning bar.
-- **Upkeep (monthly):** roads as before, plus each civic building's `upkeep` (park $1, town hall $50, the services and utilities in the tables above).
-- **Budget panel:** opened by clicking the funds in the top bar. It shows the tax slider, last month's income, expenses by group (roads, services, utilities, parks) and the net result.
+- **Company tax:** 0–100%, default 9%, levied on estimated commercial and industrial turnover. It never reduces a salary or pension directly. Higher rates lower business activity, employment and household purchasing power indirectly.
+- **Resident taxes:** independent 0–100% rates on energy, water, housing and transport bills, initially 0%. Imported food costs $200 per month without tax. These bills and taxes are deducted from wages and pensions. Utility bills paid by supplied homes enter public revenue; utility maintenance remains a public expense.
+- **Upkeep (monthly):** roads as before, plus each civic building's `upkeep` (park $1, town hall $50, the services and utilities in the tables above). Public services pay their fixed base per building. For the population-dependent portion, each occupied home is shared equally among working buildings of the same service whose coverage reaches it. Overlapping hospitals, police or fire stations therefore do not each charge for the same residents; a unit outside their reach gets no population load. Hospitals and trauma centres share the hospital load.
+- **Budget panel:** opened by clicking the funds in the top bar. It shows the company tax, four resident tax sliders with their currency deductions, income policies, monthly expenses and separate company and resident tax totals.
 
 ## 6. Civic Panel
 

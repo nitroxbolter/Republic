@@ -44,6 +44,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser, Bun: 'readonly' } },
+  },
+  {
     // The simulation must stay pure: no rendering, UI or DOM dependencies.
     files: ['src/sim/**/*.ts'],
     rules: {

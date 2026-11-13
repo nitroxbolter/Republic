@@ -7,8 +7,8 @@ import { isWorking } from './utilities';
 
 /** Cohorts are aggregate counts, so cities with many residents remain cheap to simulate. */
 export function demographics(population: number) {
-  const children = Math.round(population * 0.2);
-  const youth = Math.round(population * 0.15);
+  const children = 0;
+  const youth = 0;
   const seniors = Math.round(population * 0.13);
   return { children, youth, adults: Math.max(0, population - children - youth - seniors), seniors };
 }
@@ -22,7 +22,7 @@ export function residentCount(world: World): number {
 
 export function workingAge(population: number, sick = 0, prisoners = 0): number {
   const ages = demographics(population);
-  return Math.max(0, Math.round(ages.adults * 0.9 + ages.youth * 0.45) - Math.round(sick * 0.5) - prisoners);
+  return Math.max(0, ages.adults - Math.round(sick * 0.5) - prisoners);
 }
 
 export function societyReport(city: City) {

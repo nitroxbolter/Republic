@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/shared/balance';
-import { Lifestyle } from '../src/sim/buildings/catalog';
+import { defaultCostTaxRates, livingCosts } from '../src/sim/systems/livingCosts';
 import { applyPlace, planPlace } from '../src/sim/commands';
 import { Stage } from '../src/sim/stages';
-import { collectBudget, monthlyBudget } from '../src/sim/systems/budget';
+import { collectBudget, monthlyBudget, monthlyUpkeep } from '../src/sim/systems/budget';
 import { garbageDay } from '../src/sim/systems/garbage';
 import { zoneDemand } from '../src/sim/systems/growth';
 import { economyReport, householdPurchasingPower } from '../src/sim/systems/economy';
@@ -29,24 +29,60 @@ describe('budget', () => {
     return { t, homes, shop };
   }
 
-  it('taxes scale with the rate: 0% collects nothing, twice the base rate collects twice as much', () => {
+  it('the general tax is paid by companies while utility bills are paid by residents', () => {
     const { t } = taxed();
-    const base = monthlyBudget(t.world, BALANCE.baseTaxRate).income;
-    expect(base).toBe(Math.round(80 * BALANCE.taxPerResident + 4 * BALANCE.taxPerWorker));
-    expect(monthlyBudget(t.world, 0).income).toBe(0);
-    expect(monthlyBudget(t.world, BALANCE.baseTaxRate * 2).income).toBe(base * 2);
+    const zero = monthlyBudget(t.world, 0);
+    const base = monthlyBudget(t.world, BALANCE.baseTaxRate);
+    const high = monthlyBudget(t.world, BALANCE.baseTaxRate * 2);
+    expect(zero.businessTaxRevenue).toBe(0);
+    expect(zero.residentTaxRevenue).toBe(0);
+    expect(zero.utilityRevenue).toBeGreaterThan(0);
+    expect(zero.utilityRevenue).toBeLessThanOrEqual(80 * (BALANCE.energyBill + BALANCE.waterBill));
+    expect(base.businessTaxRevenue).toBeGreaterThan(0);
+    expect(base.residentTaxRevenue).toBe(0);
+    expect(high.businessTaxRevenue).toBeGreaterThan(base.businessTaxRevenue);
+    expect(high.residentTaxRevenue).toBe(0);
+    expect(base.taxRevenue).toBe(base.businessTaxRevenue + base.residentTaxRevenue);
+    expect(livingCosts(BALANCE.defaultMinimumWage, defaultCostTaxRates()).disposable).toBe(210);
   });
 
-  it('better-off homes pay more, construction sites and abandoned homes pay nothing', () => {
+  it('construction sites and abandoned homes do not contribute to bills or taxes', () => {
     const { t, homes } = taxed();
     const base = monthlyBudget(t.world).income;
-    homes[0].lifestyle = Lifestyle.Prosperous;
-    const richer = monthlyBudget(t.world).income;
-    expect(richer - base).toBe(Math.round(20 * BALANCE.taxPerResident * (BALANCE.lifestyleTax[Lifestyle.Prosperous] - 1)));
-    homes[0].lifestyle = Lifestyle.Basic;
     homes[1].abandoned = true;
     homes[2].construction = 2;
-    expect(monthlyBudget(t.world).income).toBe(base - Math.round(40 * BALANCE.taxPerResident));
+    expect(monthlyBudget(t.world).income).toBeLessThan(base);
+    expect(monthlyBudget(t.world).workers + monthlyBudget(t.world).seniors).toBe(40);
+  });
+
+  it('each cost tax is independent and payments cannot exceed income after essentials', () => {
+    const { t } = taxed();
+    const rates = defaultCostTaxRates();
+    rates.energy = 5;
+    rates.water = 6;
+    const sample = livingCosts(1_200, rates);
+    expect(sample.base).toBe(990);
+    expect(sample.categoryTax).toBeCloseTo(7.6);
+    expect(sample.disposable).toBeCloseTo(202.4);
+    rates.energy = 0;
+    rates.water = 0;
+    const base = monthlyBudget(t.world);
+    rates.energy = 10;
+    const energy = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates);
+    expect(energy.taxRevenue).toBeGreaterThan(base.taxRevenue);
+    rates.energy = 0;
+    rates.housing = 10;
+    const housing = monthlyBudget(t.world, BALANCE.baseTaxRate, BALANCE.defaultPensionPerSenior, BALANCE.defaultMinimumWage, rates);
+    expect(housing.residentTaxRevenue).toBeGreaterThan(energy.residentTaxRevenue);
+    rates.housing = 100;
+    rates.transport = 100;
+    const pension = livingCosts(100, rates);
+    expect(pension.disposable).toBe(0);
+    expect(pension.governmentPaid).toBe(0);
+    expect(pension.shortfall).toBeGreaterThan(0);
+    const disconnected = livingCosts(1_200, { ...defaultCostTaxRates(), energy: 100, water: 100 }, { energy: false, water: false });
+    expect(disconnected.utilityPaid).toBe(0);
+    expect(disconnected.categoryTax).toBe(0);
   });
 
   it('upkeep: every road tile, every bridge tile at the bridge rate, every civic building by group', () => {
@@ -61,6 +97,38 @@ describe('budget', () => {
     expect(r.breakdown.utilities).toBeGreaterThan(0);
     expect(r.breakdown.parks).toBeGreaterThan(0);
     expect(r.expenses).toBe(r.breakdown.roads + r.breakdown.services + r.breakdown.utilities + r.breakdown.parks);
+  });
+
+  it('shares 1,000 residents between overlapping public services while keeping each fixed base', () => {
+    const t = street();
+    const hospitalA = t.place('hospital', 20, 7);
+    const policeA = t.place('police_station', 17, 9);
+    const fireA = t.place('fire_station', 18, 9);
+    t.refresh();
+    for (let i = 0; i < 4; i++) {
+      t.world.addBuilding({ def: 'condo_tower', x: 22 + i * 2, y: 12, variant: 0, grown: true, occupants: 250 }, 2, 2);
+    }
+    expect(monthlyUpkeep(t.world, hospitalA)).toBe(640);
+    expect(monthlyUpkeep(t.world, policeA)).toBe(75);
+    expect(monthlyUpkeep(t.world, fireA)).toBe(75);
+
+    const hospitalB = t.place('hospital', 32, 7);
+    const policeB = t.place('police_station', 33, 9);
+    const fireB = t.place('fire_station', 34, 9);
+    t.refresh();
+    expect(monthlyUpkeep(t.world, hospitalA)).toBe(480);
+    expect(monthlyUpkeep(t.world, hospitalB)).toBe(480);
+    expect(monthlyUpkeep(t.world, policeA) + monthlyUpkeep(t.world, policeB)).toBe(136);
+    expect(monthlyUpkeep(t.world, fireA) + monthlyUpkeep(t.world, fireB)).toBe(136);
+    expect(monthlyBudget(t.world).breakdown.services).toBe(960 + 136 + 136);
+
+    hospitalB.entrance = -1;
+    expect(monthlyUpkeep(t.world, hospitalA)).toBe(640);
+    expect(monthlyUpkeep(t.world, hospitalB)).toBe(320);
+
+    const hospitalC = t.place('hospital', 38, 7);
+    t.refresh();
+    expect([hospitalA, hospitalB, hospitalC].map((b) => monthlyUpkeep(t.world, b))).toEqual([427, 427, 427]);
   });
 
   it('a city can go into debt; it then cannot build, but keeps running', () => {
@@ -100,7 +168,7 @@ describe('taxes and the private economy', () => {
     expect(low.commerceRevenue).toBeGreaterThan(normal.commerceRevenue);
     expect(low.commerceActivity).toBeGreaterThanOrEqual(normal.commerceActivity);
     expect(low.industrialProduction).toBeGreaterThanOrEqual(normal.industrialProduction);
-    expect(moderate.purchasingPower).toBeCloseTo(0.934, 2);
+    expect(moderate.purchasingPower).toBeLessThan(normal.purchasingPower);
     expect(moderate.commerceRevenue).toBeLessThan(normal.commerceRevenue);
     expect(moderate.commerceRevenue).toBeGreaterThan(economyReport(t.world, BALANCE.maxTaxRate).commerceRevenue);
   });
@@ -125,7 +193,7 @@ describe('taxes and the private economy', () => {
     const highStats = cityStats(t.world, t.city.taxRate);
     const highHappiness = needs.report.happiness;
 
-    expect(householdPurchasingPower(BALANCE.maxTaxRate)).toBe(0.1);
+    expect(householdPurchasingPower(BALANCE.maxTaxRate)).toBeLessThan(householdPurchasingPower(BALANCE.baseTaxRate));
     expect(highEconomy.householdSpending).toBeLessThan(lowEconomy.householdSpending);
     expect(highEconomy.commerceRevenue).toBeLessThan(lowEconomy.commerceRevenue);
     expect(highEconomy.commerceActivity).toBeLessThan(lowEconomy.commerceActivity);

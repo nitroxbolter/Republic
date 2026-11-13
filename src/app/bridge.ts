@@ -12,6 +12,7 @@ import {
   gridOnAtom,
   hoveredTileAtom,
   inspectAtom,
+  zoneInspectAtom,
   mutedAtom,
   noticesAtom,
   inboxAtom,
@@ -69,6 +70,7 @@ export function connectGameToStore(game: Game, store: Store): () => void {
     game.events.on('worldChanged', (v) => store.set(worldVersionAtom, v)),
     game.events.on('city', (c) => store.set(cityAtom, c)),
     game.events.on('inspect', (i) => store.set(inspectAtom, i)),
+    game.events.on('zoneInspect', (i) => store.set(zoneInspectAtom, i)),
     game.events.on('toolPreview', (p) => store.set(toolPreviewAtom, p)),
     game.events.on('notice', (n) => {
       // Alerts with a key stay in the inbox: a newer one with the same key replaces the older.
@@ -95,5 +97,6 @@ export function connectGameToStore(game: Game, store: Store): () => void {
     store.set(gameAtom, null);
     store.set(toolPreviewAtom, null);
     store.set(inspectAtom, null);
+    store.set(zoneInspectAtom, null);
   };
 }

@@ -7,19 +7,28 @@ import { roadSpec } from '../roadTypes';
 import type { World } from '../World';
 import { cityStats } from './population';
 import { demographics } from './society';
+import { defaultCostTaxRates, livingCosts, type CostTaxRates } from './livingCosts';
+import { economyReport } from './economy';
 import type { DayOutcome, SimSystem } from '../core/System';
 
-/** Budget system: monthly taxes (by lifestyle) and recycling sales against road and civic upkeep (docs/specs/core.md, "Budget & Taxes"). */
+/** Monthly company and resident taxes, utility bills and recycling against upkeep and pensions. */
 
 export interface BudgetReport {
   income: number;
   expenses: number;
   net: number;
-  /** Tax rate (percent) the income was collected at. */
+  /** Company tax rate (percent) used for this report. */
   taxRate: number;
   breakdown: { roads: number; services: number; utilities: number; parks: number; pensions: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
+  taxRevenue: number;
+  businessTaxRevenue: number;
+  residentTaxRevenue: number;
+  businessTurnover: number;
+  utilityRevenue: number;
+  workers: number;
+  seniors: number;
 }
 
 const SERVICE_UPKEEP_SHARE: Readonly<Partial<Record<ServiceKind, number>>> = {
@@ -39,49 +48,98 @@ const RECREATION_BUILDINGS: ReadonlySet<BuildingId> = new Set([
   'theme_park',
 ]);
 
-/** Monthly operating cost: a fixed base plus a type-specific share per 1,000 residents served. */
-export function monthlyUpkeep(world: World, building: BuildingInstance): number {
+interface ServiceProvider {
+  building: BuildingInstance;
+  x: number;
+  y: number;
+  radiusSquared: number;
+}
+
+/** A resident is assigned once per service kind, shared among working units in reach. */
+function serviceResidentLoads(world: World): ReadonlyMap<number, number> {
+  const providers = new Map<ServiceKind, ServiceProvider[]>();
+  const homes: BuildingInstance[] = [];
+  for (const b of world.buildings.values()) {
+    const d: BuildingDef = BUILDINGS[b.def];
+    if (d.category === 'residential' && b.construction === 0 && !b.abandoned && b.occupants > 0) homes.push(b);
+    if (!d.service || !d.radius || !isWorking(b)) continue;
+    const group = providers.get(d.service) ?? [];
+    group.push({ building: b, x: b.x + d.size.w / 2, y: b.y + d.size.h / 2, radiusSquared: d.radius * d.radius });
+    providers.set(d.service, group);
+  }
+
+  const loads = new Map<number, number>();
+  for (const home of homes) {
+    const d = BUILDINGS[home.def];
+    const x = home.x + d.size.w / 2;
+    const y = home.y + d.size.h / 2;
+    for (const group of providers.values()) {
+      const inReach = group.filter((p) => (p.x - x) ** 2 + (p.y - y) ** 2 <= p.radiusSquared);
+      if (inReach.length === 0) continue;
+      const portion = home.occupants / inReach.length;
+      for (const p of inReach) loads.set(p.building.id, (loads.get(p.building.id) ?? 0) + portion);
+    }
+  }
+  return loads;
+}
+
+interface UpkeepContext {
+  population: number;
+  serviceResidents: ReadonlyMap<number, number>;
+}
+
+function upkeepContext(world: World): UpkeepContext {
+  return { population: cityStats(world).population, serviceResidents: serviceResidentLoads(world) };
+}
+
+/** Monthly operating cost: each building's fixed base plus its share per 1,000 residents served. */
+export function monthlyUpkeep(world: World, building: BuildingInstance, context?: UpkeepContext): number {
   const d: BuildingDef = BUILDINGS[building.def];
   const base = upkeepOf(building.def);
   if (base <= 0) return 0;
-
-  let servedResidents = 0;
-  if (d.service && d.radius) {
-    const cx = building.x + d.size.w / 2;
-    const cy = building.y + d.size.h / 2;
-    const radiusSquared = d.radius * d.radius;
-    for (const home of world.buildings.values()) {
-      if (home.construction > 0 || home.abandoned || BUILDINGS[home.def].category !== 'residential') continue;
-      const homeDef = BUILDINGS[home.def];
-      const hx = home.x + homeDef.size.w / 2;
-      const hy = home.y + homeDef.size.h / 2;
-      if ((cx - hx) ** 2 + (cy - hy) ** 2 <= radiusSquared) servedResidents += home.occupants;
-    }
-  } else {
-    servedResidents = cityStats(world).population;
-  }
-
+  const current = context ?? upkeepContext(world);
+  const servedResidents = d.service ? (current.serviceResidents.get(building.id) ?? 0) : current.population;
   const share = d.service ? (SERVICE_UPKEEP_SHARE[d.service] ?? 0.5) : RECREATION_BUILDINGS.has(building.def) ? 0.1 : 1;
   return Math.round(base * (1 + (servedResidents / BALANCE.upkeepResidentsPerBase) * share));
 }
 
-/** Taxes scale with the rate: the base rate gives the BALANCE per-resident and per-worker amounts. */
-export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRate, pensionPerSenior: number = BALANCE.defaultPensionPerSenior): BudgetReport {
+/** Monthly government income from company turnover, household bill taxes and public utilities. */
+export function monthlyBudget(
+  world: World,
+  taxRate: number = BALANCE.baseTaxRate,
+  pensionPerSenior: number = BALANCE.defaultPensionPerSenior,
+  minimumWage: number = BALANCE.defaultMinimumWage,
+  costTaxRates: CostTaxRates = defaultCostTaxRates(),
+): BudgetReport {
   const s = cityStats(world);
-  const rate = taxRate / BALANCE.baseTaxRate;
-  // Better-off residents pay more (docs/specs/evolution.md); cityStats' population is the same homes.
-  let residentTax = 0;
   let recycled = 0;
+  let taxesPaid = 0;
+  let utilityBillsPaid = 0;
+  let residentsCounted = 0;
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
     if (d.category === 'residential' && b.construction === 0 && !b.abandoned) {
-      residentTax += b.occupants * BALANCE.taxPerResident * BALANCE.lifestyleTax[b.lifestyle];
+      const seniors = demographics(residentsCounted + b.occupants).seniors - demographics(residentsCounted).seniors;
+      const workers = b.occupants - seniors;
+      residentsCounted += b.occupants;
+      const supplied = { energy: b.powered, water: b.watered };
+      const workerCosts = livingCosts(minimumWage * BALANCE.lifestyleWage[b.lifestyle], costTaxRates, supplied);
+      const seniorCosts = livingCosts(pensionPerSenior, costTaxRates, supplied);
+      taxesPaid += workers * workerCosts.taxesPaid + seniors * seniorCosts.taxesPaid;
+      const householdUtilityPaid = workers * workerCosts.utilityPaid + seniors * seniorCosts.utilityPaid;
+      utilityBillsPaid += householdUtilityPaid;
     }
     // Recycling centres count this month's tons in `filled` (sim/systems/garbage.ts).
     if (d.garbage?.recycles) recycled += b.filled * d.garbage.recycles;
   }
   const recycling = Math.round(recycled * BALANCE.recyclePrice);
-  const income = Math.round((residentTax + s.workers * BALANCE.taxPerWorker) * rate) + recycling;
+  const ages = demographics(s.population);
+  const residentTaxRevenue = Math.round(taxesPaid);
+  const businessTurnover = economyReport(world, taxRate, { minimumWage, pensionPerSenior, costTaxRates }).businessTurnover;
+  const businessTaxRevenue = Math.round(businessTurnover * taxRate / 100);
+  const taxRevenue = residentTaxRevenue + businessTaxRevenue;
+  const utilityRevenue = Math.round(utilityBillsPaid);
+  const income = taxRevenue + utilityRevenue + recycling;
   let roads = 0;
   for (let i = 0; i < world.road.length; i++) {
     const r = world.road[i];
@@ -94,14 +152,15 @@ export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRat
   let services = 0;
   let utilities = 0;
   let parks = 0;
+  const context: UpkeepContext = { population: s.population, serviceResidents: serviceResidentLoads(world) };
   for (const b of world.buildings.values()) {
     const d: BuildingDef = BUILDINGS[b.def];
-    const upkeep = monthlyUpkeep(world, b);
+    const upkeep = monthlyUpkeep(world, b, context);
     if (d.group === 'services') services += upkeep;
     else if (d.group === 'utilities') utilities += upkeep;
     else parks += upkeep;
   }
-  const pensions = demographics(s.population).seniors * pensionPerSenior;
+  const pensions = ages.seniors * pensionPerSenior;
   const expenses = Math.round(roads + services + utilities + parks + pensions);
   return {
     income,
@@ -110,6 +169,13 @@ export function monthlyBudget(world: World, taxRate: number = BALANCE.baseTaxRat
     taxRate,
     breakdown: { roads: Math.round(roads), services, utilities, parks, pensions },
     recycling,
+    taxRevenue,
+    businessTaxRevenue,
+    residentTaxRevenue,
+    businessTurnover,
+    utilityRevenue,
+    workers: ages.adults,
+    seniors: ages.seniors,
   };
 }
 
@@ -125,7 +191,7 @@ export interface HeldTaxes {
 
 /** Apply a month's budget to the city: upkeep from the funds, taxes to the funds or the Town Hall's chest. */
 export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | null } {
-  const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior);
+  const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates);
   if (!city.collectsTaxes) {
     city.funds += r.net;
     return { ...r, held: null };
@@ -177,6 +243,6 @@ export class BudgetSystem implements SimSystem {
   }
   /** Next month at today's numbers. */
   forecast(): BudgetReport {
-    return monthlyBudget(this.city.world, this.city.taxRate, this.city.pensionPerSenior);
+    return monthlyBudget(this.city.world, this.city.taxRate, this.city.pensionPerSenior, this.city.minimumWage, this.city.costTaxRates);
   }
 }

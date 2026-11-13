@@ -1,5 +1,5 @@
 import { atom } from 'jotai';
-import type { BudgetInfo, CityInfo, DayNightMode, DebugStats, InspectInfo, Notice, ToolPreviewInfo } from '../game/events';
+import type { BudgetInfo, CityInfo, DayNightMode, DebugStats, InspectInfo, Notice, ToolPreviewInfo, ZoneInspectInfo } from '../game/events';
 import type { Game } from '../game/Game';
 import type { ToolId } from '../game/tools';
 import type { SaveStatus } from '../save/CitySaver';
@@ -39,6 +39,7 @@ export const pavementAtom = atom(0);
 export const flyoverAtom = atom(false);
 export const cityAtom = atom<CityInfo | null>(null);
 export const inspectAtom = atom<InspectInfo | null>(null);
+export const zoneInspectAtom = atom<ZoneInspectInfo | null>(null);
 export const dayNightAtom = atom<DayNightMode>('cycle');
 export const budgetAtom = atom<BudgetInfo | null>(null);
 
