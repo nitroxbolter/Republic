@@ -1280,6 +1280,24 @@ button.funds:hover {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.035);
 }
+.bank-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.bank-field input,
+.bank-field select {
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-panel);
+  border-radius: 6px;
+  background: var(--bg-app);
+  color: var(--text);
+  font: inherit;
+}
 .budget-tax-item {
   padding-top: 8px;
   border-top: 1px solid var(--border-panel);
@@ -1608,6 +1626,95 @@ button.funds:hover {
   max-height: none;
   min-height: 0;
   flex: 0 1 auto;
+}
+.updates-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.75fr) minmax(0, 1.5fr);
+  gap: 24px;
+  padding: 22px 26px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.updates-card.is-menu {
+  flex: 0 0 auto;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #151c25;
+}
+.updates-card.is-landing {
+  margin-bottom: 52px;
+  border-color: rgba(240, 178, 62, 0.36);
+  background: linear-gradient(120deg, rgba(240, 178, 62, 0.10), rgba(236, 228, 211, 0.035));
+}
+.updates-kicker,
+.updates-entry time {
+  color: var(--sign);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.updates-head h2 {
+  margin: 7px 0 8px;
+  font-family: var(--font-display);
+  font-size: 25px;
+  line-height: 1.1;
+}
+.updates-head p {
+  margin: 0;
+  color: var(--paper-dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.updates-list,
+.updates-entry ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.updates-entry + .updates-entry {
+  padding-top: 15px;
+  border-top: 1px solid var(--rule);
+}
+.updates-entry-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 14px;
+}
+.updates-entry h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.updates-entry ul {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+}
+.updates-entry ul li {
+  position: relative;
+  padding-left: 14px;
+  color: var(--paper-dim);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.updates-entry ul li::before {
+  position: absolute;
+  left: 0;
+  color: var(--sign);
+  content: '•';
+}
+.updates-card.is-menu .updates-head p,
+.updates-card.is-menu .updates-entry ul li { color: var(--text-dim); }
+@media (max-width: 650px) {
+  .updates-card { grid-template-columns: 1fr; gap: 16px; padding: 18px; }
+  .updates-card.is-menu { max-height: 270px; }
 }
 .ng-account {
   position: fixed;
@@ -5459,6 +5566,9 @@ summary {
   height: 40px;
   margin: 0;
   border-radius: 9px;
+}
+@media (max-width: 400px) {
+  .top-bar.is-phone .top-bank { display: none; }
 }
 .top-bar.is-phone .stat {
   gap: 4px;

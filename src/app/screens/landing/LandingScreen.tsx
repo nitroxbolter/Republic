@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { authAtom, authDialogAtom } from '../../atoms';
 import { appPath } from '../../basePath';
 import { heroAnchor, HeroCity } from './HeroCity';
+import { UpdatesCard } from '../UpdatesCard';
 
 interface LandingScreenProps {
   /** Continue as a guest (cities are saved on this device). */
@@ -133,6 +134,8 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
             <figcaption>Every building, tree and street here is drawn by the game, live in your browser.</figcaption>
           </figure>
         </section>
+
+        <UpdatesCard variant="landing" />
 
         <section className="landing-steps is-world" aria-labelledby="landing-world-title">
           <h2 id="landing-world-title" className="landing-section-title">

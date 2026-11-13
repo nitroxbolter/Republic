@@ -26,6 +26,7 @@ function Lines({ r }: { r: BudgetReport }) {
     ['Incentivos à migração', r.breakdown.demographicIncentives],
     ['Subsídios habitacionais', r.breakdown.housingSubsidies],
     ['Apoio a novas moradias', r.breakdown.constructionGrants],
+    ['Juros de empréstimos bancários', r.bankFlow.loanInterest],
   ];
   return (
     <div className="budget-card budget-lines">
@@ -36,6 +37,7 @@ function Lines({ r }: { r: BudgetReport }) {
       <div className="budget-line income"><span>Contas de energia e água</span><strong>+{money(r.utilityRevenue)}</strong></div>
       {r.propertyFlows.publicRent > 0 && <div className="budget-line income"><span>Aluguéis de imóveis públicos</span><strong>+{money(r.propertyFlows.publicRent)}</strong></div>}
       {r.propertyFlows.interest > 0 && <div className="budget-line income"><span>Juros recebidos de financiamentos</span><strong>+{money(r.propertyFlows.interest)}</strong></div>}
+      {r.bankFlow.investmentInterest > 0 && <div className="budget-line income"><span>Juros de aplicações bancárias</span><strong>+{money(r.bankFlow.investmentInterest)}</strong></div>}
       {r.recycling > 0 && <div className="budget-line income"><span>Reciclagem</span><strong>+{money(r.recycling)}</strong></div>}
       <div className="budget-line total income"><span>Arrecadação total</span><strong>+{money(r.income)}</strong></div>
 
@@ -47,6 +49,8 @@ function Lines({ r }: { r: BudgetReport }) {
         </div>
       ))}
       <div className="budget-line total"><span>Custo total</span><strong>−{money(r.expenses)}</strong></div>
+      {r.bankFlow.investmentPrincipal > 0 && <div className="budget-line income"><span>Principal de aplicação resgatado no caixa</span><strong>+{money(r.bankFlow.investmentPrincipal)}</strong></div>}
+      {r.bankFlow.loanPrincipal > 0 && <div className="budget-line"><span>Principal de empréstimos amortizado no caixa</span><strong>−{money(r.bankFlow.loanPrincipal)}</strong></div>}
       <div className={`budget-line total ${r.net >= 0 ? 'gain' : 'loss'}`}>
         <span>Arrecadação − custo = resultado previsto</span>
         <strong>

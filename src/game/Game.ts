@@ -34,6 +34,7 @@ import { cityStats } from '../sim/systems/population';
 import { economyReport } from '../sim/systems/economy';
 import { societyReport } from '../sim/systems/society';
 import { demographicReport, type DemographicStrategy, type PermitLimits } from '../sim/systems/demography';
+import { openInvestment, openLoan, type BankResult } from '../sim/systems/bank';
 import type { Traffic } from '../sim/systems/traffic';
 import { happinessColor, type OverlayTile } from '../render/Renderer';
 import { rectTiles, RoadType, roadMask, type BuildableRoad, type TilePos } from '../sim/roads';
@@ -898,6 +899,18 @@ export class Game {
     this.edits++; this.emitCity(); this.emitBudget();
   }
 
+  investAtBank(amount: number, months: number): BankResult {
+    const result = openInvestment(this.city, amount, months);
+    if (result.ok) { this.edits++; this.events.emit('funds', this.city.funds); this.emitCity(); this.emitBudget(); }
+    return result;
+  }
+
+  borrowFromBank(amount: number, months: number): BankResult {
+    const result = openLoan(this.city, amount, months);
+    if (result.ok) { this.edits++; this.events.emit('funds', this.city.funds); this.emitCity(); this.emitBudget(); }
+    return result;
+  }
+
   /** Budget panel data: the tax rate, last month's report and what next month looks like now. */
   emitBudget() {
     const u = this.sim.utilities.report;
@@ -976,6 +989,7 @@ export class Game {
       economy: economyReport(this.world, this.city.taxRate, this.city),
       society: societyReport(this.city),
       demography: demographicReport(this.city),
+      bank: { nextId: this.city.bank.nextId, investments: this.city.bank.investments.map((item) => ({ ...item })), loans: this.city.bank.loans.map((item) => ({ ...item })) },
       demand: this.sim.growth.demand(),
       demandWhy: this.sim.growth.explainWithDiagnostics(diagnostics),
       traffic: this.sim.commute.report,

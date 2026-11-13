@@ -17,6 +17,7 @@ import { AccountButton } from '../account/AccountButton';
 import { appPath } from '../basePath';
 import { DEFAULT_SEED, randomSeed } from '../options';
 import { CityList } from './CityList';
+import { UpdatesCard } from './UpdatesCard';
 import { useCities } from './useCities';
 import { uniqueCityName } from './cityNames';
 
@@ -156,6 +157,7 @@ export function NewGameScreen({ onStart, onOpen, notice }: NewGameScreenProps) {
           </p>
         )}
         <CityList cities={cities} onOpen={onOpen} />
+        <UpdatesCard variant="menu" />
         {!showForm && !oneCityPerAccount && (
           <button type="button" className="panel ng-found" onClick={() => setFounding(true)}>
             <span className="ng-found-plus" aria-hidden="true">

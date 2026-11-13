@@ -18,6 +18,7 @@ import type { societyReport } from '../sim/systems/society';
 import type { ToolId } from './tools';
 import type { PropertyStatus } from '../sim/systems/realEstate';
 import type { demographicReport } from '../sim/systems/demography';
+import type { BankState } from '../sim/systems/bank';
 
 /** Typed event bus: the game emits, the UI bridge / renderer listen. Nothing polls. */
 export interface GameEventMap {
@@ -71,6 +72,7 @@ export type DayNightMode = 'cycle' | 'day' | 'night';
 export interface CityInfo {
   population: number;
   demography: ReturnType<typeof demographicReport>;
+  bank: BankState;
   housing: number;
   jobs: number;
   workers: number;

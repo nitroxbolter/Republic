@@ -17,7 +17,8 @@ export type OverlayId =
   | 'more'
   /** The budget and taxes panel (from the funds button). */
   | 'budget'
-  | 'demography';
+  | 'demography'
+  | 'bank';
 
 export const overlayAtom = atom<OverlayId | null>(null);
 

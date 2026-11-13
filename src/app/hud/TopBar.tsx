@@ -336,6 +336,15 @@ function Funds({ short }: { short?: boolean }) {
   );
 }
 
+function BankButton() {
+  const bank = useOverlay('bank');
+  return <button type="button" className={`icon-button top-bank ${bank.open ? 'is-on' : ''}`} title="Banco: aplicações e empréstimos" aria-label="Abrir Banco da cidade" aria-expanded={bank.open} onClick={bank.toggle}>
+    <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m3 9 9-5 9 5M4 10h16M6 11v7m4-7v7m4-7v7m4-7v7M3 19h18M2 21h20" />
+    </svg>
+  </button>;
+}
+
 function Population({ short }: { short?: boolean }) {
   const city = useAtomValue(cityAtom);
   const demography = useOverlay('demography');
@@ -378,6 +387,7 @@ function PhoneTopBar() {
         {attention && <span className="top-more-dot" aria-hidden="true" />}
       </button>
       <Funds short />
+      <BankButton />
       <Population short />
       <DemandMeter demand={city?.demand} why={city?.demandWhy} />
       <span className="top-spacer" />
@@ -479,6 +489,7 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
       </button>
       <DemandMeter demand={city?.demand} why={city?.demandWhy} />
       <Funds />
+      <BankButton />
       <span className="top-divider" />
       <div className="speed-group" role="group" aria-label="Game speed" data-tour="speed">
         {SPEED_LABELS.map((label, i) => (

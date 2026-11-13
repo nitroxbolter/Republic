@@ -11,6 +11,7 @@ import { BASE_COSTS, COST_KINDS, defaultCostTaxRates, livingCosts, type CostKind
 import { economyReport } from './economy';
 import { propertyBills, forecastPropertyFlows, settleProperties, type PropertyFlows, type PropertyPayment } from './realEstate';
 import { demographicMonthlyCost } from './demography';
+import { forecastBankMonth, settleBankMonth, type BankFlow } from './bank';
 import type { DayOutcome, SimSystem } from '../core/System';
 
 /** Monthly company and resident taxes, utility bills and recycling against upkeep and pensions. */
@@ -46,6 +47,7 @@ export interface BudgetReport {
   seniors: number;
   propertyFlows: PropertyFlows;
   propertyPayments: ReadonlyMap<number, PropertyPayment>;
+  bankFlow: BankFlow;
 }
 
 export interface CostBalance {
@@ -273,18 +275,19 @@ export function monthlyBudget(
   const taxRevenue = residentTaxRevenue + businessTaxRevenue;
   const utilityRevenue = costBalances.energy.baseRevenue + costBalances.water.baseRevenue;
   const forecastFlows = forecastPropertyFlows(world, propertyPayments);
-  const income = taxRevenue + utilityRevenue + recycling + Math.round(forecastFlows.interest + forecastFlows.publicRent);
+  const bankFlow = policyCity ? forecastBankMonth(policyCity.bank) : forecastBankMonth({ nextId: 1, investments: [], loans: [] });
+  const income = taxRevenue + utilityRevenue + recycling + Math.round(forecastFlows.interest + forecastFlows.publicRent) + bankFlow.investmentInterest;
   const pensions = ages.seniors * pensionPerSenior;
   const demographicIncentives = policyCity ? demographicMonthlyCost(policyCity, true) : 0;
   const constructionGrants = policyCity?.demography.monthConstructionGrants ?? 0;
-  const expenses = Math.round(roads + transport + services + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating);
+  const expenses = Math.round(roads + transport + services + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating) + bankFlow.loanInterest;
   return {
     income,
     expenses,
     net: income - expenses,
     cashNet: policyCity?.collectsTaxes
-      ? Math.round(forecastFlows.principal + forecastFlows.interest + forecastFlows.publicRent - expenses)
-      : income - expenses + forecastFlows.principal,
+      ? Math.round(forecastFlows.principal + forecastFlows.interest + forecastFlows.publicRent - expenses) + bankFlow.investmentPrincipal + bankFlow.investmentInterest - bankFlow.loanPrincipal
+      : income - expenses + forecastFlows.principal + bankFlow.investmentPrincipal - bankFlow.loanPrincipal,
     taxRate,
     incomeTaxRate,
     breakdown: { roads: Math.round(roads), transport, services, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants },
@@ -305,6 +308,7 @@ export function monthlyBudget(
     seniors: ages.seniors,
     propertyFlows: forecastFlows,
     propertyPayments,
+    bankFlow,
   };
 }
 
@@ -323,6 +327,8 @@ export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | nu
   const openingFunds = city.funds;
   const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
   const flows = settleProperties(city.world, Math.floor(city.day / BALANCE.daysPerMonth), r.propertyPayments);
+  const bankFlow = settleBankMonth(city.bank);
+  r.bankFlow = bankFlow;
   const anticipated = r.propertyFlows;
   city.propertyLedger.recovered += flows.principal + flows.interest;
   flows.loanedTotal = city.propertyLedger.loaned;
@@ -337,17 +343,17 @@ export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | nu
   city.propertyLedger.repaidEarlyThisMonth = 0;
   city.propertyLedger.earlyInterestThisMonth = 0;
   r.propertyFlows = flows;
-  const regularIncome = r.income - Math.round(anticipated.interest + anticipated.publicRent);
+  const regularIncome = r.income - Math.round(anticipated.interest + anticipated.publicRent) - bankFlow.investmentInterest;
   r.income += Math.round(flows.interest + flows.publicRent) - Math.round(anticipated.interest + anticipated.publicRent);
   r.expenses += Math.round(flows.publicOperating) - Math.round(anticipated.publicOperating);
   r.net = r.income - r.expenses;
-  r.cashNet = r.net + flows.principal;
+  r.cashNet = r.net + flows.principal + bankFlow.investmentPrincipal - bankFlow.loanPrincipal;
   if (!city.collectsTaxes) {
     city.funds += r.cashNet;
     r.cashNet = city.funds - openingFunds;
     return { ...r, held: null };
   }
-  city.funds += flows.principal + flows.interest + flows.publicRent - r.expenses;
+  city.funds += flows.principal + flows.interest + flows.publicRent + bankFlow.investmentPrincipal + bankFlow.investmentInterest - r.expenses - bankFlow.loanPrincipal;
   r.cashNet = city.funds - openingFunds;
   const cap = Math.max(0, regularIncome) * BALANCE.chestMonths;
   const total = city.uncollected + regularIncome;

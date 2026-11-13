@@ -16,6 +16,7 @@ import type { World } from './World';
 import { ZoneType } from './zones';
 import { initialProperty, type PropertyState } from './systems/realEstate';
 import { initialDemography, type DemographicPolicy, type PermitLimits } from './systems/demography';
+import { BANK_MAX_TERM, investmentRate, loanRate, type BankState, type BankInvestment, type BankLoan } from './systems/bank';
 
 /**
  * The save format (docs/specs/saving.md, D-034): only what can't be recomputed. Terrain is
@@ -61,6 +62,7 @@ export interface SavedCity {
   readonly funds: number;
   readonly propertyLedger?: City['propertyLedger'];
   readonly demography?: DemographicPolicy;
+  readonly bank?: BankState;
   readonly day: number;
   readonly clock: number;
   readonly taxRate: number;
@@ -206,7 +208,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, bank: { nextId: city.bank.nextId, investments: city.bank.investments.map((item) => ({ ...item })), loans: city.bank.loans.map((item) => ({ ...item })) }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -298,6 +300,7 @@ export function deserialize(data: SaveData): City {
   const city = new City(world, data.city.funds);
   if (data.city.propertyLedger) city.propertyLedger = { ...data.city.propertyLedger };
   if (data.city.demography) city.demography = { ...data.city.demography, permitLimits: { ...data.city.demography.permitLimits }, permitUsed: { ...data.city.demography.permitUsed } };
+  if (data.city.bank) city.bank = { nextId: data.city.bank.nextId, investments: data.city.bank.investments.map((item) => ({ ...item })), loans: data.city.bank.loans.map((item) => ({ ...item })) };
   city.day = data.city.day;
   city.clock = data.city.clock;
   city.taxRate = data.city.taxRate;
@@ -523,6 +526,7 @@ export function parseSave(json: unknown): SaveData {
       funds: num(c, 'funds'),
       ...parsePropertyLedger(c.propertyLedger),
       ...parseDemography(c.demography),
+      ...parseBank(c.bank),
       day: num(c, 'day', 0),
       clock: num(c, 'clock', 0),
       taxRate: num(c, 'taxRate', BALANCE.minTaxRate, BALANCE.maxTaxRate),
@@ -563,6 +567,27 @@ export function parseSave(json: unknown): SaveData {
     ...parseSimState(json.sim),
     ...(isFiniteNumber(json.savedAt) && { savedAt: json.savedAt }),
   };
+}
+
+function parseBank(value: unknown): { bank?: BankState } {
+  if (!isObj(value)) return {};
+  const investments: BankInvestment[] = [];
+  const loans: BankLoan[] = [];
+  if (Array.isArray(value.investments)) for (const raw of value.investments.slice(0, 1000)) {
+    if (!isObj(raw)) continue;
+    const { id, principal, months, remainingMonths, maturityValue } = raw;
+    if (!Number.isSafeInteger(id) || !isFiniteNumber(id) || id < 1 || !isFiniteNumber(principal) || principal < 1000 || !Number.isInteger(months) || !isFiniteNumber(months) || months < 1 || months > BANK_MAX_TERM || !Number.isInteger(remainingMonths) || !isFiniteNumber(remainingMonths) || remainingMonths < 1 || remainingMonths > months || !isFiniteNumber(maturityValue) || maturityValue < principal) continue;
+    investments.push({ id, principal, months, remainingMonths, monthlyRate: investmentRate(months), maturityValue });
+  }
+  if (Array.isArray(value.loans)) for (const raw of value.loans.slice(0, 1000)) {
+    if (!isObj(raw)) continue;
+    const { id, principal, balance, months, remainingMonths, installment } = raw;
+    if (!Number.isSafeInteger(id) || !isFiniteNumber(id) || id < 1 || !isFiniteNumber(principal) || principal < 1000 || !isFiniteNumber(balance) || balance <= 0 || balance > principal || !Number.isInteger(months) || !isFiniteNumber(months) || months < 1 || months > BANK_MAX_TERM || !Number.isInteger(remainingMonths) || !isFiniteNumber(remainingMonths) || remainingMonths < 1 || remainingMonths > months || !isFiniteNumber(installment) || installment <= 0) continue;
+    loans.push({ id, principal, balance, months, remainingMonths, monthlyRate: loanRate(months), installment });
+  }
+  const maxId = Math.max(0, ...investments.map((item) => item.id), ...loans.map((item) => item.id));
+  const nextId = Number.isSafeInteger(value.nextId) && isFiniteNumber(value.nextId) && value.nextId > maxId ? value.nextId : maxId + 1;
+  return { bank: { nextId, investments, loans } };
 }
 
 function parsePropertyLedger(value: unknown): { propertyLedger?: City['propertyLedger'] } {

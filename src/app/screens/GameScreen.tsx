@@ -14,6 +14,7 @@ import { CostLabel } from '../hud/CostLabel';
 import { DebugOverlay } from '../hud/DebugOverlay';
 import { InfoPanel } from '../hud/InfoPanel';
 import { BudgetPanel } from '../hud/BudgetPanel';
+import { BankPanel } from '../hud/BankPanel';
 import { DemographyPanel } from '../hud/DemographyPanel';
 import { TrafficLegend } from '../hud/TrafficLegend';
 import { CitizensPanel } from '../hud/CitizensPanel';
@@ -207,6 +208,7 @@ function Hud({ options, onNewCity, onSave, beforeLogout }: HudProps) {
       <Toolbar />
       <InfoPanel />
       <BudgetPanel />
+      <BankPanel />
       <DemographyPanel />
       <BuildingPicker />
       <RoadPicker />

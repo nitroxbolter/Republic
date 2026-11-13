@@ -574,3 +574,11 @@ O saldo no topo indica a variação prevista do caixa no fechamento. Corrigida a
 ## 2026-11-13 — Subsídio impulsiona novas moradias
 
 O subsídio habitacional agora cria demanda residencial adicional mesmo quando a procura normal zerou, limitada pelo estoque de moradias prontas ou em construção. Cada obra iniciada sob a política acumula um apoio único proporcional ao custo do prédio, cobrado no fechamento mensal e mostrado em linha própria do orçamento. O desconto recorrente no aluguel permanece separado. O valor pendente persiste no save e zera após o fechamento. Teste confirma início forçado, respeito à licença mensal, débito da despesa e persistência.
+
+## 2026-11-13 — Banco da cidade
+
+Adicionado ícone Banco ao topo e acesso no menu móvel. O governo pode fazer aplicações de 1 a 12 meses com juros compostos e tomar empréstimos de 1 a 12 meses com parcelas mensais; prazos maiores têm taxa maior. Aplicações, parcelas e juros entram no fechamento e no relatório do caixa, inclusive com coleta manual de impostos. Operações ativas persistem no save e cidades antigas começam sem operações. Testes em `tests/bank.test.ts` cobrem taxas, vencimento, amortização, caixa/cofre e salvamento.
+
+## 2026-11-13 — Log de atualizações na abertura
+
+Card de atualizações compartilhado pela apresentação pública e pelo menu de cidades. As notas ficam em `src/app/updates.ts`, com data, título e mudanças visíveis ao jogador, para ampliar a cada publicação. A primeira entrada descreve o Banco da cidade.
