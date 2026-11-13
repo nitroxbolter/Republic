@@ -50,6 +50,11 @@ const UNLOCKS: Readonly<Partial<Record<BuildingId, Stage>>> = {
   sail_hotel: Stage.City,
   sky_tower: Stage.Metropolis,
   bus_station: Stage.Town,
+  barracks: Stage.Town,
+  military_garage: Stage.Town,
+  armory: Stage.City,
+  military_base: Stage.City,
+  training_ground: Stage.City,
 };
 
 export function unlockStage(id: BuildingId): Stage {

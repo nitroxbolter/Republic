@@ -582,3 +582,11 @@ Adicionado ícone Banco ao topo e acesso no menu móvel. O governo pode fazer ap
 ## 2026-11-13 — Log de atualizações na abertura
 
 Card de atualizações compartilhado pela apresentação pública e pelo menu de cidades. As notas ficam em `src/app/updates.ts`, com data, título e mudanças visíveis ao jogador, para ampliar a cada publicação. A primeira entrada descreve o Banco da cidade.
+
+## 2026-11-13 — Proposta para base militar
+
+Mapeados os sistemas cívicos, orçamento, estágios, despacho de emergências, tráfego, salvamento e arte procedural que podem servir de base. Registrados também os componentes ausentes para efetivo, treinamento, missões, unidades militares, facções e conflitos. A proposta recomenda começar com construção e defesa civil, deixando combate entre cidades para depois de existir diplomacia/facções.
+
+## 2026-11-13 — Instalações militares
+
+Adicionados Quartel, Garagem militar, Paiol, Base militar e Centro de treinamento à guia Defesa, com arte procedural original composta a partir dos kits de pátio, garagem, cerca, antena e heliponto. Definidos custos, empregos, manutenção e desbloqueios por estágio; a manutenção militar aparece separada no orçamento. Descrições esclarecem que tropas, inventário, missões e combate ainda não são simulados.

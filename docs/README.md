@@ -55,6 +55,7 @@ bun run typecheck && bun run lint
 | [specs/real-estate-demography.md](specs/real-estate-demography.md) | Building rent, utilities, property loans and demographic policy |
 | [specs/bank.md](specs/bank.md) | City investments, compound interest and government loans |
 | [specs/updates.md](specs/updates.md) | Update log shown on the landing and city menu screens |
+| [specs/military-base.md](specs/military-base.md) | Military base proposal, reusable systems and missing pieces |
 | [guia-do-jogador.md](guia-do-jogador.md) | Guia em português sobre crescimento, trabalho, contas, serviços e impostos |
 | [specs/wiki.md](specs/wiki.md) | Wiki interativa, catálogo de edifícios e simulador de orçamento |
 | [deploy.md](deploy.md) | Docker image, environment settings, production checklist |

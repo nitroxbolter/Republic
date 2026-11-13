@@ -46,7 +46,7 @@ export interface ResponderDef {
 }
 
 /** Civic panel tabs. */
-export type CivicGroup = 'services' | 'transport' | 'utilities' | 'parks';
+export type CivicGroup = 'services' | 'transport' | 'utilities' | 'parks' | 'defense';
 
 export interface BuildingDef {
   name: string;
@@ -552,6 +552,36 @@ export const BUILDINGS = {
     responder: { kind: 'ambulance', vehicles: 6, injuries: true, speed: 1.5 },
   },
 
+  barracks: {
+    name: 'Quartel', category: 'civic', zone: null, density: null, level: 0,
+    size: { w: 2, h: 2 }, cost: 12000, capacity: 80,
+    description: 'Alojamento e sede do efetivo municipal. Emprega pessoal e gera manutenção; não comanda unidades nem inicia combates.',
+    group: 'defense', upkeep: 420,
+  },
+  military_garage: {
+    name: 'Garagem militar', category: 'civic', zone: null, density: null, level: 0,
+    size: { w: 2, h: 2 }, cost: 8500, capacity: 28,
+    description: 'Garagem e oficina para veículos de serviço. Estrutura pública visual, sem frota militar funcional.',
+    group: 'defense', upkeep: 240,
+  },
+  armory: {
+    name: 'Paiol', category: 'civic', zone: null, density: null, level: 0,
+    size: { w: 2, h: 2 }, cost: 7000, capacity: 18,
+    description: 'Depósito municipal cercado para equipamentos. Não armazena itens nem fornece armas na simulação atual.',
+    group: 'defense', upkeep: 180,
+  },
+  military_base: {
+    name: 'Base militar', category: 'civic', zone: null, density: null, level: 0,
+    size: { w: 3, h: 3 }, cost: 28000, capacity: 120,
+    description: 'Complexo administrativo com pátio, alojamento e portaria. Representa uma instalação municipal; não há guerra entre cidades.',
+    group: 'defense', upkeep: 900,
+  },
+  training_ground: {
+    name: 'Centro de treinamento', category: 'civic', zone: null, density: null, level: 0,
+    size: { w: 3, h: 3 }, cost: 18000, capacity: 45,
+    description: 'Instalações de treinamento com pátio e torre de observação. Cursos e unidades treinadas ainda não fazem parte da simulação.',
+    group: 'defense', upkeep: 520,
+  },
   landfill: {
     name: 'Aterro sanitário',
     category: 'civic',

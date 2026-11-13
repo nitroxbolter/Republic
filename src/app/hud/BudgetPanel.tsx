@@ -19,6 +19,7 @@ function Lines({ r }: { r: BudgetReport }) {
     ['Vias', r.breakdown.roads],
     ['Transporte público e trilhos', r.breakdown.transport],
     ['Serviços', r.breakdown.services],
+    ['Defesa e instalações militares', r.breakdown.defense],
     ['Infraestrutura', r.breakdown.utilities],
     ['Parques e outros prédios públicos', r.breakdown.parks],
     ['Aposentadorias', r.breakdown.pensions],

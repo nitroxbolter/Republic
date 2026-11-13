@@ -7,7 +7,7 @@ import { appPath } from '../../basePath';
 import { BuildingThumb } from './BuildingThumb';
 
 type Tab = 'guia' | 'catalogo' | 'economia' | 'situacoes';
-type Filter = 'moradias' | 'lojas' | 'escritorios' | 'industria' | 'servicos' | 'infraestrutura' | 'transporte' | 'parques' | 'todos';
+type Filter = 'moradias' | 'lojas' | 'escritorios' | 'industria' | 'servicos' | 'infraestrutura' | 'transporte' | 'parques' | 'defesa' | 'todos';
 
 const tabs: readonly { id: Tab; label: string }[] = [
   { id: 'guia', label: 'Como jogar' }, { id: 'catalogo', label: 'Construções' },
@@ -18,7 +18,7 @@ const filters: readonly { id: Filter; label: string }[] = [
   { id: 'escritorios', label: 'Escritórios' }, { id: 'industria', label: 'Indústria' },
   { id: 'servicos', label: 'Serviços' }, { id: 'infraestrutura', label: 'Infraestrutura' },
   { id: 'transporte', label: 'Transporte' }, { id: 'parques', label: 'Parques e outros' },
-  { id: 'todos', label: 'Todos' },
+  { id: 'defesa', label: 'Defesa' }, { id: 'todos', label: 'Todos' },
 ];
 const money = (n: number) => `$${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`;
 const number = (n: number) => n.toLocaleString('pt-BR');
@@ -33,6 +33,7 @@ function group(id: BuildingId): Filter {
   if (d.group === 'services') return 'servicos';
   if (d.group === 'utilities') return 'infraestrutura';
   if (d.group === 'transport') return 'transporte';
+  if (d.group === 'defense') return 'defesa';
   return 'parques';
 }
 

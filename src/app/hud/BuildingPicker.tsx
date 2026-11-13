@@ -13,6 +13,7 @@ const GROUPS: readonly { id: CivicGroup; label: string; hint: string }[] = [
   { id: 'transport', label: 'Transporte', hint: 'Estações ao lado dos trilhos (Vias → Trilhos, Z). Moradias e empregos próximos usam o trem quando ele é mais rápido que dirigir.' },
   { id: 'utilities', label: 'Infraestrutura', hint: 'Energia, água e coleta de lixo atendem os edifícios nas vias conectadas, até o limite de capacidade.' },
   { id: 'parks', label: 'Parques e atrações', hint: 'Parques, mercados, comércio e Prefeitura.' },
+  { id: 'defense', label: 'Defesa', hint: 'Instalações municipais de defesa. Custos e empregos funcionam como nos outros edifícios públicos; tropas e combate ainda não fazem parte da simulação.' },
 ];
 
 const ZONE_LINKS: readonly { tool: ZoneToolId; label: string; key: string; tone: string }[] = [
@@ -34,6 +35,10 @@ const SECTIONS: Readonly<Partial<Record<CivicGroup, readonly { label: string; id
     { label: 'Energia', ids: ['power_plant', 'gas_plant', 'wind_turbine', 'solar_farm', 'battery_bank', 'substation'] },
     { label: 'Água', ids: ['water_tower'] },
     { label: 'Lixo', ids: ['landfill', 'recycling_centre', 'incinerator'] },
+  ],
+  defense: [
+    { label: 'Quartéis e bases', ids: ['barracks', 'military_base'] },
+    { label: 'Apoio e treinamento', ids: ['military_garage', 'armory', 'training_ground'] },
   ],
 };
 

@@ -25,7 +25,7 @@ export interface BudgetReport {
   /** Company tax rate (percent) used for this report. */
   taxRate: number;
   incomeTaxRate: number;
-  breakdown: { roads: number; transport: number; services: number; utilities: number; parks: number; pensions: number; demographicIncentives: number; housingSubsidies: number; constructionGrants: number };
+  breakdown: { roads: number; transport: number; services: number; defense: number; utilities: number; parks: number; pensions: number; demographicIncentives: number; housingSubsidies: number; constructionGrants: number };
   /** Part of the income from materials recycling centres sold (docs/specs/evolution.md). */
   recycling: number;
   taxRevenue: number;
@@ -235,6 +235,7 @@ export function monthlyBudget(
   // Rail track (E7b) belongs to public transport maintenance.
   for (let i = 0; i < world.rail.length; i++) if (world.rail[i] !== 0) transport += BALANCE.railUpkeep;
   let services = 0;
+  let defense = 0;
   let utilities = 0;
   let parks = 0;
   const categoryUpkeep: Record<CostKind, number> = { energy: 0, water: 0, housing: 0, transport };
@@ -243,6 +244,7 @@ export function monthlyBudget(
     const d: BuildingDef = BUILDINGS[b.def];
     const upkeep = monthlyUpkeep(world, b, context);
     if (d.group === 'services') services += upkeep;
+    else if (d.group === 'defense') defense += upkeep;
     else if (d.group === 'utilities') {
       utilities += upkeep;
       if (d.supplies?.water) categoryUpkeep.water += upkeep;
@@ -280,7 +282,7 @@ export function monthlyBudget(
   const pensions = ages.seniors * pensionPerSenior;
   const demographicIncentives = policyCity ? demographicMonthlyCost(policyCity, true) : 0;
   const constructionGrants = policyCity?.demography.monthConstructionGrants ?? 0;
-  const expenses = Math.round(roads + transport + services + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating) + bankFlow.loanInterest;
+  const expenses = Math.round(roads + transport + services + defense + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating) + bankFlow.loanInterest;
   return {
     income,
     expenses,
@@ -290,7 +292,7 @@ export function monthlyBudget(
       : income - expenses + forecastFlows.principal + bankFlow.investmentPrincipal - bankFlow.loanPrincipal,
     taxRate,
     incomeTaxRate,
-    breakdown: { roads: Math.round(roads), transport, services, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants },
+    breakdown: { roads: Math.round(roads), transport, services, defense, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants },
     recycling,
     taxRevenue,
     businessTaxRevenue,
