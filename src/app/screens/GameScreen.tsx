@@ -26,6 +26,7 @@ import { TopBar } from '../hud/TopBar';
 import { MoreSheet } from '../hud/MoreSheet';
 import { Tour } from '../tour/Tour';
 import { GuestLimit } from '../account/GuestLimit';
+import { CityAssistant } from '../hud/CityAssistant';
 import { LoadingScreen, type LoadError, type LoadKind, type ScreenStage } from './LoadingScreen';
 
 interface GameScreenProps {
@@ -221,6 +222,7 @@ function Hud({ options, onNewCity, onSave, beforeLogout }: HudProps) {
       {/* Starts on a new city until finished; an opened city only carries on a tour left midway. */}
       <Tour autoStart={options.demo ? 'never' : options.save ? 'resume' : 'start'} />
       <GuestLimit cityName={options.name} />
+      <CityAssistant />
     </>
   );
 }

@@ -75,6 +75,10 @@ export interface CityInfo {
   bank: BankState;
   housing: number;
   jobs: number;
+  jobBuildings: number;
+  jobVacancies: number;
+  vacantJobBuildings: number;
+  workforce: number;
   workers: number;
   unemployed: number;
   economy: EconomyReport;

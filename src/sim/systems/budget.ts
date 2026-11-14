@@ -6,7 +6,7 @@ import { BridgeAxis, RoadType } from '../roads';
 import { roadSpec } from '../roadTypes';
 import type { World } from '../World';
 import { cityStats } from './population';
-import { demographics, workingAge } from './society';
+import { demographics } from './society';
 import { BASE_COSTS, COST_KINDS, defaultCostTaxRates, livingCosts, type CostKind, type CostTaxRates } from './livingCosts';
 import { economyReport } from './economy';
 import { propertyBills, forecastPropertyFlows, settleProperties, type PropertyFlows, type PropertyPayment } from './realEstate';
@@ -42,6 +42,10 @@ export interface BudgetReport {
   housingByClass: Readonly<Record<Lifestyle, HousingClassBalance>>;
   /** All adults, including unemployed and temporarily unavailable residents. */
   workers: number;
+  jobs: number;
+  jobBuildings: number;
+  jobVacancies: number;
+  vacantJobBuildings: number;
   employed: number;
   unemployed: number;
   unavailable: number;
@@ -49,6 +53,50 @@ export interface BudgetReport {
   propertyFlows: PropertyFlows;
   propertyPayments: ReadonlyMap<number, PropertyPayment>;
   bankFlow: BankFlow;
+  /** Household income and payments calculated by the current aggregate model. */
+  households: Readonly<Record<Lifestyle, HouseholdAuditRow>>;
+  /** Actual treasury/chest movement, present only on completed monthly settlement. */
+  cashLedger?: BudgetCashLedger;
+}
+
+export interface HouseholdExpenseTotals {
+  food: number;
+  housing: number;
+  surcharge: number;
+  energy: number;
+  water: number;
+  transport: number;
+  serviceTaxes: number;
+  total: number;
+}
+
+export interface HouseholdAuditRow {
+  residents: number;
+  workers: number;
+  seniors: number;
+  grossWages: number;
+  netWages: number;
+  incomeTax: number;
+  pensionIncome: number;
+  disposableIncome: number;
+  shortfall: number;
+  due: HouseholdExpenseTotals;
+  paid: HouseholdExpenseTotals;
+}
+
+export interface BudgetCashLedger {
+  fundsBefore: number;
+  fundsAfter: number;
+  fundsDeltaExpected: number;
+  fundsDeltaObserved: number;
+  fundsDifference: number;
+  townHallBefore: number;
+  townHallAfter: number;
+  townHallIncomeAdded: number;
+  townHallIncomeLost: number;
+  expensesDebited: number;
+  /** Direct settled flows that bypass the municipal tax chest. */
+  directIncome: number;
 }
 
 export interface CostBalance {
@@ -87,6 +135,43 @@ const RECREATION_BUILDINGS: ReadonlySet<BuildingId> = new Set([
   'observation_wheel',
   'theme_park',
 ]);
+
+function emptyHouseholdAuditRow(): HouseholdAuditRow {
+  const expenses = (): HouseholdExpenseTotals => ({ food: 0, housing: 0, surcharge: 0, energy: 0, water: 0, transport: 0, serviceTaxes: 0, total: 0 });
+  return { residents: 0, workers: 0, seniors: 0, grossWages: 0, netWages: 0, incomeTax: 0, pensionIncome: 0, disposableIncome: 0, shortfall: 0, due: expenses(), paid: expenses() };
+}
+
+function householdExpenseParts(cost: ReturnType<typeof livingCosts>): HouseholdExpenseTotals {
+  const parts: HouseholdExpenseTotals = {
+    food: cost.due.food,
+    housing: cost.due.housing,
+    surcharge: cost.due.surcharge,
+    energy: cost.due.energy,
+    water: cost.due.water,
+    transport: cost.due.transport,
+    serviceTaxes: cost.categoryTax,
+    total: cost.total,
+  };
+  return parts;
+}
+
+function householdPaidParts(cost: ReturnType<typeof livingCosts>): HouseholdExpenseTotals {
+  const parts: HouseholdExpenseTotals = {
+    food: cost.foodPaid,
+    housing: cost.housingPaid,
+    surcharge: cost.surchargePaid,
+    energy: cost.charges.energy.base,
+    water: cost.charges.water.base,
+    transport: cost.transportPaid,
+    serviceTaxes: cost.taxesPaid,
+    total: cost.total - cost.disposable - cost.shortfall,
+  };
+  return parts;
+}
+
+function addExpenseParts(target: HouseholdExpenseTotals, parts: HouseholdExpenseTotals, count: number) {
+  for (const key of Object.keys(target) as (keyof HouseholdExpenseTotals)[]) target[key] += parts[key] * count;
+}
 
 interface ServiceProvider {
   building: BuildingInstance;
@@ -156,7 +241,7 @@ export function monthlyBudget(
 ): BudgetReport {
   const s = cityStats(world, taxRate, society, policyCity ?? { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate });
   const ages = demographics(s.population);
-  const availableWorkers = workingAge(s.population, society?.sick, society?.prisoners);
+  const availableWorkers = s.workforce;
   const employed = Math.min(availableWorkers, s.workers);
   const unemployed = availableWorkers - employed;
   const unavailable = ages.adults - availableWorkers;
@@ -174,6 +259,11 @@ export function monthlyBudget(
     [Lifestyle.Basic]: { residents: 0, rent: 0, tax: 0, paid: 0 },
     [Lifestyle.Comfortable]: { residents: 0, rent: 0, tax: 0, paid: 0 },
     [Lifestyle.Prosperous]: { residents: 0, rent: 0, tax: 0, paid: 0 },
+  };
+  const households: Record<Lifestyle, HouseholdAuditRow> = {
+    [Lifestyle.Basic]: emptyHouseholdAuditRow(),
+    [Lifestyle.Comfortable]: emptyHouseholdAuditRow(),
+    [Lifestyle.Prosperous]: emptyHouseholdAuditRow(),
   };
   const propertyPayments = new Map<number, PropertyPayment>();
   let residentsCounted = 0;
@@ -200,6 +290,22 @@ export function monthlyBudget(
       householdBills.surcharge = b.property?.loan ? Math.min(b.property.loan.payment, surchargeCapacity) / Math.max(1, occupants) : 0;
       const workerCosts = livingCosts(grossWage * (1 - incomeTaxRate / 100), costTaxRates, supplied, householdBills);
       const seniorCosts = livingCosts(pensionPerSenior, costTaxRates, supplied, householdBills);
+      const household = households[b.lifestyle];
+      household.residents += occupants;
+      household.workers += paidWorkers;
+      household.seniors += seniors;
+      const grossWages = paidWorkers * grossWage;
+      const incomeTax = paidWorkers * grossWage * incomeTaxRate / 100;
+      household.grossWages += grossWages;
+      household.netWages += grossWages - incomeTax;
+      household.incomeTax += incomeTax;
+      household.pensionIncome += seniors * pensionPerSenior;
+      household.disposableIncome += paidWorkers * workerCosts.disposable + seniors * seniorCosts.disposable;
+      household.shortfall += paidWorkers * workerCosts.shortfall + seniors * seniorCosts.shortfall;
+      addExpenseParts(household.due, householdExpenseParts(workerCosts), paidWorkers);
+      addExpenseParts(household.due, householdExpenseParts(seniorCosts), seniors);
+      addExpenseParts(household.paid, householdPaidParts(workerCosts), paidWorkers);
+      addExpenseParts(household.paid, householdPaidParts(seniorCosts), seniors);
       if (occupants > 0) {
         const housingClass = housingClasses[b.lifestyle];
         housingClass.residents += occupants;
@@ -306,6 +412,10 @@ export function monthlyBudget(
     costBalances,
     housingByClass,
     workers: ages.adults,
+    jobs: s.jobs,
+    jobBuildings: s.jobBuildings,
+    jobVacancies: s.jobVacancies,
+    vacantJobBuildings: s.vacantJobBuildings,
     employed,
     unemployed,
     unavailable,
@@ -313,6 +423,7 @@ export function monthlyBudget(
     propertyFlows: forecastFlows,
     propertyPayments,
     bankFlow,
+    households,
   };
 }
 
@@ -329,6 +440,7 @@ export interface HeldTaxes {
 /** Apply a month's budget to the city: upkeep from the funds, taxes to the funds or the Town Hall's chest. */
 export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | null } {
   const openingFunds = city.funds;
+  const openingChest = city.uncollected;
   const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
   const flows = settleProperties(city.world, Math.floor(city.day / BALANCE.daysPerMonth), r.propertyPayments);
   const bankFlow = settleBankMonth(city.bank);
@@ -355,13 +467,35 @@ export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | nu
   if (!city.collectsTaxes) {
     city.funds += r.cashNet;
     r.cashNet = city.funds - openingFunds;
+    const directIncome = r.income + flows.principal + bankFlow.investmentPrincipal;
+    const expensesDebited = r.expenses + bankFlow.loanPrincipal;
+    const fundsDeltaExpected = directIncome - expensesDebited;
+    const fundsDeltaObserved = city.funds - openingFunds;
+    r.cashLedger = {
+      fundsBefore: openingFunds, fundsAfter: city.funds, fundsDeltaExpected, fundsDeltaObserved,
+      fundsDifference: fundsDeltaObserved - fundsDeltaExpected,
+      townHallBefore: openingChest, townHallAfter: city.uncollected, townHallIncomeAdded: 0, townHallIncomeLost: 0,
+      expensesDebited, directIncome,
+    };
     return { ...r, held: null };
   }
+  const directIncome = flows.principal + flows.interest + flows.publicRent + bankFlow.investmentPrincipal + bankFlow.investmentInterest;
+  const expensesDebited = r.expenses + bankFlow.loanPrincipal;
+  const fundsDeltaExpected = directIncome - expensesDebited;
   city.funds += flows.principal + flows.interest + flows.publicRent + bankFlow.investmentPrincipal + bankFlow.investmentInterest - r.expenses - bankFlow.loanPrincipal;
   r.cashNet = city.funds - openingFunds;
   const cap = Math.max(0, regularIncome) * BALANCE.chestMonths;
   const total = city.uncollected + regularIncome;
   city.uncollected = Math.min(total, Math.max(cap, city.uncollected));
+  const fundsDeltaObserved = city.funds - openingFunds;
+  r.cashLedger = {
+    fundsBefore: openingFunds, fundsAfter: city.funds, fundsDeltaExpected, fundsDeltaObserved,
+    fundsDifference: fundsDeltaObserved - fundsDeltaExpected,
+    townHallBefore: openingChest, townHallAfter: city.uncollected,
+    townHallIncomeAdded: city.uncollected - openingChest,
+    townHallIncomeLost: total - city.uncollected,
+    expensesDebited, directIncome,
+  };
   return {
     ...r,
     held: { waiting: city.uncollected, lost: total - city.uncollected, filling: city.uncollected >= regularIncome * BALANCE.chestWarnMonths },

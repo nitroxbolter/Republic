@@ -112,9 +112,11 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
           </svg>
           <span>
             <strong>
-              {city.workers.toLocaleString()} / {city.jobs.toLocaleString()}
+              {city.workers.toLocaleString('pt-BR')} / {city.jobs.toLocaleString('pt-BR')}
             </strong>
-            <small>empregados / vagas · {city.unemployed.toLocaleString()} desempregados · {Math.max(0, city.society.adults - city.workers - city.unemployed).toLocaleString()} afastados</small>
+            <small>
+              empregados / vagas · {city.jobBuildings.toLocaleString('pt-BR')} prédio(s) oferecendo trabalho · {city.jobVacancies.toLocaleString('pt-BR')} vaga(s) abertas em {city.vacantJobBuildings.toLocaleString('pt-BR')} prédio(s) · {city.unemployed.toLocaleString('pt-BR')} desempregados · {Math.max(0, city.society.adults - city.workforce).toLocaleString('pt-BR')} afastados
+            </small>
           </span>
         </span>
         <span className="more-stat">

@@ -524,7 +524,8 @@ export class Game {
     else if (p.kind === 'road') subject = `via ${p.roadType}`;
     const invalid = plan.tiles.filter((tile) => !tile.valid).length;
     if (result.ok && result.changed) {
-      this.audit.record(this.city, 'AÇÃO NO MAPA', `${subject}${location}: aplicada em ${plan.count} tile(s); custo ${formatAuditMoney(fundsBefore - this.city.funds)}; saldo ${formatAuditMoney(this.city.funds)}.`);
+      const delta = this.city.funds - fundsBefore;
+      this.audit.record(this.city, 'AÇÃO NO MAPA', `${subject}${location}: aplicada em ${plan.count} tile(s); origem/destino caixa público; movimento ${delta <= 0 ? 'saída' : 'entrada'} ${formatAuditMoney(Math.abs(delta))}; saldo antes ${formatAuditMoney(fundsBefore)}, depois ${formatAuditMoney(this.city.funds)}.`);
       return;
     }
     const reason = result.reason === 'insufficient-funds'
@@ -964,15 +965,18 @@ export class Game {
   }
 
   enlistMilitary(quantity: number): MilitaryActionResult {
-    return this.finishMilitaryAction(enlistSoldiers(this.city, quantity));
+    const before = this.city.funds;
+    return this.finishMilitaryAction(enlistSoldiers(this.city, quantity), before, 'alistamento militar');
   }
 
   purchaseMilitary(item: MilitaryPurchase, quantity: number): MilitaryActionResult {
-    return this.finishMilitaryAction(purchaseMilitary(this.city, item, quantity));
+    const before = this.city.funds;
+    return this.finishMilitaryAction(purchaseMilitary(this.city, item, quantity), before, `compra militar (${item})`);
   }
 
-  private finishMilitaryAction(result: MilitaryActionResult): MilitaryActionResult {
+  private finishMilitaryAction(result: MilitaryActionResult, fundsBefore: number, action: string): MilitaryActionResult {
     if (result.ok) {
+      this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `${action}: origem caixa público; destino folha/estoque militar; valor ${formatAuditMoney(result.cost)}; saldo antes ${formatAuditMoney(fundsBefore)}, depois ${formatAuditMoney(this.city.funds)}; quantidade ${result.quantity}.`);
       this.edits++;
       this.events.emit('funds', this.city.funds);
       this.emitBudget();
@@ -981,14 +985,16 @@ export class Game {
   }
 
   investAtBank(amount: number, months: number): BankResult {
+    const fundsBefore = this.city.funds;
     const result = openInvestment(this.city, amount, months);
-    if (result.ok) { this.edits++; this.events.emit('funds', this.city.funds); this.emitCity(); this.emitBudget(); }
+    if (result.ok) { this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `Aplicação bancária: origem caixa público; destino ativo financeiro no banco; valor ${formatAuditMoney(amount)}; saldo antes ${formatAuditMoney(fundsBefore)}, depois ${formatAuditMoney(this.city.funds)}.`); this.edits++; this.events.emit('funds', this.city.funds); this.emitCity(); this.emitBudget(); }
     return result;
   }
 
   borrowFromBank(amount: number, months: number): BankResult {
+    const fundsBefore = this.city.funds;
     const result = openLoan(this.city, amount, months);
-    if (result.ok) { this.edits++; this.events.emit('funds', this.city.funds); this.emitCity(); this.emitBudget(); }
+    if (result.ok) { this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `Empréstimo bancário: origem banco; destino caixa público; valor ${formatAuditMoney(amount)}; saldo antes ${formatAuditMoney(fundsBefore)}, depois ${formatAuditMoney(this.city.funds)}.`); this.edits++; this.events.emit('funds', this.city.funds); this.emitCity(); this.emitBudget(); }
     return result;
   }
 
@@ -1187,6 +1193,8 @@ export class Game {
 
   /** Collect the taxes waiting at the Town Hall (info panel and budget panel buttons). */
   collectTaxes() {
+    const chestBefore = this.city.uncollected;
+    const fundsBefore = this.city.funds;
     const r = collectTaxes(this.city);
     if (!r.ok) {
       this.sound.play('error');
@@ -1199,7 +1207,7 @@ export class Game {
       return;
     }
     this.sound.play('coin');
-    this.audit.record(this.city, 'IMPOSTOS', `Receita de impostos transferida do cofre da Prefeitura para o caixa: ${formatAuditMoney(r.amount)}; novo caixa ${formatAuditMoney(this.city.funds)}.`);
+    this.audit.record(this.city, 'IMPOSTOS', `Transferência interna cofre da Prefeitura → caixa público: ${formatAuditMoney(r.amount)}; cofre ${formatAuditMoney(chestBefore)} → ${formatAuditMoney(this.city.uncollected)}; caixa ${formatAuditMoney(fundsBefore)} → ${formatAuditMoney(this.city.funds)}. Não contabilizar como nova receita.`);
     this.notify('info', `$${r.amount.toLocaleString()} recolhidos em impostos`);
     this.resolve('taxes');
     this.events.emit('funds', this.city.funds);
@@ -1212,7 +1220,9 @@ export class Game {
   /** Bulldoze a whole building (from the info panel). */
   financeProperty(id: number) {
     const b = this.world.buildings.get(id);
+    const fundsBefore = this.city.funds;
     if (!b || !financeProperty(this.city, b)) { this.notify('error', 'Financiamento indisponível: verifique dívida, prazo e caixa público.'); return; }
+    this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `Financiamento de imóvel ${b.id} em (${b.x},${b.y}): origem caixa público; destino quitação da dívida imobiliária; saída ${formatAuditMoney(fundsBefore - this.city.funds)}; saldo ${formatAuditMoney(fundsBefore)} → ${formatAuditMoney(this.city.funds)}.`);
     this.notify('info', 'Dívida quitada com financiamento público. As parcelas serão cobradas mensalmente.');
     this.events.emit('funds', this.city.funds);
     this.emitBudget(); this.emitInspect(); this.emitCity();
@@ -1220,7 +1230,9 @@ export class Game {
 
   acquireProperty(id: number) {
     const b = this.world.buildings.get(id);
+    const fundsBefore = this.city.funds;
     if (!b || !acquireProperty(this.city, b)) { this.notify('error', 'Aquisição indisponível para este imóvel ou sem recursos.'); return; }
+    this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `Aquisição pública do imóvel ${b.id} em (${b.x},${b.y}): origem caixa público; destino aquisição e assunção da operação imobiliária; saída ${formatAuditMoney(fundsBefore - this.city.funds)}; saldo ${formatAuditMoney(fundsBefore)} → ${formatAuditMoney(this.city.funds)}.`);
     this.notify('info', 'Imóvel adquirido pela cidade. Aluguel e manutenção entram no orçamento público.');
     this.events.emit('funds', this.city.funds);
     this.emitBudget(); this.emitInspect(); this.emitCity();
@@ -1235,7 +1247,9 @@ export class Game {
 
   repayPropertyLoan(id: number) {
     const b = this.world.buildings.get(id);
+    const fundsBefore = this.city.funds;
     if (!b || !repayPropertyLoan(this.city, b)) { this.notify('error', 'As reservas do imóvel ainda não cobrem a quitação.'); return; }
+    this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `Quitação do financiamento do imóvel ${b.id}: origem reserva do imóvel; destino caixa público; entrada ${formatAuditMoney(this.city.funds - fundsBefore)}; saldo ${formatAuditMoney(fundsBefore)} → ${formatAuditMoney(this.city.funds)}.`);
     this.notify('info', 'Financiamento quitado com as reservas do imóvel.');
     this.events.emit('funds', this.city.funds);
     this.emitBudget(); this.emitInspect(); this.emitCity();
@@ -1261,7 +1275,9 @@ export class Game {
       this.notify('error', `Reparar ${BUILDINGS[b.def].name} custa $${cost.toLocaleString()}`);
       return;
     }
+    const fundsBefore = this.city.funds;
     this.city.funds -= cost;
+    this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `Reparo de ${BUILDINGS[b.def].name} (ID ${b.id}): origem caixa público; destino manutenção da usina; saída ${formatAuditMoney(cost)}; saldo ${formatAuditMoney(fundsBefore)} → ${formatAuditMoney(this.city.funds)}.`);
     b.condition = 1;
     b.repairDays = 0;
     this.edits++;

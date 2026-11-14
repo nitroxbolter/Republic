@@ -58,6 +58,17 @@ export interface LotDiagnosis {
   reason: LotReason;
   title: string;
   detail: string;
+  audit: {
+    demand: number;
+    demandThreshold: 0;
+    roadAccess: boolean;
+    permitsUsed: number;
+    permitLimit: number;
+    availableMaterials: number;
+    requiredMaterials: number;
+    eligibleBuildings: number;
+    investorConfidence: number;
+  };
 }
 
 /** A rectangle of world tiles. */
@@ -126,12 +137,13 @@ function ratio(want: number, have: number, floor: number): number {
  */
 /** Higher taxes than the base rate cool demand, lower ones warm it (docs/specs/core.md). */
 /** What demand is made of: capacities built, capacities wanted, and the tax effect. */
-interface DemandInputs {
+export interface DemandInputs {
   population: number;
   housing: number;
   shops: number;
   offices: number;
   industrial: number;
+  civic: number;
   /** Jobs the workforce could still fill beyond every job that exists (negative: too many jobs). */
   openJobs: number;
   wantR: number;
@@ -140,6 +152,10 @@ interface DemandInputs {
   wantI: number;
   /** University graduates in the city (docs/specs/evolution.md); each wants office work. */
   graduates: number;
+  migrationOutlook: number;
+  subsidyStrength: number;
+  subsidizedHousing: number;
+  purchasingPower: number;
 }
 
 function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): DemandInputs {
@@ -178,12 +194,17 @@ function demandInputs(world: World, taxRate: number, policy?: HouseholdPolicy): 
     shops,
     offices,
     industrial,
+    civic,
     openJobs,
     wantR: (population * BALANCE.housingSlack + BALANCE.seedHousing) * outlook + subsidizedHousing,
     wantShops: (housing * BALANCE.shopJobsPerResident + BALANCE.seedCommercialJobs) * economy.purchasingPower,
     wantOffices: BALANCE.seedOfficeJobs + housing * BALANCE.officeJobsPerHousingResident * economy.purchasingPower + graduates * BALANCE.graduateOfficeJobs,
     wantI: industrial + openJobs * (1 - BALANCE.officeJobShare) + BALANCE.seedIndustrialJobs,
     graduates,
+    migrationOutlook: outlook,
+    subsidyStrength,
+    subsidizedHousing,
+    purchasingPower: economy.purchasingPower,
   };
 }
 
@@ -196,6 +217,12 @@ export function zoneDemand(world: World, taxRate: number = BALANCE.baseTaxRate, 
     o: adjust(ratio(x.wantOffices, x.offices, DEMAND_FLOOR.o)),
     i: adjust(ratio(x.wantI, x.industrial, DEMAND_FLOOR.i)),
   };
+}
+
+/** Formula inputs used by zoneDemand(), exposed read-only to the city audit. */
+export function growthDemandAudit(world: World, taxRate: number = BALANCE.baseTaxRate, policy?: HouseholdPolicy) {
+  const inputs = demandInputs(world, taxRate, policy);
+  return { ...inputs, demand: zoneDemand(world, taxRate, policy), floors: DEMAND_FLOOR };
 }
 
 /** One plain sentence per bar: why demand is where it is and what raises it (master plan §6.4). */
@@ -255,21 +282,25 @@ export function demandFor(demand: ZoneDemand, zone: ZonedType): number {
 interface LotContext {
   demand: ZoneDemand;
   minMaterials: ReadonlyMap<ZonedType, number>;
+  eligibleCounts: ReadonlyMap<ZonedType, number>;
   availableMaterials: number;
+  investorConfidence: number;
 }
 
 function lotContext(city: City, importsUsed: number): LotContext {
   const demand = zoneDemand(city.world, city.taxRate, city);
   const confidence = investorScore(city.world, city.taxRate, city);
   const minMaterials = new Map<ZonedType, number>();
+  const eligibleCounts = new Map<ZonedType, number>();
   for (const zone of ZONED_TYPES) {
     const ids = eligibleBuildings(zonedBuildings(ZONE_LETTER[zone], ZONE_DENSITY[zone], startLevel(ZONE_LETTER[zone], ZONE_DENSITY[zone]), 1), confidence);
+    eligibleCounts.set(zone, ids.length);
     minMaterials.set(zone, ids.length === 0 ? Infinity : Math.min(...ids.map(materialsFor)) * techEffects(city).materials);
   }
   const availableMaterials = city.needsMaterials
     ? city.materials + Math.max(0, BALANCE.materialsImportPerDay - importsUsed)
     : Infinity;
-  return { demand, minMaterials, availableMaterials };
+  return { demand, minMaterials, eligibleCounts, availableMaterials, investorConfidence: confidence };
 }
 
 /** Exactly one current reason for an empty zoned tile, ordered by the first fix needed. */
@@ -306,9 +337,7 @@ export function diagnoseZones(city: City, importsUsed = 0): ZoneDiagnostics {
   return result;
 }
 
-/** A selected vacant lot explains its own state, not just the citywide demand bar. */
-export function diagnoseLot(city: City, x: number, y: number, importsUsed = 0): LotDiagnosis | null {
-  const context = lotContext(city, importsUsed);
+function diagnoseLotInContext(city: City, x: number, y: number, context: LotContext): LotDiagnosis | null {
   const reason = lotReason(city, x, y, context);
   if (!reason) return null;
   const zone = city.world.zone[city.world.index(x, y)];
@@ -333,7 +362,35 @@ export function diagnoseLot(city: City, x: number, y: number, importsUsed = 0): 
           : reason === 'permitLimit'
             ? 'O limite mensal de novas construções desta zona foi atingido. Ajuste as licenças na Política Demográfica ou aguarde o mês seguinte.'
           : `A demanda está positiva. O jogo inicia até ${Math.ceil(demandFor(context.demand, zone) * BALANCE.growthPerDay)} novos terrenos desta zona por dia, escolhidos entre todos os terrenos aptos. Deixe o tempo avançar.`;
-  return { x, y, zone, reason, title, detail };
+  return {
+    x, y, zone, reason, title, detail,
+    audit: {
+      demand: demandFor(context.demand, zone), demandThreshold: 0,
+      roadAccess: findEntrance(city.world, x, y, 1, 1, BALANCE.roadAccessRange) !== -1,
+      permitsUsed: city.demography.permitUsed[key], permitLimit: city.demography.permitLimits[key],
+      availableMaterials: context.availableMaterials, requiredMaterials: context.minMaterials.get(zone) ?? Infinity,
+      eligibleBuildings: context.eligibleCounts.get(zone) ?? 0, investorConfidence: context.investorConfidence,
+    },
+  };
+}
+
+/** A selected vacant lot explains its own state, not just the citywide demand bar. */
+export function diagnoseLot(city: City, x: number, y: number, importsUsed = 0): LotDiagnosis | null {
+  return diagnoseLotInContext(city, x, y, lotContext(city, importsUsed));
+}
+
+/** All vacant zoned lots, sharing the same calculation to keep audit cost bounded. */
+export function diagnoseVacantLots(city: City, importsUsed = 0): LotDiagnosis[] {
+  const context = lotContext(city, importsUsed);
+  const result: LotDiagnosis[] = [];
+  const world = city.world;
+  for (let y = 0; y < world.height; y++) for (let x = 0; x < world.width; x++) {
+    const i = world.index(x, y);
+    if (!isZoned(world.zone[i]) || world.building[i] !== -1) continue;
+    const lot = diagnoseLotInContext(city, x, y, context);
+    if (lot) result.push(lot);
+  }
+  return result;
 }
 
 /** 0 = foundation, 1 = scaffold. Only meaningful while `construction > 0`. */

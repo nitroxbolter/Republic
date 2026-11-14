@@ -18,7 +18,17 @@ export interface CityStats {
   population: number;
   /** Homes' total capacity. */
   housing: number;
+  /** Current effective employment slots at finished, connected and supplied buildings. */
   jobs: number;
+  /** Finished, connected buildings that currently offer at least one job. */
+  jobBuildings: number;
+  /** Unfilled positions across eligible job buildings. */
+  jobVacancies: number;
+  /** Number of eligible job buildings with at least one open position. */
+  vacantJobBuildings: number;
+  /** Adults available for work after illness and imprisonment. */
+  workforce: number;
+  /** Workers assigned to active positions, bounded by both open positions and workforce. */
   workers: number;
   /** Working-age residents without a job. */
   unemployed: number;
@@ -34,6 +44,8 @@ export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, s
   let housing = 0;
   let jobs = 0;
   let workers = 0;
+  let jobBuildings = 0;
+  let vacantJobBuildings = 0;
   const economy = economyReport(world, taxRate, policy);
   for (const b of world.buildings.values()) {
     // Construction sites keep carried-over occupants for later but don't count yet; abandoned buildings are empty.
@@ -43,12 +55,22 @@ export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, s
       population += b.occupants;
       housing += d.capacity;
     } else {
-      jobs += b.entrance === -1 || !hasUtilities(b) ? 0 : effectiveJobs(b, economy);
-      workers += b.occupants;
+      // Count workers and jobs from the same eligible buildings. Occupants can briefly be
+      // stale after a utility/access change or an economic slowdown, so cap them to live slots.
+      if (b.entrance === -1 || !hasUtilities(b)) continue;
+      const slots = Math.floor(effectiveJobs(b, economy));
+      if (slots <= 0) continue;
+      jobs += slots;
+      jobBuildings++;
+      const assigned = Math.min(slots, Math.max(0, b.occupants));
+      workers += assigned;
+      if (slots > assigned) vacantJobBuildings++;
     }
   }
   const workforce = workingAge(population, society?.sick, society?.prisoners);
-  return { population, housing, jobs, workers, unemployed: Math.max(0, workforce - workers) };
+  workers = Math.min(workforce, workers);
+  const jobVacancies = Math.max(0, jobs - workers);
+  return { population, housing, jobs, jobBuildings, jobVacancies, vacantJobBuildings, workforce, workers, unemployed: workforce - workers };
 }
 
 /**

@@ -30,6 +30,10 @@ export interface LivingCosts {
   utilityPaid: number;
   housingPaid: number;
   surchargePaid: number;
+  foodPaid: number;
+  transportPaid: number;
+  /** Amounts due before income limits, exposed for reconciliation and audit. */
+  due: Readonly<Record<CostKind | 'food' | 'surcharge', number>>;
   /** Actual government receipts by bill after utility availability and income limits. */
   charges: Readonly<Record<CostKind, GovernmentCharge>>;
 }
@@ -56,7 +60,7 @@ export function livingCosts(
   const surchargePaid = pay(bills.surcharge ?? 0);
   const energyPaid = pay(due.energy);
   const waterPaid = pay(due.water);
-  pay(bills.food);
+  const foodPaid = pay(bills.food);
   const transportPaid = pay(due.transport);
   const charges = {
     energy: { base: energyPaid, tax: pay(due.energy * rates.energy / 100) },
@@ -76,6 +80,9 @@ export function livingCosts(
     utilityPaid,
     housingPaid,
     surchargePaid,
+    foodPaid,
+    transportPaid,
+    due: { food: bills.food, housing: due.housing, surcharge: bills.surcharge ?? 0, energy: due.energy, water: due.water, transport: due.transport },
     charges,
   };
 }

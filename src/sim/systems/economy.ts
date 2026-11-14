@@ -27,6 +27,19 @@ export interface EconomyReport {
   commerceActivity: number;
   /** Industrial output factor, which follows demand from the commercial sector. */
   industrialProduction: number;
+  /** Formula inputs exposed for economic audit; these do not alter simulation outcomes. */
+  audit: {
+    residents: number;
+    disposableIncome: number;
+    baselineDisposableIncome: number;
+    referenceDisposablePerResident: number;
+    companyTaxFactor: number;
+    householdCostFactor: number;
+    shopCapacity: number;
+    industrialCapacity: number;
+    targetShopJobs: number;
+    marketCoverage: number;
+  };
 }
 
 const MIN_PURCHASING_POWER = 0.1;
@@ -98,7 +111,14 @@ export function economyReport(world: World, taxRate: number = BALANCE.baseTaxRat
   const industrialProduction = 0.25 + 0.75 * commerceActivity;
   const businessTurnover = commerceRevenue + Math.round(industrialCapacity * BALANCE.monthlyShopSpendPerResident * industrialProduction);
 
-  return { purchasingPower, householdSpending, commerceRevenue, businessTurnover, commerceActivity, industrialProduction };
+  return {
+    purchasingPower, householdSpending, commerceRevenue, businessTurnover, commerceActivity, industrialProduction,
+    audit: {
+      residents, disposableIncome: disposable, baselineDisposableIncome: baselineDisposable,
+      referenceDisposablePerResident: reference, companyTaxFactor: companyFactor, householdCostFactor: housingFactor,
+      shopCapacity: commerceCapacity, industrialCapacity, targetShopJobs, marketCoverage,
+    },
+  };
 }
 
 /** The portion of a business's normal employment capacity supported by current sales. */
