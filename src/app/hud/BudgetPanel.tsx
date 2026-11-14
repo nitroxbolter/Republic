@@ -143,6 +143,17 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
         </button>
       </header>
       <button type="button" className="secondary-button" onClick={demography.show}>Abrir Política Demográfica</button>
+      <button type="button" className="secondary-button" disabled={!game} onClick={() => {
+        if (!game) return;
+        const file = new Blob([`\uFEFF${game.auditLogText()}`], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `republic-auditoria-ano-${game.city.date.year}.txt`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }}>Exportar auditoria da cidade (.txt)</button>
+      <p className="tax-hint">O arquivo reúne dados atuais, fechamentos mensais e eventos registrados desde o início desta sessão/cidade carregada.</p>
 
       {info.taxes && (
         <div className="tax-chest">

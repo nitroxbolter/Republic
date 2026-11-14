@@ -45,6 +45,7 @@ import { loadSimulation, serialize, type SaveData } from '../sim/save';
 import type { TerrainSettings } from '../sim/terrain/presets';
 import type { World } from '../sim/World';
 import { SoundBoard } from './audio';
+import { CityAudit, formatAuditMoney } from './audit';
 import { daylightTint, nightness } from '../render/daylight';
 import type { Point, ViewTransform } from '../render/view/ViewTransform';
 import { EventBus, type DayNightMode, type GameEventMap, type Notice, type ProgressInfo } from './events';
@@ -120,6 +121,7 @@ export class Game {
   private readonly renderer: Renderer;
   private readonly input: InputController;
   private readonly loop: GameLoop;
+  private readonly audit: CityAudit;
 
   private simTick = 0;
   private hovered: TilePos | null = null;
@@ -167,6 +169,7 @@ export class Game {
     this.sim = sim;
     this.city = sim.city;
     this.options = options;
+    this.audit = new CityAudit(options.name, this.city, this.sim);
     this.renderer = renderer;
     this.input = new InputController(renderer.app.canvas, renderer.camera, {
       onPointer: (p) => this.updateHover(p),
@@ -248,6 +251,11 @@ export class Game {
   /** The city as a save (docs/specs/saving.md). A few ms even for a big city. */
   snapshot(): SaveData {
     return serialize(this.city, this.options.terrain, this.options.name, this.sim);
+  }
+
+  /** Full plain-text economy and population audit for analysis/export. */
+  auditLogText(): string {
+    return this.audit.export(this.city, this.sim);
   }
 
   get changeStamp(): ChangeStamp {
@@ -444,6 +452,7 @@ export class Game {
 
   /** Apply a tool plan: mutate the world, then refresh rendering, sim caches and UI. */
   private execute(p: ToolPlan) {
+    const fundsBefore = this.city.funds;
     // What's on each tile before it changes decides the particles (leaves, grit, dust).
     const debris = this.debrisOf(p.plan.tiles);
     // Rezoning or dezoning removes grown buildings; they get a puff of dust.
@@ -460,6 +469,7 @@ export class Game {
     else if (p.kind === 'move') result = applyMove(this.city, p.plan);
     else if (p.kind === 'rail') result = applyRail(this.city, p.plan);
     else result = applyPlace(this.city, p.plan, Math.floor(Math.random() * BUILDING_VARIANTS));
+    this.recordAuditToolAction(p, result, fundsBefore);
 
     if (p.kind === 'move' && !p.plan.ok) {
       this.sound.play('error');
@@ -497,6 +507,36 @@ export class Game {
           : `${name} é desbloqueado no estágio ${stage.name} (${stage.population.toLocaleString()} moradores)`,
       );
     }
+  }
+
+  private recordAuditToolAction(p: ToolPlan, result: ApplyResult, fundsBefore: number) {
+    const plan = p.plan;
+    let subject: string = p.kind;
+    let location = '';
+    if (p.kind === 'place') {
+      subject = BUILDINGS[p.plan.building].name;
+      location = ` em (${p.plan.origin.x}, ${p.plan.origin.y})`;
+    } else if (p.kind === 'move') {
+      const building = this.world.buildings.get(p.plan.moving);
+      subject = building ? `mover ${BUILDINGS[building.def].name}` : 'mover prédio';
+      location = ` para (${p.plan.origin.x}, ${p.plan.origin.y})`;
+    } else if (p.kind === 'zone') subject = `zona ${p.zone}`;
+    else if (p.kind === 'road') subject = `via ${p.roadType}`;
+    const invalid = plan.tiles.filter((tile) => !tile.valid).length;
+    if (result.ok && result.changed) {
+      this.audit.record(this.city, 'AÇÃO NO MAPA', `${subject}${location}: aplicada em ${plan.count} tile(s); custo ${formatAuditMoney(fundsBefore - this.city.funds)}; saldo ${formatAuditMoney(this.city.funds)}.`);
+      return;
+    }
+    const reason = result.reason === 'insufficient-funds'
+      ? `saldo insuficiente: necessário ${formatAuditMoney(plan.cost)}, disponível ${formatAuditMoney(fundsBefore)}`
+      : result.reason === 'locked'
+        ? p.kind === 'place' ? (p.plan.note ?? 'estrutura bloqueada por estágio ou pesquisa') : 'ferramenta bloqueada'
+        : p.kind === 'place' && !p.plan.ok
+          ? p.plan.note ?? `${invalid} tile(s) inválido(s): terreno fora do mapa, água, via ou prédio ocupado`
+          : invalid > 0
+            ? `${invalid} tile(s) inválido(s) por terreno ocupado ou incompatível`
+            : 'nenhuma alteração válida foi aplicada';
+    this.audit.record(this.city, 'AÇÃO RECUSADA', `${subject}${location}: ${reason}. Custo previsto ${formatAuditMoney(plan.cost)}; tiles válidos ${plan.count}/${plan.tiles.length}.`);
   }
 
   /** Zones only grow within reach of a road; say so when some of the new zone can't. */
@@ -556,6 +596,7 @@ export class Game {
   }
 
   private newDay(out: DayOutcome) {
+    this.audit.daily(this.city, this.sim, out);
     this.showDay(out);
     this.explainMaterials();
     this.showMilestones(out);
@@ -841,64 +882,84 @@ export class Game {
   }
 
   setTaxRate(rate: number) {
+    const previous = this.city.taxRate;
     this.city.taxRate = Math.max(BALANCE.minTaxRate, Math.min(BALANCE.maxTaxRate, Math.round(rate)));
+    if (previous !== this.city.taxRate) this.audit.record(this.city, 'POLÍTICA', `Imposto sobre empresas: ${previous}% → ${this.city.taxRate}%.`, 'company-tax');
     this.edits++;
     this.emitBudget();
     this.emitCity();
   }
 
   setIncomeTaxRate(rate: number) {
+    const previous = this.city.incomeTaxRate;
     this.city.incomeTaxRate = Math.max(0, Math.min(100, Math.round(rate)));
+    if (previous !== this.city.incomeTaxRate) this.audit.record(this.city, 'POLÍTICA', `Imposto de renda dos habitantes: ${previous}% → ${this.city.incomeTaxRate}%.`, 'income-tax');
     this.edits++;
     this.emitBudget();
     this.emitCity();
   }
 
   setMinimumWage(amount: number) {
+    const previous = this.city.minimumWage;
     this.city.minimumWage = Math.max(BALANCE.minMinimumWage, Math.min(BALANCE.maxMinimumWage, Math.round(amount)));
+    if (previous !== this.city.minimumWage) this.audit.record(this.city, 'POLÍTICA', `Salário mínimo mensal: ${formatAuditMoney(previous)} → ${formatAuditMoney(this.city.minimumWage)}.`, 'minimum-wage');
     this.edits++;
     this.emitBudget();
     this.emitCity();
   }
 
   setPensionPerSenior(amount: number) {
+    const previous = this.city.pensionPerSenior;
     this.city.pensionPerSenior = Math.max(BALANCE.minPensionPerSenior, Math.min(BALANCE.maxPensionPerSenior, Math.round(amount)));
+    if (previous !== this.city.pensionPerSenior) this.audit.record(this.city, 'POLÍTICA', `Aposentadoria por idoso: ${formatAuditMoney(previous)} → ${formatAuditMoney(this.city.pensionPerSenior)}/mês.`, 'pension-rate');
     this.edits++;
     this.emitBudget();
     this.emitCity();
   }
 
   setCostTaxRate(kind: import('../sim/systems/livingCosts').CostKind, rate: number) {
+    const previous = this.city.costTaxRates[kind];
     this.city.costTaxRates[kind] = Math.max(0, Math.min(100, Math.round(rate)));
+    if (previous !== this.city.costTaxRates[kind]) this.audit.record(this.city, 'POLÍTICA', `Alíquota ${kind}: ${previous}% → ${this.city.costTaxRates[kind]}%.`, `cost-tax-${kind}`);
     this.edits++;
     this.emitBudget();
     this.emitCity();
   }
 
   setDemographicStrategy(strategy: DemographicStrategy) {
+    const previous = this.city.demography.strategy;
     this.city.demography.strategy = strategy;
+    if (previous !== strategy) this.audit.record(this.city, 'POLÍTICA', `Estratégia demográfica: ${previous} → ${strategy}.`, 'demography-strategy');
     this.edits++; this.emitCity(); this.emitBudget();
   }
 
   setAnnualGrowthTarget(target: number) {
+    const previous = this.city.demography.annualTarget;
     this.city.demography.annualTarget = Math.max(0, Math.min(10, target));
+    if (previous !== this.city.demography.annualTarget) this.audit.record(this.city, 'POLÍTICA', `Meta anual de crescimento: ${previous}% → ${this.city.demography.annualTarget}%.`, 'population-target');
     this.edits++; this.emitCity(); this.emitBudget();
   }
 
   setMigrationIncentives(enabled: boolean) {
+    const previous = this.city.demography.incentivesEnabled;
     this.city.demography.incentivesEnabled = enabled;
+    if (previous !== enabled) this.audit.record(this.city, 'POLÍTICA', `Incentivos migratórios: ${previous ? 'ativos' : 'suspensos'} → ${enabled ? 'ativos' : 'suspensos'}.`, 'migration-incentives');
     this.edits++; this.emitCity(); this.emitBudget();
   }
 
   setHousingSubsidy(percent: number) {
+    const previous = this.city.demography.housingSubsidy;
     this.city.demography.housingSubsidy = Math.max(0, Math.min(BALANCE.demographicMaxHousingSubsidy, percent / 100));
+    if (previous !== this.city.demography.housingSubsidy) this.audit.record(this.city, 'POLÍTICA', `Subsídio habitacional: ${(previous * 100).toFixed(1)}% → ${(this.city.demography.housingSubsidy * 100).toFixed(1)}%.`, 'housing-subsidy');
     this.edits++; this.emitCity(); this.emitBudget();
   }
 
   setPermitLimits(limits: PermitLimits) {
+    const previous = { ...this.city.demography.permitLimits };
     for (const zone of ['r', 'c', 'o', 'i'] as const) {
       this.city.demography.permitLimits[zone] = Math.max(0, Math.min(9999, Math.round(limits[zone])));
     }
+    if (Object.keys(previous).some((key) => previous[key as keyof PermitLimits] !== this.city.demography.permitLimits[key as keyof PermitLimits])) this.audit.record(this.city, 'POLÍTICA', `Limites mensais de licenças: ${JSON.stringify(previous)} → ${JSON.stringify(this.city.demography.permitLimits)}.`, 'permit-limits');
     this.edits++; this.emitCity(); this.emitBudget();
   }
 
@@ -933,6 +994,7 @@ export class Game {
 
   /** Budget panel data: the tax rate, last month's report and what next month looks like now. */
   emitBudget() {
+    this.audit.observe(this.city, this.sim, 'reavaliação econômica');
     const u = this.sim.utilities.report;
     this.events.emit('budget', {
       taxRate: this.city.taxRate,
@@ -1137,6 +1199,7 @@ export class Game {
       return;
     }
     this.sound.play('coin');
+    this.audit.record(this.city, 'IMPOSTOS', `Receita de impostos transferida do cofre da Prefeitura para o caixa: ${formatAuditMoney(r.amount)}; novo caixa ${formatAuditMoney(this.city.funds)}.`);
     this.notify('info', `$${r.amount.toLocaleString()} recolhidos em impostos`);
     this.resolve('taxes');
     this.events.emit('funds', this.city.funds);
