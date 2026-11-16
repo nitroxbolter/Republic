@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useAtomValue } from 'jotai';
-import { budgetAtom, cityAtom, gameAtom } from '../atoms';
+import { useAtom, useAtomValue } from 'jotai';
+import { budgetAtom, cityAtom, gameAtom, inboxAtom } from '../atoms';
 import type { BudgetInfo, CityInfo } from '../../game/events';
 import type { Game } from '../../game/Game';
 
@@ -92,11 +92,21 @@ export function CityAssistant() {
   const city = useAtomValue(cityAtom);
   const budget = useAtomValue(budgetAtom);
   const game = useAtomValue(gameAtom);
+  const [messages, setMessages] = useAtom(inboxAtom);
   const [open, setOpen] = useState(false);
   const [hidden, setHidden] = useState<string[]>([]);
   const advice = useMemo(() => city && game ? makeAdvice(city, budget, game) : [], [city, budget, game]);
   const visible = advice.filter((item) => !hidden.includes(item.key));
   const lead = visible[0];
+  const unread = messages.filter((message) => !message.read).length;
+
+  const toggleOpen = () => {
+    const next = !open;
+    setOpen(next);
+    if (next && unread) setMessages((items) => items.map((message) => ({ ...message, read: true })));
+  };
+
+  const dismissMessage = (key: string) => setMessages((items) => items.filter((message) => message.key !== key));
 
   if (!city || !game) return null;
   return (
@@ -105,10 +115,16 @@ export function CityAssistant() {
         <section className="city-assistant-card panel" aria-labelledby="city-assistant-title">
           <header className="city-assistant-header">
             <span className="assistant-avatar" aria-hidden="true"><AssistantPortrait /></span>
-            <div><strong id="city-assistant-title">Lia · Secretária da Cidade</strong><small>{visible.length ? `${visible.length} aviso(s) para acompanhar` : 'Tudo em ordem por enquanto'}</small></div>
+            <div><strong id="city-assistant-title">Lia · Secretária da Cidade</strong><small>{visible.length + messages.length ? `${visible.length + messages.length} aviso(s) para acompanhar` : 'Tudo em ordem por enquanto'}</small></div>
             <button className="assistant-close" type="button" onClick={() => setOpen(false)} aria-label="Fechar assistente">×</button>
           </header>
           <div className="city-assistant-list" aria-live="polite">
+            {messages.map((message) => (
+              <article className={`assistant-advice advice-${message.kind === 'error' ? 'critical' : message.kind === 'milestone' ? 'info' : 'warning'}`} key={`message-${message.key}`}>
+                <div className="assistant-advice-title"><span className="assistant-status-dot" /><div><small>{message.kind === 'error' ? 'Atenção' : message.kind === 'milestone' ? 'Conquista' : 'Aviso'}</small><strong>{message.message}</strong></div><button type="button" className="assistant-dismiss" title="Dispensar aviso" aria-label={`Dispensar aviso: ${message.message}`} onClick={() => dismissMessage(message.key)}>×</button></div>
+                {message.date && <div className="assistant-metric">{message.date}</div>}
+              </article>
+            ))}
             {visible.map((item) => (
               <article className={`assistant-advice advice-${item.level}`} key={item.key}>
                 <div className="assistant-advice-title"><span className="assistant-status-dot" /><div><small>{levelLabel[item.level]}</small><strong>{item.title}</strong></div><button type="button" className="assistant-dismiss" title="Dispensar aviso" aria-label={`Dispensar: ${item.title}`} onClick={() => setHidden((items) => [...items, item.key])}>×</button></div>
@@ -121,9 +137,9 @@ export function CityAssistant() {
           {hidden.length > 0 && <button className="assistant-show-all" type="button" onClick={() => setHidden([])}>Mostrar todos os avisos</button>}
         </section>
       )}
-      <button className={`assistant-bubble ${open ? 'is-open' : ''} ${lead ? `bubble-${lead.level}` : ''}`} type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label={open ? 'Recolher assistente da cidade' : `Abrir assistente da cidade, ${visible.length} aviso(s)`}>
+      <button className={`assistant-bubble ${open ? 'is-open' : ''} ${lead ? `bubble-${lead.level}` : ''}`} type="button" onClick={toggleOpen} aria-expanded={open} aria-label={open ? 'Recolher assistente da cidade' : `Abrir assistente da cidade, ${visible.length + messages.length} aviso(s)`}>
         <span className="assistant-avatar" aria-hidden="true"><AssistantPortrait /></span>
-        {!open && visible.length > 0 && <span className="assistant-count" aria-hidden="true">{visible.length}</span>}
+        {!open && visible.length + unread > 0 && <span className="assistant-count" aria-hidden="true">{visible.length + unread}</span>}
       </button>
     </aside>
   );

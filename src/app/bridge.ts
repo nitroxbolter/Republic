@@ -14,7 +14,6 @@ import {
   inspectAtom,
   zoneInspectAtom,
   mutedAtom,
-  noticesAtom,
   inboxAtom,
   INBOX_MAX,
   type InboxAlert,
@@ -31,9 +30,6 @@ import {
 
 type Store = ReturnType<typeof createStore>;
 
-/** How long a notice toast stays on screen. */
-const NOTICE_MS = 2600;
-
 /** Pipe game events into Jotai atoms. Returns an unsubscribe function. */
 export function connectGameToStore(game: Game, store: Store): () => void {
   // Seed atoms with current state; events only carry changes.
@@ -49,7 +45,6 @@ export function connectGameToStore(game: Game, store: Store): () => void {
   store.set(rotationAtom, game.rotation);
   store.set(dayNightAtom, game.dayNight);
 
-  const timers = new Set<ReturnType<typeof setTimeout>>();
   const offs = [
     game.events.on('stats', (s) => store.set(debugStatsAtom, s)),
     game.events.on('hover', (t) => store.set(hoveredTileAtom, t)),
@@ -73,18 +68,10 @@ export function connectGameToStore(game: Game, store: Store): () => void {
     game.events.on('zoneInspect', (i) => store.set(zoneInspectAtom, i)),
     game.events.on('toolPreview', (p) => store.set(toolPreviewAtom, p)),
     game.events.on('notice', (n) => {
-      // Alerts with a key stay in the inbox: a newer one with the same key replaces the older.
-      const key = n.key;
-      if (key) {
-        const alert: InboxAlert = { key, kind: n.kind, message: n.message, date: n.date ?? '', id: n.id, read: false };
-        store.set(inboxAtom, (list) => [alert, ...list.filter((a) => a.key !== key)].slice(0, INBOX_MAX));
-      }
-      store.set(noticesAtom, (list) => [...list.slice(-2), n]);
-      const timer = setTimeout(() => {
-        timers.delete(timer);
-        store.set(noticesAtom, (list) => list.filter((x) => x.id !== n.id));
-      }, n.kind === 'milestone' ? NOTICE_MS * 2.5 : NOTICE_MS);
-      timers.add(timer);
+      // Every game notice goes to the secretary; replace recurring messages instead of flooding it.
+      const key = n.key ?? `message:${n.message}`;
+      const alert: InboxAlert = { key, kind: n.kind, message: n.message, date: n.date ?? '', id: n.id, read: false };
+      store.set(inboxAtom, (list) => [alert, ...list.filter((a) => a.key !== key)].slice(0, INBOX_MAX));
     }),
     // An ongoing problem was fixed: its alert goes.
     game.events.on('resolve', (key) => store.set(inboxAtom, (list) => (list.some((a) => a.key === key) ? list.filter((a) => a.key !== key) : list))),
@@ -93,7 +80,6 @@ export function connectGameToStore(game: Game, store: Store): () => void {
   game.emitBudget();
   return () => {
     offs.forEach((off) => off());
-    timers.forEach(clearTimeout);
     store.set(gameAtom, null);
     store.set(toolPreviewAtom, null);
     store.set(inspectAtom, null);

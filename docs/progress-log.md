@@ -2,6 +2,12 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16: Alertas centralizados na secretaria
+
+- Mensagens do jogo agora ficam na Lia até serem dispensadas ou resolvidas; toasts e o sino separado foram removidos.
+- Removidos o painel de atalhos e o cartão flutuante de felicidade dos habitantes.
+- O minimapa agora aparece somente como opção em dispositivos touch; ele fica oculto no navegador desktop.
+
 ## 2026-11-16: Tela cheia no mobile
 
 - Adicionado ao menu móvel um botão para entrar e sair da tela cheia, com estado sincronizado ao navegador.

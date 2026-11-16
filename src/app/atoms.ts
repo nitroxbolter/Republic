@@ -17,9 +17,7 @@ export const gameAtom = atom<Game | null>(null);
 export const fundsAtom = atom(0);
 export const activeToolAtom = atom<ToolId>('select');
 export const toolPreviewAtom = atom<ToolPreviewInfo | null>(null);
-export const noticesAtom = atom<readonly Notice[]>([]);
-
-/** An alert kept in the inbox until the game resolves it or the player dismisses it. */
+/** A game message kept for the city secretary until the game resolves it or the player dismisses it. */
 export interface InboxAlert {
   key: string;
   kind: Notice['kind'];
@@ -29,7 +27,7 @@ export interface InboxAlert {
   id: number;
   read: boolean;
 }
-/** The alerts inbox (top bar bell), newest first; at most INBOX_MAX. */
+/** Messages shown by the city secretary, newest first; at most INBOX_MAX. */
 export const inboxAtom = atom<readonly InboxAlert[]>([]);
 export const INBOX_MAX = 40;
 export const mutedAtom = atom(false);

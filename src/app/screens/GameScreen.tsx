@@ -9,7 +9,6 @@ import { connectGameToStore } from '../bridge';
 import { randomSeed } from '../options';
 import { BuildingPicker } from '../hud/BuildingPicker';
 import { RoadPicker } from '../hud/RoadPicker';
-import { ControlsHint } from '../hud/ControlsHint';
 import { CostLabel } from '../hud/CostLabel';
 import { DebugOverlay } from '../hud/DebugOverlay';
 import { InfoPanel } from '../hud/InfoPanel';
@@ -18,9 +17,7 @@ import { MilitaryPanel } from '../hud/MilitaryPanel';
 import { BankPanel } from '../hud/BankPanel';
 import { DemographyPanel } from '../hud/DemographyPanel';
 import { TrafficLegend } from '../hud/TrafficLegend';
-import { CitizensPanel } from '../hud/CitizensPanel';
 import { Minimap } from '../hud/Minimap';
-import { Notices } from '../hud/Notices';
 import { Toolbar } from '../hud/Toolbar';
 import { TopBar } from '../hud/TopBar';
 import { MoreSheet } from '../hud/MoreSheet';
@@ -204,7 +201,6 @@ function Hud({ options, onNewCity, onSave, beforeLogout }: HudProps) {
     <>
       <TopBar cityName={options.name} onNewCity={onNewCity} onSave={onSave} beforeLogout={beforeLogout} />
       <DebugOverlay />
-      <CitizensPanel />
       <Minimap />
       <TrafficLegend />
       <Toolbar />
@@ -216,9 +212,7 @@ function Hud({ options, onNewCity, onSave, beforeLogout }: HudProps) {
       <BuildingPicker />
       <RoadPicker />
       <MoreSheet cityName={options.name} onNewCity={onNewCity} onSave={onSave} beforeLogout={beforeLogout} />
-      <Notices />
       <CostLabel />
-      <ControlsHint />
       {/* Starts on a new city until finished; an opened city only carries on a tour left midway. */}
       <Tour autoStart={options.demo ? 'never' : options.save ? 'resume' : 'start'} />
       <GuestLimit cityName={options.name} />

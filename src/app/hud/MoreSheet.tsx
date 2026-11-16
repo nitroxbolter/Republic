@@ -2,7 +2,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import type { ReactNode } from 'react';
 import { AccountButton } from '../account/AccountButton';
 import { airViewAtom, cityAtom, dayNightAtom, gameAtom, happinessViewAtom, mutedAtom, trafficViewAtom } from '../atoms';
-import { PHONE, SLIM_BAR, useMedia } from '../mobile/useMedia';
+import { SLIM_BAR, TOUCH, useMedia } from '../mobile/useMedia';
 import { useOverlay } from '../overlay/overlay';
 import { useStartTour } from '../tour/tourState';
 import { aqiBand } from '../../sim/systems/air';
@@ -68,7 +68,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
   const airView = useAtomValue(airViewAtom);
   const [minimap, setMinimap] = useAtom(minimapShownAtom);
   // Only upright screens hide the minimap; landscape phones always show a small one.
-  const minimapOptional = useMedia(PHONE);
+  const minimapOptional = useMedia(TOUCH);
   const startTour = useStartTour();
   const clock = useClockText();
   if (!city) return null;

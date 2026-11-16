@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CityInfo, DayNightMode } from '../../game/events';
-import { airViewAtom, happinessViewAtom, trafficViewAtom, budgetAtom, cityAtom, clockAtom, dayNightAtom, fundsAtom, gameAtom, mutedAtom, rotationAtom, inboxAtom } from '../atoms';
+import { airViewAtom, happinessViewAtom, trafficViewAtom, budgetAtom, cityAtom, clockAtom, dayNightAtom, fundsAtom, gameAtom, mutedAtom, rotationAtom } from '../atoms';
 import { AccountButton } from '../account/AccountButton';
 import { compactNumber } from '../format';
 import { SLIM_BAR, useMedia } from '../mobile/useMedia';
@@ -9,7 +9,6 @@ import { useDismiss, useOverlay } from '../overlay/overlay';
 import { useStartTour } from '../tour/tourState';
 import { SaveStatus } from './SaveStatus';
 import { StageChip } from './StageChip';
-import { AlertsButton } from './AlertsButton';
 import { aqiBand } from '../../sim/systems/air';
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] as const;
@@ -371,20 +370,16 @@ function PhoneTopBar() {
   const city = useAtomValue(cityAtom);
   const game = useAtomValue(gameAtom);
   const more = useOverlay('more');
-  const inbox = useAtomValue(inboxAtom);
-  const complaints = city?.needs.complaints.length ?? 0;
   const speed = city?.speed ?? 1;
   const paused = speed === 0;
   // The speed button steps 1× → 2× → 3× → 1×; pause has its own button.
   const nextSpeed = paused ? 1 : (speed % 3) + 1;
-  const attention = complaints > 0 && !inbox.some((a) => !a.read);
   return (
     <div className="panel top-bar is-phone">
       <button type="button" className={`icon-button top-more ${more.open ? 'is-on' : ''}`} aria-label="City menu" aria-expanded={more.open} onClick={more.toggle}>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
           <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
-        {attention && <span className="top-more-dot" aria-hidden="true" />}
       </button>
       <Funds short />
       <BankButton />
@@ -410,7 +405,6 @@ function PhoneTopBar() {
           {speedGlyph(paused ? 1 : speed)}
         </button>
       </div>
-      <AlertsButton />
     </div>
   );
 }
@@ -552,7 +546,6 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
           </svg>
         </button>
       </Fold>
-      <AlertsButton />
       <button type="button" className="icon-button" title="Tour the basics" aria-label="Tour the basics" onClick={startTour}>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           {HELP}

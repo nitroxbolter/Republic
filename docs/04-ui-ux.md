@@ -42,7 +42,8 @@
 ```
 
 - **Info panel** slides in from the right when you inspect a tile or building.
-- **Minimap** sits bottom-right (see below). The controls hint is bottom-left and the toolbar bottom-centre.
+- The **city secretary** is the central place for game alerts and recommendations; temporary alert popups and the on-screen controls card are not shown.
+- The **minimap** is available as an optional view on touch devices and is hidden on desktop browsers.
 - **Toolbar groups**, separated by thin dividers: *Select · Clear · Civic* | *Homes · Shops · Industry* | *Road · Highway*. Civic offers parks and the town hall (D-042); Clear also removes zones (D-051).
 - **Tool options** (e.g. zone density, road type) pop up above the active toolbar button.
 
@@ -55,7 +56,7 @@
   - roads dark.
 - It repaints when the world changes (at most 4 times a second) and on rotation.
 - A white quad shows the part of the map on screen and follows the camera every frame.
-- **Click or drag** on the minimap to move the camera there (smooth pan).
+- **Click or drag** on the minimap to move the camera there (smooth pan). On compact touch layouts, the minimap is available in the mobile menu; desktop browsers hide it.
 - The same painter (`render/minimap.ts`) draws the New Game preview (Phase 2b).
 
 ## Time of Day & Day/Night (Phase 5)

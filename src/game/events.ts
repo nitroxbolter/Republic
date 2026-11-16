@@ -230,12 +230,11 @@ export interface Notice {
   kind: 'error' | 'info' | 'milestone';
   message: string;
   /**
-   * Alerts worth keeping carry a key: they go to the alerts inbox, a newer one with the same key
-   * replaces the older, and the game resolves the key when the problem is gone. Without a key a
-   * notice is only a toast.
+   * Ongoing alerts carry a key: the secretary replaces older messages with the same key, and the
+   * game resolves the key when the problem is gone. Other notices remain until dismissed.
    */
   key?: string;
-  /** The game date it happened, for the inbox ("Jul 9, Y3"). */
+  /** The game date it happened, for the secretary ("Jul 9, Y3"). */
   date?: string;
 }
 
