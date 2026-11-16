@@ -9,7 +9,7 @@ work session, read **Current Status** below, then the relevant spec.
 |---|---|
 | **Current phase** | City evolution, property economy, demographic policy and in-game Wiki |
 | **Next phase** | Follow the open items in `03-roadmap.md` |
-| **Last updated** | 2026-11-13 |
+| **Last updated** | 2026-11-16 |
 
 ## Run It
 
@@ -59,6 +59,7 @@ bun run typecheck && bun run lint
 | [guia-do-jogador.md](guia-do-jogador.md) | Guia em português sobre crescimento, trabalho, contas, serviços e impostos |
 | [specs/wiki.md](specs/wiki.md) | Wiki interativa, catálogo de edifícios e simulador de orçamento |
 | [deploy.md](deploy.md) | Docker image, environment settings, production checklist |
+| [vps-access.md](vps-access.md) | VPS connection details and credential handling |
 | [decisions.md](decisions.md) | Decision log (why we chose X over Y) |
 | [progress-log.md](progress-log.md) | Dated log of what got done each session |
 

@@ -2,6 +2,24 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16: Confirmação de construção junto ao toque
+
+- Em telas móveis, o rascunho de construção, zona, via ou limpeza mostra um controle compacto perto do último ponto tocado: custo, cancelar e seta para aplicar. O controle respeita barra superior, dock e áreas seguras; o desktop mantém a barra com texto.
+- A atualização visível nas telas iniciais registra os controles móveis para a publicação desta versão.
+
+## 2026-11-16: Assistente compacto no celular
+
+- A Lia agora aparece como um único botão com retrato e contador de avisos; o texto de prévia persistente foi removido. Toque no ícone para abrir ou recolher as orientações.
+- O cartão usa a área livre entre barra superior e controles inferiores nos celulares em retrato e paisagem, com rolagem interna, texto maior e alvos de toque mais amplos.
+- Typecheck e lint passaram sem erros; `Compilar.bat` atualizou o jogo local.
+
+## 2026-11-16: Acesso à VPS documentado
+
+- Registrados em `docs/vps-access.md` o host, usuário e porta SSH informados pelo usuário.
+- A senha não foi gravada em documentação versionada; guardar em um gerenciador de senhas. Recomendada a rotação, pois foi compartilhada na conversa.
+- Acesso SSH pelo perfil Bitvise confirmou o checkout em `/var/www/html3-current/Republic`: commit `f55282e` e árvore de trabalho limpa na VPS. O checkout local está no mesmo commit, com alterações apenas na documentação desta sessão e `AGENTS.md` local não rastreado. `dist/` existe localmente, mas não no checkout remoto.
+- Confirmada na VPS a imagem `republic-app` em execução; o `Iniciar.exe` e o `dist/` locais eram anteriores ao commit atual. Executado `Compilar.bat` para reconstruir ambos a partir de `f55282e`; typecheck e lint passaram sem erros.
+
 ## 2026-11-12: Empregados e previsão mensal reconciliados (D-107)
 
 - O orçamento separa adultos, empregados, desempregados e afastados; os três últimos somam os adultos. O topo e o menu Mais identificam empregados / vagas em vez de chamar empregados de todos os trabalhadores.

@@ -121,11 +121,9 @@ export function CityAssistant() {
           {hidden.length > 0 && <button className="assistant-show-all" type="button" onClick={() => setHidden([])}>Mostrar todos os avisos</button>}
         </section>
       )}
-      <button className={`assistant-bubble ${lead ? `bubble-${lead.level}` : ''}`} type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label={open ? 'Recolher assistente da cidade' : 'Abrir assistente da cidade'}>
-        <span className="assistant-avatar"><AssistantPortrait /></span>
-        {!open && <span className="assistant-bubble-copy"><strong>{lead ? lead.title : 'Lia, sua secretária'}</strong><small>{lead ? 'Toque para ver o problema e a solução' : 'A cidade está sob controle'}</small></span>}
-        {!open && visible.length > 0 && <span className="assistant-count">{visible.length}</span>}
-        {open && <span className="assistant-bubble-x">−</span>}
+      <button className={`assistant-bubble ${open ? 'is-open' : ''} ${lead ? `bubble-${lead.level}` : ''}`} type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label={open ? 'Recolher assistente da cidade' : `Abrir assistente da cidade, ${visible.length} aviso(s)`}>
+        <span className="assistant-avatar" aria-hidden="true"><AssistantPortrait /></span>
+        {!open && visible.length > 0 && <span className="assistant-count" aria-hidden="true">{visible.length}</span>}
       </button>
     </aside>
   );

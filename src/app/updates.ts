@@ -7,6 +7,14 @@ export interface UpdateEntry {
 
 export const UPDATES: readonly UpdateEntry[] = [
   {
+    date: '2026-11-16',
+    title: 'Controles mais leves no celular',
+    changes: [
+      'A Lia abre pelo ícone e mantém os avisos dentro de um painel que cabe na tela.',
+      'Ao desenhar no mapa, uma seta perto da área confirma a obra ou a zona; o custo continua visível.',
+    ],
+  },
+  {
     date: '2026-11-13',
     title: 'Banco da cidade',
     changes: [
