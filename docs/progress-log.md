@@ -2,6 +2,10 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16: Avançar do passeio acessível no mobile
+
+- O botão do passeio mostra “Avançar” em telas touch e fica preso ao rodapé do cartão enquanto o conteúdo rola.
+
 ## 2026-11-16: Ações reunidas em Preferências
 
 - Removidos da barra principal os controles de rotação, o tour introdutório e o atalho de salvar.

@@ -183,11 +183,11 @@ function TourCard({ index }: { index: number }) {
           <div className="tour-actions">
             {index === 0 && (
               <button type="button" className="tour-link" onClick={end}>
-                Skip tour
+                {touch ? 'Pular passeio' : 'Skip tour'}
               </button>
             )}
             <button type="button" className="tour-primary" autoFocus onClick={() => go(index + 1)}>
-              {last ? 'Start building' : 'Show me around'}
+              {last ? (touch ? 'Começar a construir' : 'Start building') : (touch ? 'Avançar' : 'Show me around')}
             </button>
           </div>
         </div>
@@ -285,16 +285,16 @@ function TourCard({ index }: { index: number }) {
         <div className="tour-actions">
           {index > 1 && (
             <button type="button" className="tour-link" onClick={() => go(index - 1)}>
-              Back
+              {touch ? 'Voltar' : 'Back'}
             </button>
           )}
           {step.done ? (
             <button type="button" className="tour-link" onClick={() => go(index + 1)}>
-              Skip step
+              {touch ? 'Avançar' : 'Skip step'}
             </button>
           ) : (
             <button type="button" className="tour-primary" onClick={() => go(index + 1)}>
-              Next
+              {touch ? 'Avançar' : 'Next'}
             </button>
           )}
         </div>

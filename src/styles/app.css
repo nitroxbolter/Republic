@@ -4290,6 +4290,19 @@ summary {
     min-height: 40px;
     padding: 8px 16px;
   }
+  .tour-card.is-docked .tour-actions {
+    position: sticky;
+    bottom: -10px;
+    margin: 8px -14px -10px;
+    padding: 9px 14px calc(5px + var(--safe-b, 0px));
+    border-top: 1px solid var(--border-panel);
+    background: rgba(18, 22, 30, 0.98);
+  }
+  .tour-card.is-docked .tour-primary,
+  .tour-card.is-modal .tour-primary {
+    min-width: 108px;
+    min-height: 44px;
+  }
   .tour-icon {
     width: 36px;
     height: 36px;

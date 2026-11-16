@@ -5,6 +5,7 @@
 - The mobile city menu includes a fullscreen toggle for the game screen.
 - It uses the browser Fullscreen API when available. If the browser blocks page fullscreen, explain that installing the app from the browser menu opens it without browser chrome.
 - Save, view rotation, and the introductory tour live in Preferences on both desktop and mobile; these controls no longer take space in the main bar.
+- On touch devices, the introductory tour has a sticky, clearly labeled “Avançar” button so it stays visible while its card scrolls.
 
 ## Look & Feel
 
