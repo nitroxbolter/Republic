@@ -174,6 +174,13 @@ const EYE = (
     <circle cx="12" cy="12" r="2.8" />
   </g>
 );
+const SETTINGS = (
+  <g {...icon}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4m10.6 10.6 1.4 1.4m0-13.4-1.4 1.4M6.7 17.3l-1.4 1.4" />
+    <circle cx="12" cy="12" r="8.5" />
+  </g>
+);
 export const PEOPLE = (
   <g {...icon}>
     <circle cx="9" cy="8" r="3" />
@@ -344,6 +351,47 @@ function BankButton() {
   </button>;
 }
 
+/** Desktop preferences menu: save, rotation, onboarding, and sound-independent options. */
+function PreferencesMenu({ onSave }: { onSave: () => void }) {
+  const game = useAtomValue(gameAtom);
+  const rotation = useAtomValue(rotationAtom);
+  const preferences = useOverlay('preferences');
+  const startTour = useStartTour();
+  const wrap = useRef<HTMLSpanElement>(null);
+  useDismiss(wrap, preferences.open, preferences.close);
+
+  return (
+    <span className="preferences-wrap" ref={wrap}>
+      <button type="button" className={`icon-button ${preferences.open ? 'is-on' : ''}`} title="Preferências" aria-label="Abrir Preferências" aria-haspopup="dialog" aria-expanded={preferences.open} onClick={preferences.toggle}>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{SETTINGS}</svg>
+      </button>
+      {preferences.open && (
+        <span className="panel preferences-menu" role="dialog" aria-label="Preferências">
+          <strong>Preferências</strong>
+          <div className="preferences-rotation">
+            <button type="button" className="preferences-action" onClick={() => game?.rotate(-1)} aria-label="Girar tela para a esquerda">
+              <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">{ROTATE_LEFT}</svg>
+              Girar à esquerda
+            </button>
+            <span className="compass" title="Norte" style={{ transform: `rotate(${45 + rotation * 90}deg)` }} aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3l4 9h-8z" fill="#f87171" /><path d="M12 21l-4-9h8z" fill="currentColor" opacity="0.55" /></svg>
+            </span>
+            <button type="button" className="preferences-action" onClick={() => game?.rotate(1)} aria-label="Girar tela para a direita">
+              <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">{ROTATE_RIGHT}</svg>
+              Girar à direita
+            </button>
+          </div>
+          <SaveStatus onSave={onSave} />
+          <button type="button" className="preferences-action" onClick={() => { preferences.close(); startTour(); }}>
+            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">{HELP}</svg>
+            Conhecer o básico
+          </button>
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Population({ short }: { short?: boolean }) {
   const city = useAtomValue(cityAtom);
   const demography = useOverlay('demography');
@@ -414,8 +462,6 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
   const city = useAtomValue(cityAtom);
   const muted = useAtomValue(mutedAtom);
   const game = useAtomValue(gameAtom);
-  const rotation = useAtomValue(rotationAtom);
-  const startTour = useStartTour();
   const trafficView = useAtomValue(trafficViewAtom);
   const happinessView = useAtomValue(happinessViewAtom);
   const airView = useAtomValue(airViewAtom);
@@ -436,7 +482,6 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
         </svg>
       </button>
       <span className="city-name">{cityName}</span>
-      <SaveStatus onSave={onSave} />
       <span className="top-divider" />
       <Fold id="city" open={fold} onOpen={setFold} label="Show the date, clock and jobs" glyph={CALENDAR}>
         <Stat title="Date" glyph={CALENDAR}>
@@ -500,27 +545,7 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
           </button>
         ))}
       </div>
-      <Fold id="view" open={fold} onOpen={setFold} label="Show rotate, traffic view and sound" glyph={EYE}>
-        <span className="top-divider" />
-        <div className="rotate-group" role="group" aria-label="Rotate view">
-          <button type="button" className="icon-button" title="Rotate left (,)" aria-label="Rotate view left" onClick={() => game?.rotate(-1)}>
-            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
-              {ROTATE_LEFT}
-            </svg>
-          </button>
-          {/* Compass: the arrow points to the map's north as seen from this side. */}
-          <span className="compass" title="North" style={{ transform: `rotate(${45 + rotation * 90}deg)` }} aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18">
-              <path d="M12 3l4 9h-8z" fill="#f87171" />
-              <path d="M12 21l-4-9h8z" fill="currentColor" opacity="0.55" />
-            </svg>
-          </span>
-          <button type="button" className="icon-button" title="Rotate right (.)" aria-label="Rotate view right" onClick={() => game?.rotate(1)}>
-            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
-              {ROTATE_RIGHT}
-            </svg>
-          </button>
-        </div>
+      <Fold id="view" open={fold} onOpen={setFold} label="Show map views and sound" glyph={EYE}>
         <span className="top-divider" />
         <button
           type="button"
@@ -546,11 +571,7 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
           </svg>
         </button>
       </Fold>
-      <button type="button" className="icon-button" title="Tour the basics" aria-label="Tour the basics" onClick={startTour}>
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          {HELP}
-        </svg>
-      </button>
+      <PreferencesMenu onSave={onSave} />
       <AccountButton compact beforeLogout={beforeLogout} />
     </div>
   );

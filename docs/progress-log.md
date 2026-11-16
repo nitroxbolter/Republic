@@ -2,6 +2,11 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16: Ações reunidas em Preferências
+
+- Removidos da barra principal os controles de rotação, o tour introdutório e o atalho de salvar.
+- As três ações agora ficam no menu Preferências, tanto no navegador desktop quanto no menu móvel.
+
 ## 2026-11-16: Minimapa removido também do mobile
 
 - Removidos o minimapa durante a partida e seu controle no menu móvel. O mapa de prévia na criação de cidade continua disponível.

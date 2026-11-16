@@ -213,3 +213,5 @@ Format: **ID — Title** · Status · Date. Reason in one or two lines.
 - **D-106 — The city secretary is the single home for in-game notices.** 2026-11-16. Temporary toasts and the separate alert bell split attention across the map. All game notices now remain in the secretary until dismissed or resolved, alongside her current recommendations. The keyboard-help card and floating citizen-happiness panel are removed to clear the map.
 
 - **D-107 — The minimap stays out of the live city view on every device.** 2026-11-16. The minimap competed with buildings and mobile touch controls for screen area. Remove it from gameplay and its mobile-menu toggle; keep the shared painter for city-creation previews.
+
+- **D-108 — Save, rotation and the intro tour live in Preferences.** 2026-11-16. These occasional actions crowded the main HUD. Put them together in a named Preferences menu on desktop and mobile, leaving daily city controls in the main bar.

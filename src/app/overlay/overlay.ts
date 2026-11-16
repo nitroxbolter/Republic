@@ -19,7 +19,8 @@ export type OverlayId =
   | 'budget'
   | 'demography'
   | 'bank'
-  | 'military';
+  | 'military'
+  | 'preferences';
 
 export const overlayAtom = atom<OverlayId | null>(null);
 

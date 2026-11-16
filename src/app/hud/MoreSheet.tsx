@@ -80,7 +80,6 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
             {date} · {clock.text}
           </span>
         </span>
-        <SaveStatus onSave={onSave} />
       </header>
 
       <button type="button" className="primary-button" onClick={budget.show}>Orçamento, salário mínimo e aposentadorias</button>
@@ -176,18 +175,6 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
         </div>
       </div>
       <div className="more-row">
-        <button type="button" className="more-button" onClick={() => game?.rotate(-1)} aria-label="Rotate view left">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            {ROTATE_LEFT}
-          </svg>
-          Turn left
-        </button>
-        <button type="button" className="more-button" onClick={() => game?.rotate(1)} aria-label="Rotate view right">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            {ROTATE_RIGHT}
-          </svg>
-          Turn right
-        </button>
         <button type="button" className={`more-button ${muted ? '' : 'is-on'}`} aria-pressed={!muted} onClick={() => game?.setMuted(!muted)}>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
             {speakerGlyph(muted)}
@@ -196,14 +183,29 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
         </button>
       </div>
 
+      <details className="more-section">
+        <summary>Preferências</summary>
+        <div className="more-stage more-preferences">
+          <div className="more-row">
+            <button type="button" className="more-button" onClick={() => game?.rotate(-1)} aria-label="Girar tela para a esquerda">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{ROTATE_LEFT}</svg>
+              Girar à esquerda
+            </button>
+            <button type="button" className="more-button" onClick={() => game?.rotate(1)} aria-label="Girar tela para a direita">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{ROTATE_RIGHT}</svg>
+              Girar à direita
+            </button>
+          </div>
+          <SaveStatus onSave={onSave} />
+          <button type="button" className="more-button" onClick={startTour}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">{HELP}</svg>
+            Conhecer o básico
+          </button>
+        </div>
+      </details>
+
       <h3 className="more-heading">Game</h3>
       <div className="more-row">
-        <button type="button" className="more-button" onClick={startTour}>
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            {HELP}
-          </svg>
-          Tour the basics
-        </button>
         <button
           type="button"
           className="more-button"
