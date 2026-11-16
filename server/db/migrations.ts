@@ -106,6 +106,8 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (email, purpose)
   );
   `,
+  // 7: world cities are opt-in and private by default (D-110)
+  `ALTER TABLE saves ADD COLUMN is_public boolean NOT NULL DEFAULT false;`,
 ];
 
 export async function migrate(db: Db): Promise<void> {

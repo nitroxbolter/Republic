@@ -21,6 +21,7 @@ import { OAuthService } from './modules/oauth/oauth.service.ts';
 import { SavesRepository } from './modules/saves/saves.repository.ts';
 import { savesRoutes } from './modules/saves/saves.routes.ts';
 import { SavesService } from './modules/saves/saves.service.ts';
+import { worldRoutes } from './modules/saves/world.routes.ts';
 import { GuestsRepository } from './modules/guests/guests.repository.ts';
 import { guestsRoutes } from './modules/guests/guests.routes.ts';
 import { GuestsService, type GuestRules } from './modules/guests/guests.service.ts';
@@ -105,6 +106,7 @@ export function createApp(db: Db, opts: AppOptions): express.Express & { auth: A
     }),
   );
   api.use('/saves', savesRoutes(saves));
+  api.use('/world', worldRoutes(saves));
   api.use('/tour', tourRoutes(tour));
   api.use('/guest', guestsRoutes(guests, opts.secureCookies));
   api.use('/events', analyticsRoutes(analytics));

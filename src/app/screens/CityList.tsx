@@ -1,4 +1,5 @@
 import { useAtomValue } from 'jotai';
+import { api } from '../../save/api';
 import { useEffect, useState } from 'react';
 import { storeFor } from '../../save/CitySaver';
 import type { CityRef } from '../../save/SaveStore';
@@ -91,6 +92,7 @@ export function CityList({ cities, onOpen }: CityListProps) {
         <span className={`city-badge is-${e.store}`}>
           {e.store === 'cloud' ? 'Account' : 'This device'}
         </span>
+        {e.store === 'cloud' && m.isPublic && <span className="city-badge is-cloud">No mundo online</span>}
       </>
     );
   };
@@ -119,6 +121,11 @@ export function CityList({ cities, onOpen }: CityListProps) {
                 onClick={() => void upload(e)}
               >
                 Move to account
+              </button>
+            )}
+            {e.store === 'cloud' && loggedIn && (
+              <button type="button" className="link-button" disabled={busy === key} onClick={() => void run(key, async () => { await api.setSavePublic(e.meta.id, !e.meta.isPublic); })}>
+                {e.meta.isPublic ? 'Remover do mundo' : 'Compartilhar no mundo'}
               </button>
             )}
             <button

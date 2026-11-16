@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { API_LIMITS } from '../../../src/shared/api.ts';
 
 export const SaveIdParam = z.coerce.number().int().positive();
+export const SaveSharingBody = z.object({ isPublic: z.boolean() });
 
 /**
  * The server can't run the sim, so it checks the list metadata and that `data` looks like a

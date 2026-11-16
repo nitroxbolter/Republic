@@ -118,6 +118,9 @@ server/
 | `POST /api/saves` | `{ meta, data }` → `{ meta }` (new city) |
 | `PUT /api/saves/:id` | `{ meta, data }` → `{ meta }` |
 | `DELETE /api/saves/:id` | `204` |
+| `PUT /api/saves/:id/sharing` | `{ isPublic }` → `{ meta }`; only the owner can publish or hide a city |
+| `GET /api/world/cities` | `{ cities }`; public metadata only, no owner identity or funds |
+| `GET /api/world/cities/:id` | `{ meta, data }` for an explicitly shared city only |
 | `GET /api/tour` | `{ progress: { step, done } \| null }` (first-play tour, docs/04-ui-ux.md) |
 | `PUT /api/tour` | `{ step, done }` → `204`; a finished tour stays finished |
 | `POST /api/guest/heartbeat` | `{ guestId? }` → `{ kind: 'guest', guestId, state, playSeconds, nudgeMinutes, limitMinutes }` + `cb_guest` cookie, or `{ kind: 'member' }` when signed in (D-083) |
@@ -143,3 +146,4 @@ server/
 - `CitySaver` owns autosave for the open city: which store and id it saves to, dirty
   tracking, and moving a local city into the account after login.
 - The URL holds the open city as `?city=local:<id>` or `?city=cloud:<id>`.
+- Account cities are private by default. Their owner can publish/unpublish them from the city list. The public world only returns opted-in cities; visits load a snapshot without the edit HUD or autosave. See [world.md](world.md).

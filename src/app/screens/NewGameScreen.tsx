@@ -87,6 +87,7 @@ interface NewGameScreenProps {
   onStart: (o: GameOptions) => void;
   /** Continue a saved city. */
   onOpen: (ref: CityRef) => void;
+  onWorld: () => void;
   /** Shown above the cards (e.g. a city that couldn't be opened). */
   notice?: string;
 }
@@ -95,7 +96,7 @@ interface NewGameScreenProps {
  * The start screen: your saved cities, then found a new one (pick a preset, tune it, preview
  * it live). See docs/04-ui-ux.md, "New Game Screen", and docs/specs/saving.md.
  */
-export function NewGameScreen({ onStart, onOpen, notice }: NewGameScreenProps) {
+export function NewGameScreen({ onStart, onOpen, onWorld, notice }: NewGameScreenProps) {
   const [name, setName] = useState('');
   const [terrain, setTerrain] = useState<TerrainSettings>(() =>
     presetSettings('riverValley', DEFAULT_SEED, DEFAULT_MAP_SIZE),
@@ -148,6 +149,7 @@ export function NewGameScreen({ onStart, onOpen, notice }: NewGameScreenProps) {
       />
       <div className="ng-account">
         <a className="ng-wiki-link" href={appPath('wiki')}>Wiki · Como jogar</a>
+        <button type="button" className="ng-wiki-link" onClick={onWorld}>Mundo online</button>
         <AccountButton />
       </div>
       <div className="ng-stack">

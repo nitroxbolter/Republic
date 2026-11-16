@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { SaveListResponse, SaveWriteResponse } from '../../../src/shared/api.ts';
 import { requireUser } from '../../http/middleware.ts';
 import { parse } from '../../http/validate.ts';
-import { SaveIdParam, SaveWriteBody } from './saves.schemas.ts';
+import { SaveIdParam, SaveSharingBody, SaveWriteBody } from './saves.schemas.ts';
 import type { SavesService } from './saves.service.ts';
 
 /** /api/saves: the signed-in user's cities. */
@@ -34,6 +34,13 @@ export function savesRoutes(saves: SavesService): Router {
     const { meta, data } = parse(SaveWriteBody, req.body);
     const body: SaveWriteResponse = { meta: await saves.update(user.id, id, meta, data) };
     res.json(body);
+  });
+
+  router.put('/:id/sharing', async (req, res) => {
+    const user = requireUser(res);
+    const id = parse(SaveIdParam, req.params.id);
+    const { isPublic } = parse(SaveSharingBody, req.body);
+    res.json({ meta: await saves.setPublic(user.id, id, isPublic) });
   });
 
   router.delete('/:id', async (req, res) => {

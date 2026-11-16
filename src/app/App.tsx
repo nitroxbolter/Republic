@@ -16,10 +16,15 @@ import { NewGameScreen } from './screens/NewGameScreen';
 import { WikiScreen } from './screens/wiki/WikiScreen';
 import { guestAtom, setChoseGuest } from './screens/landing/guest';
 import { LandingScreen } from './screens/landing/LandingScreen';
+import { WorldScreen } from './screens/WorldScreen';
+import { api } from '../save/api';
+import { parseSave } from '../sim/save';
 
 /** What's on screen. A playing city knows its save (null for a new or demo city). */
 type Screen =
   | { readonly kind: 'menu'; readonly notice?: string }
+  | { readonly kind: 'world'; readonly notice?: string }
+  | { readonly kind: 'world-loading'; readonly id: number }
   | { readonly kind: 'wiki' }
   | { readonly kind: 'recovering' }
   | { readonly kind: 'loading'; readonly ref: CityRef }
@@ -28,6 +33,9 @@ type Screen =
 function initialScreen(): Screen {
   if (isAppPath('wiki')) return { kind: 'wiki' };
   if (isDemoRoute()) return { kind: 'play', options: demoOptions(), ref: null };
+  if (isAppPath('world')) return { kind: 'world' };
+  const worldId = Number(new URLSearchParams(location.search).get('world'));
+  if (Number.isSafeInteger(worldId) && worldId > 0) return { kind: 'world-loading', id: worldId };
   // A new city closed before its first save is in the journal: store it, then reopen it.
   if (hasJournal('new')) return { kind: 'recovering' };
   const ref = readCityRef();
@@ -53,7 +61,7 @@ export function App() {
   useEffect(() => {
     if (!playing) return;
     track('city_start', {
-      kind: playing.save ? 'open' : playing.demo ? 'demo' : 'new',
+      kind: playing.readOnly ? 'world_visit' : playing.save ? 'open' : playing.demo ? 'demo' : 'new',
       preset: playing.terrain.preset,
       size: playing.terrain.size,
       customFunds: playing.funds !== undefined,
@@ -109,6 +117,31 @@ export function App() {
     setScreen({ kind: 'loading', ref });
   };
 
+  const visitWorldCity = (id: number) => {
+    history.replaceState(null, '', `${appPath()}?world=${id}`);
+    setScreen({ kind: 'world-loading', id });
+  };
+
+  const toWorld = useCallback(() => {
+    history.replaceState(null, '', appPath('world'));
+    setScreen({ kind: 'world' });
+  }, []);
+
+  const worldId = screen.kind === 'world-loading' ? screen.id : null;
+  useEffect(() => {
+    if (worldId === null) return;
+    let cancelled = false;
+    api.loadWorldCity(worldId).then(({ meta, data }) => {
+      const save = parseSave(data);
+      if (!cancelled) setScreen({ kind: 'play', options: { terrain: save.terrain, name: meta.name, save, readOnly: true }, ref: null });
+    }).catch((err: unknown) => {
+      if (cancelled) return;
+      history.replaceState(null, '', appPath('world'));
+      setScreen({ kind: 'world', notice: err instanceof Error ? err.message : 'Não foi possível abrir essa cidade.' });
+    });
+    return () => { cancelled = true; };
+  }, [worldId]);
+
   const toMenu = useCallback(() => {
     if (isDemoRoute()) history.replaceState(null, '', appPath());
     else clearUrlOptions();
@@ -121,24 +154,25 @@ export function App() {
   };
   // Visitors who aren't signed in meet the landing page first; signing in or choosing guest moves on.
   const menu = screen.kind === 'menu';
-  const loginRequired = localAccount && auth.status !== 'user' && !menu && screen.kind !== 'wiki' && !(screen.kind === 'play' && screen.options.demo);
+  const loginRequired = localAccount && auth.status !== 'user' && !menu && screen.kind !== 'wiki' && screen.kind !== 'world' && screen.kind !== 'world-loading' && !(screen.kind === 'play' && (screen.options.demo || screen.options.readOnly));
   const landing = (menu && auth.status === 'guest' && (localAccount || !guest)) || (loginRequired && auth.status === 'guest');
 
   return (
     <>
       {menu && auth.status === 'checking' && <div className="landing-blank" />}
       {screen.kind === 'wiki' && <WikiScreen />}
+      {screen.kind === 'world' && <WorldScreen onBack={toMenu} onVisit={visitWorldCity} notice={screen.notice} />}
       {loginRequired && auth.status === 'checking' && <div className="landing-blank" />}
       {landing && <LandingScreen onPlay={playAsGuest} onDemo={() => start(demoOptions())} />}
-      {menu && !landing && auth.status !== 'checking' && <NewGameScreen onStart={start} onOpen={open} notice={screen.notice} />}
-      {!loginRequired && (screen.kind === 'loading' || screen.kind === 'recovering') && <LoadingScreen kind="save" current="fetch" />}
+      {menu && !landing && auth.status !== 'checking' && <NewGameScreen onStart={start} onOpen={open} onWorld={() => { history.replaceState(null, '', appPath('world')); setScreen({ kind: 'world' }); }} notice={screen.notice} />}
+      {!loginRequired && (screen.kind === 'loading' || screen.kind === 'world-loading' || screen.kind === 'recovering') && <LoadingScreen kind="save" current="fetch" />}
       {!loginRequired && screen.kind === 'play' && (
         <GameScreen
           options={screen.options}
           cityRef={screen.ref}
           onSaved={writeCityUrl}
           onReroll={(o) => start(o.demo ? demoOptions(o.terrain.seed) : o)}
-          onNewCity={toMenu}
+          onNewCity={screen.options.readOnly ? toWorld : toMenu}
         />
       )}
       <AuthDialog />

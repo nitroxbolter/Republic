@@ -16,6 +16,8 @@ import type {
   TourProgress,
   TourResponse,
   TrackRequest,
+  WorldCityListResponse,
+  WorldCityResponse,
 } from '../shared/api';
 import { appPath } from '../app/basePath';
 
@@ -92,6 +94,10 @@ export const api = {
   updateSave: (id: number, body: SaveWriteRequest): Promise<SaveMeta> =>
     request<SaveWriteResponse>('PUT', `/saves/${id}`, body).then((r) => r.meta),
   deleteSave: (id: number) => request<void>('DELETE', `/saves/${id}`),
+  setSavePublic: (id: number, isPublic: boolean) => request<SaveWriteResponse>('PUT', `/saves/${id}/sharing`, { isPublic }).then((r) => r.meta),
+
+  listWorldCities: () => request<WorldCityListResponse>('GET', '/world/cities').then((r) => [...r.cities]),
+  loadWorldCity: (id: number) => request<WorldCityResponse>('GET', `/world/cities/${id}`),
 
   getTour: () => request<TourResponse>('GET', '/tour').then((r) => r.progress),
   putTour: (body: TourProgress) => request<void>('PUT', '/tour', body),

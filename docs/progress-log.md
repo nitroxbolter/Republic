@@ -635,3 +635,7 @@ Adicionados Quartel, Garagem militar, Paiol, Base militar e Centro de treinament
 # 2026-11-16 — Armazenamento de unidades militares e aterro
 
 Unidades militares podem ser recolhidas individualmente ao clicar numa instalação compatível ou em grupo pelo Centro de Comando. Quartéis e bases armazenam soldados; garagens armazenam viaturas. Os painéis mostram ocupação e oferecem mobilização de volta ao mapa; o local de armazenamento é persistido em saves antigos e novos. O aterro recebeu uma pilha menor e mais centrada dentro do lote, com margem visual maior para evitar sobreposição e corte junto de construções vizinhas.
+
+## 2026-11-16 — Mundo online de cidades compartilhadas
+
+Adicionado catálogo público de cidades com publicação voluntária e privada por padrão. O catálogo omite saldo e dados do dono; visitas abrem o último save pausado, sem HUD de edição nem autosave. Migração 7 adiciona a flag de compartilhamento sem expor saves antigos.

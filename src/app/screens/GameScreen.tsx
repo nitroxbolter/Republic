@@ -76,11 +76,13 @@ export function GameScreen({ options, cityRef, onSaved, onReroll, onNewCity }: G
   // Logged out while playing a city from the account: it can't be saved any more, so leave it.
   const auth = useAtomValue(authAtom);
   useEffect(() => {
+    if (options.readOnly) return;
     if (auth.status === 'guest' && saverRef.current?.cityRef?.store === 'cloud') onNewCity();
-  }, [auth.status, onNewCity]);
+  }, [auth.status, onNewCity, options.readOnly]);
 
   // Ctrl/⌘ S saves now instead of opening the browser's "Save page".
   useEffect(() => {
+    if (options.readOnly) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'KeyS' || !(e.metaKey || e.ctrlKey)) return;
       e.preventDefault();
@@ -88,10 +90,11 @@ export function GameScreen({ options, cityRef, onSaved, onReroll, onNewCity }: G
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [save]);
+  }, [save, options.readOnly]);
 
   // N: roll a new map with the same preset and sliders.
   useEffect(() => {
+    if (options.readOnly) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'KeyN' || e.repeat || e.metaKey || e.ctrlKey) return;
       if (e.target instanceof HTMLInputElement) return;
@@ -127,7 +130,7 @@ export function GameScreen({ options, cityRef, onSaved, onReroll, onNewCity }: G
         game = g;
         disconnect = connectGameToStore(g, store);
         // The demo is a showcase, never saved.
-        if (!options.demo) {
+        if (!options.demo && !options.readOnly) {
           saverRef.current = new CitySaver(g, {
             ref: initialRef.current,
             preferredStore: () => (store.get(authAtom).status === 'user' ? 'cloud' : 'local'),
@@ -167,7 +170,9 @@ export function GameScreen({ options, cityRef, onSaved, onReroll, onNewCity }: G
     <div className="game-screen">
       <div ref={hostRef} className="game-canvas" />
       {/* The HUD only comes in with the city, never over an empty screen. */}
-      {ready && <Hud options={options} onNewCity={() => void leave()} onSave={save} beforeLogout={flush} />}
+      {ready && (options.readOnly
+        ? <VisitBar cityName={options.name} onReturn={onNewCity} />
+        : <Hud options={options} onNewCity={() => void leave()} onSave={save} beforeLogout={flush} />)}
       {curtain && (
         <LoadingScreen
           kind={loadKind(options)}
@@ -182,6 +187,13 @@ export function GameScreen({ options, cityRef, onSaved, onReroll, onNewCity }: G
       )}
     </div>
   );
+}
+
+function VisitBar({ cityName, onReturn }: { cityName: string; onReturn: () => void }) {
+  return <header className="world-visit-bar">
+    <div><strong>{cityName}</strong><span>Somente leitura · arraste para explorar, use a roda/gesto para zoom</span></div>
+    <button type="button" className="secondary-button" onClick={onReturn}>Voltar ao mundo</button>
+  </header>;
 }
 
 interface HudProps {

@@ -7,7 +7,7 @@ work session, read **Current Status** below, then the relevant spec.
 
 | | |
 |---|---|
-| **Current phase** | City evolution, property economy, demographic policy and in-game Wiki |
+| **Current phase** | City evolution, online world, property economy, demographic policy and in-game Wiki |
 | **Next phase** | Follow the open items in `03-roadmap.md` |
 | **Last updated** | 2026-11-16 |
 
@@ -46,6 +46,7 @@ bun run typecheck && bun run lint
 | [specs/traffic.md](specs/traffic.md) | Commute model, visible traffic, lights, traffic view |
 | [specs/needs.md](specs/needs.md) | Citizen needs, happiness, complaints, abandonment |
 | [specs/saving.md](specs/saving.md) | Save format, accounts, save server, autosave |
+| [specs/world.md](specs/world.md) | Public world directory and read-only city visits |
 | [specs/analytics.md](specs/analytics.md) | Anonymous usage events: visits, cities started, sources |
 | [05-master-plan.md](05-master-plan.md) | The plan for Phases 11–22: people, land value, transport, economy, government, disasters |
 | [specs/engine.md](specs/engine.md) | Phase 11: harness, timings, determinism, time-slicing, fields, road graph, Worker |

@@ -1,9 +1,11 @@
-import type { SaveMeta, SaveMetaInput } from '../../../src/shared/api.ts';
+import type { SaveMeta, SaveMetaInput, WorldCityMeta } from '../../../src/shared/api.ts';
 import { queryOne, type Db } from '../../db/db.ts';
 
-/** SQL for city saves. Every query is scoped to its owner. Data is JSON text, passed through untouched. */
+/** Owner queries stay scoped to the account; public queries only select opted-in cities. Save data remains JSON text. */
 
 const META = `id, name, population, funds, day, size, preset, seed,
+  (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt", is_public AS "isPublic"`;
+const WORLD_META = `id, name, population, day, size, preset,
   (extract(epoch FROM updated_at) * 1000)::float8 AS "updatedAt"`;
 
 export class SavesRepository {
@@ -15,6 +17,18 @@ export class SavesRepository {
 
   list(userId: number): Promise<SaveMeta[]> {
     return this.db.query<SaveMeta>(`SELECT ${META} FROM saves WHERE user_id = $1 ORDER BY updated_at DESC`, [userId]);
+  }
+
+  listPublic(): Promise<WorldCityMeta[]> {
+    return this.db.query<WorldCityMeta>(`SELECT ${WORLD_META} FROM saves WHERE is_public = true ORDER BY updated_at DESC LIMIT 100`);
+  }
+
+  findPublic(id: number): Promise<(WorldCityMeta & { data: string }) | null> {
+    return queryOne(this.db, `SELECT ${WORLD_META}, data FROM saves WHERE id = $1 AND is_public = true`, [id]);
+  }
+
+  setPublic(userId: number, id: number, isPublic: boolean): Promise<SaveMeta | null> {
+    return queryOne(this.db, `UPDATE saves SET is_public = $3 WHERE id = $1 AND user_id = $2 RETURNING ${META}`, [id, userId, isPublic]);
   }
 
   find(userId: number, id: number): Promise<(SaveMeta & { data: string }) | null> {

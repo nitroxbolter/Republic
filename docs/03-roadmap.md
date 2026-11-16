@@ -193,6 +193,7 @@ We focus on **one** terrain and make it look great before adding presets or menu
 - [x] Client stores: IndexedDB for guests, the HTTP API for accounts; `CitySaver` autosave (45 s, tab hidden, leaving), `Ctrl/⌘ S`
 - [x] Start screen "Your cities" (continue, delete, move to account); log in / sign up dialog; account menu; save status in the top bar; `?city=` reopens on reload
 - [x] A guest city moves into the account on its first save after logging in
+- [x] Public online world: owner opt-in, public city directory and paused read-only visits (D-110)
 - [x] Verified in Chrome: sign up → build → save → list → reopen → reload; guest → log in migration; no errors
 
 ## Phase 11 — Engine for Depth (in progress)  → [specs/engine.md](specs/engine.md)

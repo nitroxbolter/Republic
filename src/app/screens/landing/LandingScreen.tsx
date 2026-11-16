@@ -105,6 +105,7 @@ export function LandingScreen({ onPlay, onDemo }: LandingScreenProps) {
               )}
             </div>
             <a className="landing-wiki-cta" href={appPath('wiki')}>Explorar a Wiki: construções, impostos e moradores →</a>
+            <a className="landing-wiki-cta" href={appPath('world')}>Visitar cidades compartilhadas →</a>
             <p className="landing-aside">
               {online && !localAccount && (
                 <>

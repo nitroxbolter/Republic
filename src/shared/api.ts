@@ -31,10 +31,32 @@ export interface SaveMeta {
   readonly seed: number;
   /** ms since the epoch. */
   readonly updatedAt: number;
+  /** Only cities explicitly shared by their owner appear in the online world. */
+  readonly isPublic?: boolean;
 }
 
 /** What the client sends with a save; the server adds id and updatedAt. */
-export type SaveMetaInput = Omit<SaveMeta, 'id' | 'updatedAt'>;
+export type SaveMetaInput = Omit<SaveMeta, 'id' | 'updatedAt' | 'isPublic'>;
+
+/** Public city listing data. Funds and account identifiers are deliberately omitted. */
+export interface WorldCityMeta {
+  readonly id: number;
+  readonly name: string;
+  readonly population: number;
+  readonly day: number;
+  readonly size: number;
+  readonly preset: string;
+  readonly updatedAt: number;
+}
+
+export interface WorldCityListResponse {
+  readonly cities: readonly WorldCityMeta[];
+}
+
+export interface WorldCityResponse {
+  readonly meta: WorldCityMeta;
+  readonly data: unknown;
+}
 
 export interface AuthResponse {
   readonly user: ApiUser;

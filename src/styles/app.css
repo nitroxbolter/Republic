@@ -6263,3 +6263,66 @@ summary {
 .toolbar.is-dock {
   animation: chip-in 120ms ease-out both;
 }
+/* Public city directory and read-only visits. */
+.world-page {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-screen, 100);
+  overflow: auto;
+  padding: clamp(20px, 5vw, 64px);
+  color: var(--text, #e5edf4);
+  background: radial-gradient(ellipse at 50% 0%, rgba(43, 91, 91, .44), transparent 60%), #101820;
+}
+.world-page-header,
+.world-city {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.world-page-header { max-width: 1000px; margin: 0 auto 28px; }
+.world-page-header h1 { margin: 12px 0 6px; font-size: clamp(28px, 5vw, 42px); }
+.world-page-header p { max-width: 580px; margin: 0; color: #aab7c4; }
+.world-page-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.world-city-list { display: grid; gap: 12px; max-width: 1000px; margin: 0 auto; }
+.world-city { justify-content: flex-start; padding: 18px; }
+.world-city-symbol { display: grid; flex: 0 0 56px; width: 56px; height: 56px; place-items: center; border-radius: 14px; background: rgba(75, 206, 188, .13); font-size: 28px; }
+.world-city-details { min-width: 0; flex: 1; }
+.world-city-details h2 { margin: 0 0 5px; font-size: 18px; }
+.world-city-details p { margin: 0 0 4px; color: #d5dde5; }
+.world-city-details span,.world-empty span { color: #9aa9b8; font-size: 13px; }
+.world-empty { display: grid; gap: 8px; padding: 24px; text-align: center; }
+.world-error { max-width: 1000px; margin: 0 auto 14px; color: #ffc3ba; }
+.world-visit-button { flex: 0 0 auto; }
+.world-visit-bar {
+  position: fixed;
+  z-index: var(--z-hud, 20);
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: min(720px, calc(100vw - 24px));
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 12px;
+  background: rgba(17, 25, 34, .92);
+  color: #e7edf3;
+  box-shadow: 0 8px 28px rgba(0,0,0,.3);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+.world-visit-bar span { color: #aab7c4; font-size: 12px; }
+.world-visit-bar div { min-width: 0; flex: 1; }
+.world-visit-bar strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 680px) {
+  .world-page { padding: 18px 12px calc(20px + env(safe-area-inset-bottom)); }
+  .world-page-header { align-items: flex-start; flex-direction: column; }
+  .world-page-actions { justify-content: flex-start; }
+  .world-city { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+  .world-city-symbol { flex-basis: 44px; width: 44px; height: 44px; font-size: 22px; }
+  .world-visit-button { width: 100%; }
+  .world-visit-bar { align-items: flex-start; }
+  .world-visit-bar span { display: block; }
+}

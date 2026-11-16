@@ -64,6 +64,8 @@ export interface GameOptions {
   demo?: boolean;
   /** Continue a saved city (its terrain settings and name match `terrain` and `name`). */
   save?: SaveData;
+  /** Open another player's published snapshot without construction or saving. */
+  readOnly?: boolean;
 }
 
 /** What has changed since a save: player edits and in-game days (src/save/CitySaver.ts). */
@@ -169,6 +171,7 @@ export class Game {
     this.sim = sim;
     this.city = sim.city;
     this.options = options;
+    if (options.readOnly) this.speedIndex = 0;
     this.audit = new CityAudit(options.name, this.city, this.sim);
     this.renderer = renderer;
     this.input = new InputController(renderer.app.canvas, renderer.camera, {
@@ -365,6 +368,7 @@ export class Game {
   }
 
   setTool(tool: ToolId) {
+    if (this.options.readOnly && tool !== 'select') return;
     if (tool !== 'move') this.carrying = null;
     if (isRoadTool(tool)) this.recentRoadTool = tool;
     if (tool !== this.toolId) this.sound.play('tool');
@@ -1150,6 +1154,7 @@ export class Game {
 
   private onClick(screen: ScreenPoint) {
     if (this.toolId !== 'select') return;
+    if (this.options.readOnly) return;
     const t = this.tileAt(screen);
     const clickedUnit = [...this.city.military.units]
       .map((unit) => ({ unit, distance: Math.hypot(unit.x - (t.x + 0.5), unit.y - (t.y + 0.5)) }))
@@ -1594,6 +1599,7 @@ export class Game {
   }
 
   private onKey(code: string) {
+    if (this.options.readOnly && code !== 'Escape' && code !== 'Period' && code !== 'Comma') return;
     if (code === 'KeyG') this.setGrid(!this.renderer.ground.gridOn);
     else if (code === 'KeyM') this.setMuted(!this.sound.muted);
     else if (code === 'KeyT') this.setTrafficView(this.dataView !== 'traffic');
