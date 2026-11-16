@@ -11,6 +11,7 @@ export type OverlayId =
   /** Top-bar menus. */
   | 'clock'
   | 'stage'
+  | 'employment'
   | 'alerts'
   | 'account'
   /** Phones: the sheet with everything the slim top bar leaves out. */

@@ -20,6 +20,7 @@ Status: **Implemented (first version).** Tuning numbers live in `src/shared/bala
 2. Homes can attract residents without jobs. Job coverage is one of the factors affecting occupancy.
 3. Finished, connected buildings with the required utilities offer jobs according to their effective capacity. Hiring distributes up to the smaller of the available workforce and the offered jobs across those buildings. The distribution carries rounding remainders across buildings.
 4. The top bar shows employed residents and total jobs. Unemployment is available workforce minus employed residents. Open positions are total jobs minus employed residents.
+5. Click the employment indicator (or the employment tile in the mobile city menu) to see available workers, employed, unemployed and those on sick leave. The sick leave figure is the share of patients deducted from the workforce by the simulation, capped at the adults who are not in prison.
 
 ## Budget (monthly)
 

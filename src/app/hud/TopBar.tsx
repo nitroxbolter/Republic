@@ -9,6 +9,7 @@ import { useDismiss, useOverlay } from '../overlay/overlay';
 import { useStartTour } from '../tour/tourState';
 import { SaveStatus } from './SaveStatus';
 import { StageChip } from './StageChip';
+import { EmploymentDetails, EmploymentSheet } from './EmploymentDetails';
 import { aqiBand } from '../../sim/systems/air';
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] as const;
@@ -288,7 +289,7 @@ interface FoldProps {
  */
 function Fold({ id, open, onOpen, label, glyph, children }: FoldProps) {
   return (
-    <span className={`top-fold ${open === id ? 'is-open' : ''}`}>
+    <div className={`top-fold ${open === id ? 'is-open' : ''}`}>
       {onOpen && (
         <button
           type="button"
@@ -304,7 +305,7 @@ function Fold({ id, open, onOpen, label, glyph, children }: FoldProps) {
         </button>
       )}
       {children}
-    </span>
+    </div>
   );
 }
 
@@ -404,10 +405,37 @@ function Population({ short }: { short?: boolean }) {
   );
 }
 
+function Employment({ city }: { city: CityInfo | null }) {
+  const { open, toggle, close } = useOverlay('employment');
+  const wrap = useRef<HTMLDivElement>(null);
+  useDismiss(wrap, open, close);
+  if (!city) return null;
+  const count = (n: number) => n.toLocaleString('pt-BR');
+  const tooltip = [
+    `${count(city.jobs)} empregos = ${count(city.workers)} empregados + ${count(city.jobVacancies)} vagas abertas`,
+    `${count(city.workforce)} disponíveis para trabalhar = ${count(city.workers)} empregados + ${count(city.unemployed)} desempregados`,
+    `${count(city.society.sickLeave)} afastados por doença`,
+  ].join('\n');
+  return (
+    <div className="employment-wrap" ref={wrap}>
+      <button type="button" className="top-jobs-button" aria-label={`Ver empregos na cidade, ${count(city.workers)} de ${count(city.jobs)} ocupados`} aria-expanded={open} onClick={toggle}>
+        <Stat title={tooltip} glyph={BRIEFCASE}>
+          <span className="stat-value">{count(city.workers)}<span className="stat-dim">/{count(city.jobs)}</span></span>
+        </Stat>
+      </button>
+      {open && (
+        <section className="panel employment-popover" aria-label="Empregos na cidade">
+          <EmploymentDetails city={city} />
+        </section>
+      )}
+    </div>
+  );
+}
+
 /** The top bar: the wide one, or the slim one on phones and tablets. */
 export function TopBar(props: TopBarProps) {
   const slim = useMedia(SLIM_BAR);
-  return slim ? <PhoneTopBar /> : <WideTopBar {...props} />;
+  return slim ? <><PhoneTopBar /><EmploymentSheet /></> : <WideTopBar {...props} />;
 }
 
 /**
@@ -493,19 +521,7 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
       <StageChip />
       {/* Jobs folds with the date: one toggle, shown in the date's place. */}
       <Fold id="city" open={fold}>
-        <Stat
-          title={city ? [
-            `${city.jobs.toLocaleString('pt-BR')} empregos = ${city.workers.toLocaleString('pt-BR')} empregados + ${city.jobVacancies.toLocaleString('pt-BR')} vagas abertas`,
-            `${city.workforce.toLocaleString('pt-BR')} pessoas disponíveis para trabalhar = ${city.workers.toLocaleString('pt-BR')} empregados + ${city.unemployed.toLocaleString('pt-BR')} desempregados`,
-            `${city.society.seniors.toLocaleString('pt-BR')} aposentados · ${(city.society.adults - city.workforce).toLocaleString('pt-BR')} afastados`,
-          ].join('\n') : 'Empregos'}
-          glyph={BRIEFCASE}
-        >
-          <span className="stat-value">
-            {(city?.workers ?? 0).toLocaleString()}
-            <span className="stat-dim">/{(city?.jobs ?? 0).toLocaleString()}</span>
-          </span>
-        </Stat>
+        <Employment city={city} />
       </Fold>
       <button
         type="button"

@@ -770,7 +770,8 @@ kbd {
 }
 
 /* ---------- Top bar stats & speed ---------- */
-.top-population-button {
+.top-population-button,
+.top-jobs-button {
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 3px 5px;
@@ -779,7 +780,9 @@ kbd {
   cursor: pointer;
 }
 .top-population-button:hover,
-.top-population-button[aria-expanded="true"] {
+.top-population-button[aria-expanded="true"],
+.top-jobs-button:hover,
+.top-jobs-button[aria-expanded="true"] {
   background: var(--bg-panel-hover);
 }
 .stat {
@@ -4806,7 +4809,8 @@ summary {
 }
 
 /* ---------- Top bar: city stage (docs/specs/evolution.md) ---------- */
-.stage-wrap {
+.stage-wrap,
+.employment-wrap {
   position: relative;
   display: inline-flex;
 }
@@ -4833,7 +4837,8 @@ summary {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.stage-menu {
+.stage-menu,
+.employment-popover {
   position: absolute;
   top: calc(100% + 10px);
   left: 50%;
@@ -4851,6 +4856,28 @@ summary {
 .stage-menu-title {
   color: var(--warn);
   font-size: 15px;
+}
+.employment-title {
+  font-size: 15px;
+  color: var(--text);
+}
+.employment-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px 16px;
+  margin: 0;
+  font-size: 13px;
+  white-space: normal;
+}
+.employment-details dt { color: var(--text-dim); }
+.employment-details dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.employment-sheet .employment-details {
+  padding-block: 4px 12px;
 }
 .stage-menu-sub {
   color: var(--text-dim);
@@ -5581,6 +5608,15 @@ summary {
 }
 .more-stat .air-dot {
   flex: none;
+}
+.employment-trigger {
+  border: 1px solid var(--border-panel);
+  text-align: left;
+  cursor: pointer;
+}
+.employment-trigger:hover,
+.employment-trigger:focus-visible {
+  background: var(--bg-panel-hover);
 }
 .more-section {
   border-radius: 10px;

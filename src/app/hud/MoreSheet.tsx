@@ -53,6 +53,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
   const budget = useOverlay('budget');
   const demography = useOverlay('demography');
   const bank = useOverlay('bank');
+  const employment = useOverlay('employment');
   const muted = useAtomValue(mutedAtom);
   const dayNight = useAtomValue(dayNightAtom);
   const trafficView = useAtomValue(trafficViewAtom);
@@ -96,7 +97,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
           <strong>Saúde e segurança</strong>
           <small>Doentes {city.society.sick.toLocaleString()} · presos {city.society.prisoners.toLocaleString()}/{city.society.prisonCapacity.toLocaleString()} · sem vaga {city.society.prisonOverflow.toLocaleString()} · mortes {city.society.deaths.toLocaleString()}</small>
         </span></span>
-        <span className="more-stat">
+        <button type="button" className="more-stat employment-trigger" aria-haspopup="dialog" onClick={employment.show}>
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             {BRIEFCASE}
           </svg>
@@ -104,14 +105,10 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
             <strong>
               {city.workers.toLocaleString('pt-BR')} / {city.jobs.toLocaleString('pt-BR')}
             </strong>
-            <small>
-              empregados / empregos · {city.jobVacancies.toLocaleString('pt-BR')} vagas abertas em {city.vacantJobBuildings.toLocaleString('pt-BR')} prédios
-            </small>
-            <small>
-              {city.workforce.toLocaleString('pt-BR')} disponíveis para trabalhar · {city.unemployed.toLocaleString('pt-BR')} desempregados · {(city.society.adults - city.workforce).toLocaleString('pt-BR')} afastados
-            </small>
+            <small>Empregados / empregos</small>
+            <small>{city.jobVacancies.toLocaleString('pt-BR')} vagas abertas em {city.vacantJobBuildings.toLocaleString('pt-BR')} prédios</small>
           </span>
-        </span>
+        </button>
         <span className="more-stat">
           <span className="air-dot" style={{ background: '#d6a84f' }} aria-hidden="true" />
           <span>

@@ -2,6 +2,11 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16 — Card de empregos
+
+- O indicador de empregos abre um card na barra superior. O menu da cidade no celular abre a mesma lista em um painel.
+- A contagem de afastados por doença usa a parcela de doentes que a simulação deduz da força de trabalho.
+
 ## 2026-11-16 — Empregos e conciliação do caixa
 
 - A contratação diária distribui pessoas por postos ativos e carrega as frações entre edifícios. O tooltip e a auditoria mostram como calcular vagas abertas e desemprego.

@@ -11,6 +11,7 @@ export const UPDATES: readonly UpdateEntry[] = [
     title: 'Empregos e caixa da cidade',
     changes: [
       'A contratação aproveita os postos abertos quando há trabalhadores disponíveis. O tooltip mostra como o desemprego é calculado.',
+      'Clique no indicador de empregos para ver pessoas disponíveis, empregados, desempregados e afastados por doença.',
       'O último fechamento mostra o saldo antes e depois da cobrança. A auditoria inclui exportações e importações de materiais.',
     ],
   },

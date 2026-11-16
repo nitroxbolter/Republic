@@ -23,9 +23,14 @@ export function residentCount(world: World): number {
   return total;
 }
 
+/** The model removes half of patients from the workforce, up to the remaining adults. */
+function onSickLeave(adultsOutsidePrison: number, sick: number): number {
+  return Math.min(adultsOutsidePrison, Math.round(sick * 0.5));
+}
+
 export function workingAge(population: number, sick = 0, prisoners = 0): number {
-  const ages = demographics(population);
-  return Math.max(0, ages.adults - Math.round(sick * 0.5) - prisoners);
+  const adultsOutsidePrison = Math.max(0, demographics(population).adults - prisoners);
+  return adultsOutsidePrison - onSickLeave(adultsOutsidePrison, sick);
 }
 
 export function societyReport(city: City) {
@@ -37,6 +42,7 @@ export function societyReport(city: City) {
   return {
     ...ages,
     sick: Math.min(city.society.sick, population),
+    sickLeave: onSickLeave(Math.max(0, ages.adults - city.society.prisoners), city.society.sick),
     prisoners,
     prisonCapacity: cells,
     prisonOverflow: city.society.prisonOverflow,
