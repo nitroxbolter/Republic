@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai';
 import type { ReactNode } from 'react';
-import { SERVICE_KINDS as ALL_SERVICES, type ServiceKind } from '../../sim/buildings/catalog';
+import { BUILDINGS, SERVICE_KINDS as ALL_SERVICES, type ServiceKind } from '../../sim/buildings/catalog';
 import type { NeedKind } from '../../sim/systems/needs';
 import type { InspectInfo, StationInfo } from '../../game/events';
 import { gameAtom, inspectAtom, zoneInspectAtom } from '../atoms';
@@ -285,6 +285,15 @@ export function InfoPanel() {
             {info.property.canAcquire && <button type="button" className="secondary-button" onClick={() => game?.acquireProperty(info.id)}>Adquirir pelo governo</button>}
             {info.property.canPrivateRecover && <button type="button" className="secondary-button" onClick={() => game?.privateRecoverProperty(info.id)}>Venda privada</button>}
           </div>}
+        </section>
+      )}
+
+      {selectedDefinition && ['military_garage', 'barracks', 'military_base'].includes(selectedDefinition) && (
+        <section className="info-section">
+          <h3 className="info-section-title">Unidades na instalação</h3>
+          <div className="info-row"><span>Efetivo e viaturas guardados</span><strong>{game?.militaryUnitsAt(info.id) ?? 0} / {BUILDINGS[selectedDefinition].capacity}</strong></div>
+          <button type="button" className="primary-button" disabled={!game?.militaryUnitsAt(info.id)} onClick={() => game?.deployMilitaryUnits(info.id)}>Retirar unidades para o pátio</button>
+          <p className="info-note">As unidades mobilizadas aparecem junto à instalação e podem receber ordens de movimento no mapa.</p>
         </section>
       )}
 

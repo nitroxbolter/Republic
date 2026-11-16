@@ -72,3 +72,6 @@ As regras devem definir aviso e duração de mobilização, perdas, proteção d
 4. Qual estágio libera a base e qual custo mensal é aceitável frente a polícia, bombeiros, hospital e universidade?
 
 **Recomendação técnica:** começar com a base cívica e defesa civil, deixando combate entre cidades para a fase de facções e diplomacia. Isso reutiliza construção, orçamento, rotas, agentes e salvamento presentes, enquanto mantém as regras de guerra fora do escopo até existirem atores e objetivos para elas.
+## Unidades guardadas e mobilização
+
+Soldados e viaturas podem ficar mobilizados no mapa ou guardados em instalações concluídas. Soldados usam vagas de Quartéis ou da Base Militar; viaturas usam vagas de Garagens Militares. A capacidade é contabilizada por instalação e respeita o limite de cada edifício. O jogador pode selecionar uma unidade no mapa e clicar numa instalação compatível para guardá-la, ou recolher todas as unidades de uma vez pelo Centro de Comando. O painel do edifício mostra a quantidade guardada e permite colocá-las de volta no pátio. Unidades guardadas não são desenhadas nem recebem ordens de movimento, mas continuam contando para soldos e para o efetivo comprado/alistado. O campo opcional `storedAt` preserva compatibilidade com saves anteriores.

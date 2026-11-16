@@ -29,7 +29,7 @@ export const CIVIC_ART: Readonly<Record<CustomArtId, CivicArt>> = {
   town_hall: { variants: 3, headroom: () => 72, paint: paintTownHall },
   power_plant: { variants: 3, headroom: () => 92, paint: paintPowerPlant, smoke: powerPlantSmoke },
   water_tower: { variants: 3, headroom: (v) => (v === 0 ? 62 : v === 1 ? 56 : 30), paint: paintWaterTower },
-  landfill: { variants: 3, headroom: () => 34, paint: paintLandfill },
+  landfill: { variants: 3, headroom: () => 58, paint: paintLandfill },
   // Variant = the side its track runs along (set when placed), so the platform faces the rails.
   train_station: { variants: 4, headroom: () => 58, paint: paintTrainStation },
   // Variant = the side its street runs along, so the driveway turns off it.

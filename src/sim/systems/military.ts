@@ -13,6 +13,8 @@ export interface MilitaryUnit {
   path: MilitaryWaypoint[];
   pathIndex: number;
   heading: number;
+  /** Facility holding this unit. Omitted while the unit is deployed on the map. */
+  storedAt?: number;
 }
 export type MilitaryPurchase = MilitaryVehicle | 'rifles' | 'ammunition' | 'supplies';
 
@@ -105,6 +107,70 @@ function spawnUnits(city: City, kind: MilitaryUnitKind, quantity: number) {
     if (!p) break;
     city.military.units.push({ id: city.military.nextUnitId++, kind, ...p, path: [], pathIndex: 0, heading: 0 });
   }
+}
+
+function facilityForUnit(kind: MilitaryUnitKind): BuildingId[] {
+  return kind === 'soldier' ? ['barracks', 'military_base'] : ['military_garage'];
+}
+
+function unitCapacity(def: BuildingId) {
+  return BUILDINGS[def].capacity;
+}
+
+export type MilitaryStorageResult = 'ok' | 'unit' | 'facility' | 'capacity' | 'incompatible';
+
+/** Store a deployed unit in a compatible completed facility. */
+export function storeMilitaryUnit(city: City, unitId: number, facilityId: number): MilitaryStorageResult {
+  const unit = city.military.units.find((item) => item.id === unitId);
+  const facility = city.world.buildings.get(facilityId);
+  if (!unit) return 'unit';
+  if (!facility || facility.construction > 0 || !facilityForUnit(unit.kind).includes(facility.def)) return 'facility';
+  const current = city.military.units.filter((item) => item.storedAt === facilityId).length;
+  if (current >= unitCapacity(facility.def)) return 'capacity';
+  unit.storedAt = facilityId;
+  unit.path = [];
+  unit.pathIndex = 0;
+  unit.x = facility.x + 0.5;
+  unit.y = facility.y + 0.5;
+  return 'ok';
+}
+
+/** Store every deployed unit that fits, preferring the nearest available completed facility. */
+export function storeAllMilitaryUnits(city: City): number {
+  let stored = 0;
+  for (const unit of city.military.units) {
+    if (unit.storedAt !== undefined) continue;
+    const options = facilities(city, facilityForUnit(unit.kind)[0]);
+    const compatible = unit.kind === 'soldier'
+      ? [...facilities(city, 'barracks'), ...facilities(city, 'military_base')]
+      : options;
+    compatible.sort((a, b) => Math.hypot(a.x - unit.x, a.y - unit.y) - Math.hypot(b.x - unit.x, b.y - unit.y));
+    const facility = compatible.find((building) => city.military.units.filter((item) => item.storedAt === building.id).length < unitCapacity(building.def));
+    if (facility && storeMilitaryUnit(city, unit.id, facility.id) === 'ok') stored++;
+  }
+  return stored;
+}
+
+/** Send all units held by one facility to its apron. */
+export function deployMilitaryUnits(city: City, facilityId: number): number {
+  const facility = city.world.buildings.get(facilityId);
+  if (!facility || facility.construction > 0) return 0;
+  const units = city.military.units.filter((unit) => unit.storedAt === facilityId);
+  units.forEach((unit, index) => {
+    const lane = index % 8;
+    const row = Math.floor(index / 8);
+    const size = BUILDINGS[facility.def].size;
+    unit.x = facility.x - 1 + lane * 0.42;
+    unit.y = facility.y + size.h + 0.5 + row * 0.42;
+    unit.storedAt = undefined;
+    unit.path = [];
+    unit.pathIndex = 0;
+  });
+  return units.length;
+}
+
+export function militaryUnitsAt(city: City, facilityId: number) {
+  return city.military.units.filter((unit) => unit.storedAt === facilityId);
 }
 
 function pathFor(city: City, unit: MilitaryUnit, tx: number, ty: number): MilitaryWaypoint[] | null {

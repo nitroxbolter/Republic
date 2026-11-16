@@ -632,3 +632,6 @@ Mapeados os sistemas cívicos, orçamento, estágios, despacho de emergências, 
 ## 2026-11-13 — Instalações militares
 
 Adicionados Quartel, Garagem militar, Paiol, Base militar e Centro de treinamento à guia Defesa, com arte procedural original composta a partir dos kits de pátio, garagem, cerca, antena e heliponto. Definidos custos, empregos, manutenção e desbloqueios por estágio; a manutenção militar aparece separada no orçamento. Descrições esclarecem que tropas, inventário, missões e combate ainda não são simulados.
+# 2026-11-16 — Armazenamento de unidades militares e aterro
+
+Unidades militares podem ser recolhidas individualmente ao clicar numa instalação compatível ou em grupo pelo Centro de Comando. Quartéis e bases armazenam soldados; garagens armazenam viaturas. Os painéis mostram ocupação e oferecem mobilização de volta ao mapa; o local de armazenamento é persistido em saves antigos e novos. O aterro recebeu uma pilha menor e mais centrada dentro do lote, com margem visual maior para evitar sobreposição e corte junto de construções vizinhas.

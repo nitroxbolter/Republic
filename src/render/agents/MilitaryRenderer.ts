@@ -23,6 +23,11 @@ export class MilitaryRenderer {
     const vt = this.viewRef.current;
     for (const unit of units) {
       alive.add(unit.id);
+      if (unit.storedAt !== undefined) {
+        const stored = this.sprites.get(unit.id);
+        if (stored) stored.visible = false;
+        continue;
+      }
       const vp = vt.pointToView(unit.x, unit.y);
       const point = liftView(this.viewRef.ground, vp.x, vp.y);
       if (point.x < view.minX - 70 || point.x > view.maxX + 70 || point.y < view.minY - 90 || point.y > view.maxY + 50) {

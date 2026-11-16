@@ -86,8 +86,13 @@ function MilitaryBody({ onClose }: { onClose: () => void }) {
 
     <section className="budget-card">
       <h3 className="budget-heading">Efetivo e soldos</h3>
-      <p className="tax-hint">Unidades ficam no pátio da base. No mapa, clique em um soldado, veículo ou helicóptero e depois clique no destino; Esc cancela a seleção. Tropas e veículos contornam prédios e água. Helicópteros sobrevoam obstáculos.</p>
-      <Stock label="Soldados alojados" value={report.inventory.soldiers} capacity={report.capacity.soldiers} />
+      <p className="tax-hint">Clique numa unidade e depois numa garagem ou quartel compatível para guardá-la. Unidades guardadas somem do mapa e passam a ocupar vagas da instalação; para retirar, abra o prédio e use o botão de mobilização. Unidades em campo podem ser movidas clicando nelas e depois no destino.</p>
+      <button type="button" className="secondary-button" disabled={report.inventory.units.every((unit) => unit.storedAt !== undefined)} onClick={() => {
+        const countStored = game.storeAllMilitaryUnits();
+        setMessage(countStored ? `${countStored} unidade(s) recolhida(s) às instalações.` : 'Não há vagas compatíveis para recolher as unidades.');
+        setRevision((value) => value + 1);
+      }}>Recolher todas as unidades</button>
+      <Stock label="Soldados alistados" value={report.inventory.soldiers} capacity={report.capacity.soldiers} />
       {!report.capacity.soldiers && <p className="tax-hint warn-text">Construa um Quartel para aumentar a capacidade de alojamento.</p>}
       <div className="budget-line"><span>Soldos no próximo mês</span><strong>{money(report.monthlyPayroll)}/mês</strong></div>
       <p className="tax-hint">Cada alistamento custa {money(report.enlistmentCost)} e consome um fuzil e {BALANCE.military.roundsPerSoldier} munições. O soldo é debitado mensalmente e aparece nos custos de defesa.</p>
@@ -98,7 +103,7 @@ function MilitaryBody({ onClose }: { onClose: () => void }) {
 
     <section className="budget-card">
       <h3 className="budget-heading">Garagem e frota</h3>
-      <Stock label="Veículos armazenados" value={totalVehicles} capacity={report.capacity.vehicles} />
+      <Stock label="Veículos comprados" value={totalVehicles} capacity={report.capacity.vehicles} />
       {!report.capacity.garages && <p className="tax-hint warn-text">Construa uma Garagem Militar para comprar e armazenar veículos.</p>}
       {vehicleRows.map((row) => <div className="military-purchase" key={row.id}>
         <div><strong>{row.label}</strong><span>{report.inventory.vehicles[row.id]} · {money(row.cost)} cada</span></div>

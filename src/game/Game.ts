@@ -21,7 +21,7 @@ import { stageRequirements } from '../sim/progression';
 import { lifestyleReport } from '../sim/systems/lifestyle';
 import { currentTech, researchRate, TECHS } from '../sim/research';
 import { materialStorage } from '../sim/systems/materials';
-import { enlistSoldiers, issueMilitaryMove, purchaseMilitary, type MilitaryPurchase, type MilitaryActionResult } from '../sim/systems/military';
+import { deployMilitaryUnits, enlistSoldiers, issueMilitaryMove, militaryUnitsAt, purchaseMilitary, storeAllMilitaryUnits, storeMilitaryUnit, type MilitaryPurchase, type MilitaryActionResult } from '../sim/systems/military';
 import { collectTaxes, townHall } from '../sim/systems/budget';
 import { acquireProperty, financeProperty, privateRecoverProperty, repayPropertyLoan } from '../sim/systems/realEstate';
 import { inspectInfo } from './inspect';
@@ -974,6 +974,32 @@ export class Game {
     return this.finishMilitaryAction(purchaseMilitary(this.city, item, quantity), before, `compra militar (${item})`);
   }
 
+  storeAllMilitaryUnits() {
+    const count = storeAllMilitaryUnits(this.city);
+    if (count > 0) {
+      this.selectedMilitaryUnit = null;
+      this.edits++;
+      this.audit.record(this.city, 'DEFESA', `${count} unidade(s) militar(es) recolhida(s) às instalações.`);
+      this.emitCity();
+    }
+    return count;
+  }
+
+  militaryUnitsAt(facilityId: number) {
+    return militaryUnitsAt(this.city, facilityId).length;
+  }
+
+  deployMilitaryUnits(facilityId: number) {
+    const count = deployMilitaryUnits(this.city, facilityId);
+    if (count > 0) {
+      this.edits++;
+      this.audit.record(this.city, 'DEFESA', `${count} unidade(s) militar(es) mobilizada(s) da instalação ${facilityId}.`);
+      this.emitCity();
+      this.inspect(facilityId);
+    }
+    return count;
+  }
+
   private finishMilitaryAction(result: MilitaryActionResult, fundsBefore: number, action: string): MilitaryActionResult {
     if (result.ok) {
       this.audit.record(this.city, 'MOVIMENTO FINANCEIRO', `${action}: origem caixa público; destino folha/estoque militar; valor ${formatAuditMoney(result.cost)}; saldo antes ${formatAuditMoney(fundsBefore)}, depois ${formatAuditMoney(this.city.funds)}; quantidade ${result.quantity}.`);
@@ -1133,6 +1159,21 @@ export class Game {
       this.selectedMilitaryUnit = clickedUnit.id;
       this.inspect(null);
       this.notify('info', `${this.militaryUnitLabel(clickedUnit.kind)} selecionado. Clique no mapa para mover.`);
+      return;
+    }
+    const clickedBuildingId = this.world.building[this.world.index(t.x, t.y)];
+    if (this.selectedMilitaryUnit !== null && clickedBuildingId !== -1) {
+      const result = storeMilitaryUnit(this.city, this.selectedMilitaryUnit, clickedBuildingId);
+      if (result === 'ok') {
+        this.selectedMilitaryUnit = null;
+        this.edits++;
+        this.audit.record(this.city, 'DEFESA', `Unidade militar recolhida à instalação ${clickedBuildingId}.`);
+        this.emitCity();
+        this.notify('info', 'Unidade guardada na instalação. Use Retirar unidades no painel para mobilizá-la.');
+        this.inspect(clickedBuildingId);
+        return;
+      }
+      this.notify('error', result === 'capacity' ? 'A instalação está sem vagas.' : 'Essa instalação não pode guardar essa unidade.');
       return;
     }
     if (this.selectedMilitaryUnit !== null) {

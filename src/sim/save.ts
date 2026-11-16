@@ -609,7 +609,7 @@ function parseMilitary(value: unknown): { military?: MilitaryState } {
     if (!isObj(raw) || !Number.isSafeInteger(raw.id) || !isFiniteNumber(raw.id) || raw.id < 1 || !kinds.includes(raw.kind as MilitaryUnitKind) || !isFiniteNumber(raw.x) || !isFiniteNumber(raw.y) || Math.abs(raw.x) > 100_000 || Math.abs(raw.y) > 100_000 || !Array.isArray(raw.path) || raw.path.length > 20_000 || !Number.isSafeInteger(raw.pathIndex) || !isFiniteNumber(raw.pathIndex) || raw.pathIndex < 0 || raw.pathIndex > raw.path.length || !isFiniteNumber(raw.heading)) return [];
     const path = raw.path.flatMap((point) => isObj(point) && isFiniteNumber(point.x) && isFiniteNumber(point.y) && Math.abs(point.x) <= 100_000 && Math.abs(point.y) <= 100_000 ? [{ x: point.x, y: point.y }] : []);
     if (path.length !== raw.path.length) return [];
-    return [{ id: raw.id as number, kind: raw.kind as MilitaryUnitKind, x: raw.x, y: raw.y, path, pathIndex: raw.pathIndex as number, heading: raw.heading }];
+    return [{ id: raw.id as number, kind: raw.kind as MilitaryUnitKind, x: raw.x, y: raw.y, path, pathIndex: raw.pathIndex as number, heading: raw.heading, ...(Number.isSafeInteger(raw.storedAt) && isFiniteNumber(raw.storedAt) && raw.storedAt > 0 ? { storedAt: raw.storedAt } : {}) }];
   }) : [];
   const uniqueUnits = units.filter((unit, index) => units.findIndex((other) => other.id === unit.id) === index);
   const maxId = Math.max(0, ...uniqueUnits.map((unit) => unit.id));
