@@ -2,6 +2,11 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16: Tela cheia no mobile
+
+- Adicionado ao menu móvel um botão para entrar e sair da tela cheia, com estado sincronizado ao navegador.
+- Quando a API não está disponível, o jogo explica como abrir o app sem a barra do navegador.
+
 ## 2026-11-16: Confirmação de construção junto ao toque
 
 - Em telas móveis, o rascunho de construção, zona, via ou limpeza mostra um controle compacto perto do último ponto tocado: custo, cancelar e seta para aplicar. O controle respeita barra superior, dock e áreas seguras; o desktop mantém a barra com texto.

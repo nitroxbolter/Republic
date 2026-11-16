@@ -1,5 +1,10 @@
 # 04 — UI / UX
 
+## Mobile Fullscreen
+
+- The mobile city menu includes a fullscreen toggle for the game screen.
+- It uses the browser Fullscreen API when available. If the browser blocks page fullscreen, explain that installing the app from the browser menu opens it without browser chrome.
+
 ## Look & Feel
 
 - **Style:** modern "glass" HUD floating over the world. Panels are translucent dark with backdrop blur, soft shadows and rounded corners (12px). The world stays the hero, and the UI never covers it with big opaque bars.

@@ -9,6 +9,7 @@ import { aqiBand } from '../../sim/systems/air';
 import { minimapShownAtom } from './Minimap';
 import { SaveStatus } from './SaveStatus';
 import { Sheet } from './Sheet';
+import { FullscreenButton } from './FullscreenButton';
 import { StageDetails, StageRing, stageProgress } from './StageChip';
 import { BRIEFCASE, CAR, CITIES, DAY_NIGHT_OPTIONS, DemandList, HELP, ROTATE_LEFT, ROTATE_RIGHT, faceGlyph, speakerGlyph, useClockText } from './TopBar';
 
@@ -96,6 +97,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
       <button type="button" className="primary-button" onClick={budget.show}>Orçamento, salário mínimo e aposentadorias</button>
       <button type="button" className="secondary-button" onClick={demography.show}>Política Demográfica</button>
       <button type="button" className="secondary-button" onClick={bank.show}>Banco: aplicações e empréstimos</button>
+      <FullscreenButton />
 
       <div className="more-stats">
         <span className="more-stat"><span className="air-dot" style={{ background: '#7b8da4' }} aria-hidden="true" /><span>
