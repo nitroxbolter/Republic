@@ -1119,23 +1119,6 @@ kbd {
   background: rgba(79, 209, 197, 0.12);
 }
 
-/* ---------- Minimap ---------- */
-.minimap {
-  right: 16px;
-  bottom: 20px;
-  padding: 6px;
-  animation-name: hint-in;
-}
-.minimap canvas {
-  display: block;
-}
-.minimap-view {
-  position: absolute;
-  inset: 6px;
-  cursor: pointer;
-  touch-action: none;
-}
-
 /* ---------- New Game screen ---------- */
 .new-game {
   position: fixed;
@@ -3784,13 +3767,6 @@ summary {
   .tool-tip {
     display: none;
   }
-  .minimap {
-    right: calc(8px + var(--safe-r));
-    bottom: calc(6px + var(--safe-b));
-    padding: 4px;
-    zoom: 0.58;
-  }
-
   /*
    * Pickers: one short row above the toolbar that scrolls sideways, so the map stays in view.
    * Only what you need to choose is kept (picture, name, price); the help text goes.
@@ -5960,12 +5936,6 @@ summary {
   }
   .citizens-header {
     min-height: 32px;
-  }
-  .minimap {
-    right: calc(8px + var(--safe-r));
-    bottom: var(--above-dock);
-    padding: 4px;
-    zoom: 0.62;
   }
   .traffic-legend {
     left: calc(8px + var(--safe-l));

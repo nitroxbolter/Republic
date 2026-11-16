@@ -17,7 +17,6 @@ import { MilitaryPanel } from '../hud/MilitaryPanel';
 import { BankPanel } from '../hud/BankPanel';
 import { DemographyPanel } from '../hud/DemographyPanel';
 import { TrafficLegend } from '../hud/TrafficLegend';
-import { Minimap } from '../hud/Minimap';
 import { Toolbar } from '../hud/Toolbar';
 import { TopBar } from '../hud/TopBar';
 import { MoreSheet } from '../hud/MoreSheet';
@@ -201,7 +200,6 @@ function Hud({ options, onNewCity, onSave, beforeLogout }: HudProps) {
     <>
       <TopBar cityName={options.name} onNewCity={onNewCity} onSave={onSave} beforeLogout={beforeLogout} />
       <DebugOverlay />
-      <Minimap />
       <TrafficLegend />
       <Toolbar />
       <InfoPanel />

@@ -210,4 +210,6 @@ Format: **ID — Title** · Status · Date. Reason in one or two lines.
 
 - **D-105 — Release notes share one source across both start screens.** 2026-11-13. A static, dated list in `src/app/updates.ts` feeds the public landing and the city menu. Players see the same published changes before login and after login. Each future release appends a short player-facing entry before deployment; no server data or extra request is needed.
 
-- **D-106 — The city secretary is the single home for in-game notices.** 2026-11-16. Temporary toasts and the separate alert bell split attention across the map. All game notices now remain in the secretary until dismissed or resolved, alongside her current recommendations. The keyboard-help card and floating citizen-happiness panel are removed to clear the map; the minimap is hidden on desktop and remains optional on compact touch layouts.
+- **D-106 — The city secretary is the single home for in-game notices.** 2026-11-16. Temporary toasts and the separate alert bell split attention across the map. All game notices now remain in the secretary until dismissed or resolved, alongside her current recommendations. The keyboard-help card and floating citizen-happiness panel are removed to clear the map.
+
+- **D-107 — The minimap stays out of the live city view on every device.** 2026-11-16. The minimap competed with buildings and mobile touch controls for screen area. Remove it from gameplay and its mobile-menu toggle; keep the shared painter for city-creation previews.

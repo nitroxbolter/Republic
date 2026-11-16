@@ -2,6 +2,10 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16: Minimapa removido também do mobile
+
+- Removidos o minimapa durante a partida e seu controle no menu móvel. O mapa de prévia na criação de cidade continua disponível.
+
 ## 2026-11-16: Alertas centralizados na secretaria
 
 - Mensagens do jogo agora ficam na Lia até serem dispensadas ou resolvidas; toasts e o sino separado foram removidos.

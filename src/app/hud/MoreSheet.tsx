@@ -1,12 +1,11 @@
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtomValue } from 'jotai';
 import type { ReactNode } from 'react';
 import { AccountButton } from '../account/AccountButton';
 import { airViewAtom, cityAtom, dayNightAtom, gameAtom, happinessViewAtom, mutedAtom, trafficViewAtom } from '../atoms';
-import { SLIM_BAR, TOUCH, useMedia } from '../mobile/useMedia';
+import { SLIM_BAR, useMedia } from '../mobile/useMedia';
 import { useOverlay } from '../overlay/overlay';
 import { useStartTour } from '../tour/tourState';
 import { aqiBand } from '../../sim/systems/air';
-import { minimapShownAtom } from './Minimap';
 import { SaveStatus } from './SaveStatus';
 import { Sheet } from './Sheet';
 import { FullscreenButton } from './FullscreenButton';
@@ -14,13 +13,6 @@ import { StageDetails, StageRing, stageProgress } from './StageChip';
 import { BRIEFCASE, CAR, CITIES, DAY_NIGHT_OPTIONS, DemandList, HELP, ROTATE_LEFT, ROTATE_RIGHT, faceGlyph, speakerGlyph, useClockText } from './TopBar';
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'] as const;
-
-const MAP_GLYPH = (
-  <g fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-    <path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3z" />
-    <path d="M9 4v13M15 7v13" />
-  </g>
-);
 
 interface MoreSheetProps {
   cityName: string;
@@ -66,9 +58,6 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
   const trafficView = useAtomValue(trafficViewAtom);
   const happinessView = useAtomValue(happinessViewAtom);
   const airView = useAtomValue(airViewAtom);
-  const [minimap, setMinimap] = useAtom(minimapShownAtom);
-  // Only upright screens hide the minimap; landscape phones always show a small one.
-  const minimapOptional = useMedia(TOUCH);
   const startTour = useStartTour();
   const clock = useClockText();
   if (!city) return null;
@@ -174,7 +163,6 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
           onClick={view(() => game?.setAirView(!airView))}
         />
         <Toggle on={trafficView} glyph={CAR} label="Traffic" onClick={view(() => game?.setTrafficView(!trafficView))} />
-        {minimapOptional && <Toggle on={minimap} glyph={MAP_GLYPH} label="Minimap" onClick={view(() => setMinimap(!minimap))} />}
       </div>
 
       <h3 className="more-heading">Look</h3>
