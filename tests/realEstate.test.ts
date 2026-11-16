@@ -14,6 +14,7 @@ function town(type: BuildingId = 'cottage', occupants: number = BUILDINGS[type].
   const home = world.addBuilding({ def: type, x: 2, y: 2, variant: 0, occupants }, BUILDINGS[type].size.w, BUILDINGS[type].size.h);
   home.powered = true; home.watered = true;
   const jobs = world.addBuilding({ def: 'factory', x: 20, y: 20, variant: 0, occupants: 10_000 }, 2, 2);
+  jobs.entrance = world.index(20, 19);
   jobs.powered = true; jobs.watered = true;
   return { city, world, home };
 }

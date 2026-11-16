@@ -3,7 +3,7 @@ import { BUILDINGS, type BuildingInstance } from '../buildings/catalog';
 import type { World } from '../World';
 import { isActive } from './access';
 import { hasUtilities } from './utilities';
-import { economyReport, effectiveJobs, employmentFactor, type HouseholdPolicy } from './economy';
+import { economyReport, effectiveJobs, type EconomyReport, type HouseholdPolicy } from './economy';
 import type { SimSystem } from '../core/System';
 import { workingAge } from './society';
 import type { City } from '../City';
@@ -39,14 +39,23 @@ export function happinessFactor(b: BuildingInstance): number {
   return BALANCE.happinessBase + BALANCE.happinessRange * b.happiness;
 }
 
+export function jobSlots(b: BuildingInstance, economy: EconomyReport): number {
+  return b.construction === 0 && !b.abandoned && b.entrance !== -1 && hasUtilities(b)
+    ? Math.floor(effectiveJobs(b, economy))
+    : 0;
+}
+
 export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, society?: City['society'], policy?: HouseholdPolicy): CityStats {
+  return countCity(world, economyReport(world, taxRate, policy), society);
+}
+
+function countCity(world: World, economy: EconomyReport, society?: City['society']): CityStats {
   let population = 0;
   let housing = 0;
   let jobs = 0;
   let workers = 0;
   let jobBuildings = 0;
   let vacantJobBuildings = 0;
-  const economy = economyReport(world, taxRate, policy);
   for (const b of world.buildings.values()) {
     // Construction sites keep carried-over occupants for later but don't count yet; abandoned buildings are empty.
     if (b.construction > 0 || b.abandoned) continue;
@@ -57,8 +66,7 @@ export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, s
     } else {
       // Count workers and jobs from the same eligible buildings. Occupants can briefly be
       // stale after a utility/access change or an economic slowdown, so cap them to live slots.
-      if (b.entrance === -1 || !hasUtilities(b)) continue;
-      const slots = Math.floor(effectiveJobs(b, economy));
+      const slots = jobSlots(b, economy);
       if (slots <= 0) continue;
       jobs += slots;
       jobBuildings++;
@@ -78,10 +86,11 @@ export function cityStats(world: World, taxRate: number = BALANCE.baseTaxRate, s
  * jobs still determine employment and therefore spending, taxes and happiness.
  */
 export function simulateDay(world: World, taxRate: number = BALANCE.baseTaxRate, society?: City['society'], policy?: City) {
-  const before = cityStats(world, taxRate, society, policy);
-  const workforce = workingAge(before.population, society?.sick, society?.prisoners);
+  const marketBefore = economyReport(world, taxRate, policy);
+  const before = countCity(world, marketBefore, society);
+  const workforce = before.workforce;
   const jobCover = workforce === 0 ? (before.jobs > 0 ? 1 : 0) : Math.min(1, before.jobs / workforce);
-  const outlook = migrationOutlook(policy, taxRate, economyReport(world, taxRate, policy).purchasingPower);
+  const outlook = migrationOutlook(policy, taxRate, marketBefore.purchasingPower);
   const migrationRate = policy ? Math.max(BALANCE.demographicNaturalMoveInFloor, 1 - policy.demography.slowLevel * (1 - BALANCE.demographicNaturalMoveInFloor) + (policy.demography.strategy === 'stimulate' && policy.demography.incentivesEnabled ? policy.demography.incentiveLevel * BALANCE.demographicStimulusMoveInBonus : 0)) : 1;
   let immigration = 0, emigration = 0;
 
@@ -99,16 +108,23 @@ export function simulateDay(world: World, taxRate: number = BALANCE.baseTaxRate,
   }
   if (policy) recordMigration(policy, immigration, emigration);
 
-  // Share the (new) workforce across job buildings by capacity.
-  const after = cityStats(world, taxRate, society, policy);
-  const available = workingAge(after.population, society?.sick, society?.prisoners);
-  const share = after.jobs === 0 ? 0 : Math.min(1, available / after.jobs);
+  assignJobs(world, taxRate, society, policy);
+}
+
+/** Match available workers to offered positions in the aggregate labour market. */
+export function assignJobs(world: World, taxRate: number, society?: City['society'], policy?: HouseholdPolicy): void {
   const economy = economyReport(world, taxRate, policy);
+  const { jobs, workforce } = countCity(world, economy, society);
+  const hires = Math.min(jobs, workforce);
+  let slotsSeen = 0;
+  let assigned = 0;
   for (const b of world.buildings.values()) {
-    const d = BUILDINGS[b.def];
-    if (d.category === 'residential' || b.construction > 0) continue;
-    const factor = d.category === 'civic' ? 1 : happinessFactor(b);
-    b.occupants = b.entrance === -1 || !hasUtilities(b) || b.abandoned ? 0 : Math.floor(d.capacity * share * factor * employmentFactor(d.category, economy));
+    if (BUILDINGS[b.def].category === 'residential' || b.construction > 0) continue;
+    slotsSeen += jobSlots(b, economy);
+    // Carry fractional shares between buildings so the last one closes the total exactly.
+    const cumulative = jobs > 0 ? Math.floor(slotsSeen * hires / jobs) : 0;
+    b.occupants = cumulative - assigned;
+    assigned = cumulative;
   }
 }
 

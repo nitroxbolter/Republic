@@ -52,6 +52,8 @@ export class City {
   needsMaterials = false;
   /** Construction materials in stock, in tons. */
   materials = 0;
+  /** Cash already received or paid through the construction materials market this month. */
+  materialTrade = { exportIncome: 0, importCost: 0 };
   /** Research progress (sim/research.ts): points toward the current project, projects finished. */
   research: ResearchState = { points: 0, done: 0 };
   /** Fires, thefts and patients in progress, and the vehicles answering them (docs/specs/evolution.md, E3). */

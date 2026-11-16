@@ -14,19 +14,17 @@ Status: **Implemented (first version).** Tuning numbers live in `src/shared/bala
 - Without access, a building stays empty, shows a bobbing **orange road badge**, and its info panel says why.
 - Rechecked after every build, clear or demolish.
 
-## Population & Jobs (`sim/population.ts`, once per day)
+## Population & Jobs (`sim/systems/population.ts`, once per day)
 
-1. **Workforce** = 60% of residents.
-2. **Job cover** = jobs ÷ workforce, capped at 1. With no residents yet, any jobs count as full cover.
-3. Homes fill toward **target = capacity × (45% + 55% × job cover)**, closing 12% of the gap each day (at least 1 person). With no jobs, homes stop at about 45% full. Building shops, offices and industry lets them fill completely.
-4. Job buildings with access take workers from the workforce in proportion to their capacity.
-5. Top bar: **population** (tooltip shows housing capacity) and **workers/jobs** (tooltip shows unemployed).
+1. The available workforce is the adult population (87%, with the other 13% retired) less workers unavailable due to illness or imprisonment.
+2. Homes can attract residents without jobs. Job coverage is one of the factors affecting occupancy.
+3. Finished, connected buildings with the required utilities offer jobs according to their effective capacity. Hiring distributes up to the smaller of the available workforce and the offered jobs across those buildings. The distribution carries rounding remainders across buildings.
+4. The top bar shows employed residents and total jobs. Unemployment is available workforce minus employed residents. Open positions are total jobs minus employed residents.
 
 ## Budget (monthly)
 
-- Income: **$3 per resident + $2 per worker**.
-- Upkeep: road $0.4, highway $1.2, bridge $2 per tile; civic buildings 1% of their cost.
-- On the last day of each month the net amount is added to funds, with a toast ("Jan budget: +$1,689 (taxes …, upkeep …)"). It's red if the month made a loss.
+- The monthly close calculates actual receipts and operating costs. Cities with manual collection pay expenses from available funds and hold regular receipts in the Town Hall chest until collected.
+- Construction material imports and exports change available funds daily. The report shows these flows separately from the closing debits and credits, and includes their monthly totals in the operating result for the period.
 
 ## Traffic (`sim/traffic.ts`)
 

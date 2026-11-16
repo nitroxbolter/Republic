@@ -494,7 +494,11 @@ function WideTopBar({ cityName, onNewCity, onSave, beforeLogout }: TopBarProps) 
       {/* Jobs folds with the date: one toggle, shown in the date's place. */}
       <Fold id="city" open={fold}>
         <Stat
-          title={city ? `${city.workers.toLocaleString('pt-BR')} empregados ativos / ${city.jobs.toLocaleString('pt-BR')} vagas · ${city.unemployed.toLocaleString('pt-BR')} desempregados · ${city.jobVacancies.toLocaleString('pt-BR')} vagas abertas em ${city.vacantJobBuildings.toLocaleString('pt-BR')} prédios · força de trabalho disponível: ${city.workforce.toLocaleString('pt-BR')}` : 'Empregos'}
+          title={city ? [
+            `${city.jobs.toLocaleString('pt-BR')} empregos = ${city.workers.toLocaleString('pt-BR')} empregados + ${city.jobVacancies.toLocaleString('pt-BR')} vagas abertas`,
+            `${city.workforce.toLocaleString('pt-BR')} pessoas disponíveis para trabalhar = ${city.workers.toLocaleString('pt-BR')} empregados + ${city.unemployed.toLocaleString('pt-BR')} desempregados`,
+            `${city.society.seniors.toLocaleString('pt-BR')} aposentados · ${(city.society.adults - city.workforce).toLocaleString('pt-BR')} afastados`,
+          ].join('\n') : 'Empregos'}
           glyph={BRIEFCASE}
         >
           <span className="stat-value">

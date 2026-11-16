@@ -2,6 +2,11 @@
 
 Newest first. One entry per work session.
 
+## 2026-11-16 — Empregos e conciliação do caixa
+
+- A contratação diária distribui pessoas por postos ativos e carrega as frações entre edifícios. O tooltip e a auditoria mostram como calcular vagas abertas e desemprego.
+- O saldo da barra acompanha exportações e importações no dia do pagamento. O orçamento e a auditoria conciliam caixa e cofre no fechamento e incluem o comércio de materiais no resultado do período. Saves novos preservam os totais parciais de materiais até o fechamento.
+
 ## 2026-11-16: Avançar do passeio acessível no mobile
 
 - O botão do passeio mostra “Avançar” em telas touch e fica preso ao rodapé do cartão enquanto o conteúdo rola.

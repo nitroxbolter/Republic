@@ -8,6 +8,14 @@ export interface UpdateEntry {
 export const UPDATES: readonly UpdateEntry[] = [
   {
     date: '2026-11-16',
+    title: 'Empregos e caixa da cidade',
+    changes: [
+      'A contratação aproveita os postos abertos quando há trabalhadores disponíveis. O tooltip mostra como o desemprego é calculado.',
+      'O último fechamento mostra o saldo antes e depois da cobrança. A auditoria inclui exportações e importações de materiais.',
+    ],
+  },
+  {
+    date: '2026-11-16',
     title: 'Controles mais leves no celular',
     changes: [
       'A Lia abre pelo ícone e mantém os avisos dentro de um painel que cabe na tela.',

@@ -85,6 +85,7 @@ export interface SavedCity {
   /** Growth uses construction materials, and the stock (E6). */
   readonly needsMaterials?: boolean;
   readonly materials?: number;
+  readonly materialTrade?: City['materialTrade'];
   /** Research progress (E7). */
   readonly research?: { readonly points: number; readonly done: number };
   /** Fires, thefts and patients in progress, vehicles out, and robbed or untreated buildings (E3). */
@@ -211,7 +212,7 @@ export function serialize(city: City, terrain: TerrainSettings, name: string, si
     gen: GENERATOR_VERSION,
     name,
     terrain: { ...terrain },
-    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, bank: { nextId: city.bank.nextId, investments: city.bank.investments.map((item) => ({ ...item })), loans: city.bank.loans.map((item) => ({ ...item })) }, military: { ...city.military, vehicles: { ...city.military.vehicles }, units: city.military.units.map((unit) => ({ ...unit, path: unit.path.map((point) => ({ ...point })) })) }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, research: { ...city.research }, ...incidentsField(city) },
+    city: { funds: city.funds, propertyLedger: { ...city.propertyLedger }, demography: { ...city.demography, permitLimits: { ...city.demography.permitLimits }, permitUsed: { ...city.demography.permitUsed } }, bank: { nextId: city.bank.nextId, investments: city.bank.investments.map((item) => ({ ...item })), loans: city.bank.loans.map((item) => ({ ...item })) }, military: { ...city.military, vehicles: { ...city.military.vehicles }, units: city.military.units.map((unit) => ({ ...unit, path: unit.path.map((point) => ({ ...point })) })) }, day: city.day, clock: city.clock, taxRate: city.taxRate, incomeTaxRate: city.incomeTaxRate, minimumWage: city.minimumWage, pensionPerSenior: city.pensionPerSenior, costTaxRates: { ...city.costTaxRates }, society: { ...city.society }, stage: city.stage, locked: city.locked, collectsTaxes: city.collectsTaxes, uncollected: city.uncollected, needsMaterials: city.needsMaterials, materials: city.materials, materialTrade: { ...city.materialTrade }, research: { ...city.research }, ...incidentsField(city) },
     layers: {
       road: encodeLayer(w.road),
       bridge: encodeLayer(w.bridge),
@@ -323,6 +324,7 @@ export function deserialize(data: SaveData): City {
   city.uncollected = Math.max(0, data.city.uncollected ?? 0);
   city.needsMaterials = data.city.needsMaterials ?? false;
   city.materials = Math.max(0, data.city.materials ?? 0);
+  if (data.city.materialTrade) city.materialTrade = { ...data.city.materialTrade };
   if (data.city.research) city.research = { points: Math.max(0, data.city.research.points), done: Math.max(0, Math.min(TECHS.length, Math.floor(data.city.research.done))) };
   city.stage = data.city.stage !== undefined && isStage(data.city.stage) ? data.city.stage : Stage.Hamlet;
   if (data.city.incidents) loadIncidents(city, data.city.incidents);
@@ -555,6 +557,7 @@ export function parseSave(json: unknown): SaveData {
       ...(isFiniteNumber(c.uncollected) && { uncollected: c.uncollected }),
       ...(typeof c.needsMaterials === 'boolean' && { needsMaterials: c.needsMaterials }),
       ...(isFiniteNumber(c.materials) && { materials: c.materials }),
+      ...parseMaterialTrade(c.materialTrade),
       ...(isObj(c.research) && isFiniteNumber(c.research.points) && isFiniteNumber(c.research.done) && { research: { points: c.research.points, done: c.research.done } }),
       ...optionalIncidents(parseIncidents(c.incidents)),
     },
@@ -596,6 +599,13 @@ function parseBank(value: unknown): { bank?: BankState } {
   const maxId = Math.max(0, ...investments.map((item) => item.id), ...loans.map((item) => item.id));
   const nextId = Number.isSafeInteger(value.nextId) && isFiniteNumber(value.nextId) && value.nextId > maxId ? value.nextId : maxId + 1;
   return { bank: { nextId, investments, loans } };
+}
+
+function parseMaterialTrade(value: unknown): { materialTrade?: City['materialTrade'] } {
+  if (!isObj(value)) return {};
+  const { exportIncome, importCost } = value;
+  if (!isFiniteNumber(exportIncome) || exportIncome < 0 || !isFiniteNumber(importCost) || importCost < 0) return {};
+  return { materialTrade: { exportIncome, importCost } };
 }
 
 function parseMilitary(value: unknown): { military?: MilitaryState } {

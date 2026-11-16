@@ -21,6 +21,8 @@ export interface BudgetReport {
   income: number;
   expenses: number;
   net: number;
+  /** Materials already traded during the period. Their cash movements are outside the closing payment. */
+  materialTrade: Readonly<City['materialTrade']>;
   /** Actual change in available funds at month end; excludes revenue held for manual collection. */
   cashNet: number;
   /** Company tax rate (percent) used for this report. */
@@ -241,10 +243,9 @@ export function monthlyBudget(
 ): BudgetReport {
   const s = cityStats(world, taxRate, society, policyCity ?? { minimumWage, pensionPerSenior, costTaxRates, incomeTaxRate });
   const ages = demographics(s.population);
-  const availableWorkers = s.workforce;
-  const employed = Math.min(availableWorkers, s.workers);
-  const unemployed = availableWorkers - employed;
-  const unavailable = ages.adults - availableWorkers;
+  const employed = s.workers;
+  const unemployed = s.unemployed;
+  const unavailable = ages.adults - s.workforce;
   const employedShare = ages.adults > 0 ? employed / ages.adults : 0;
   let recycled = 0;
   let incomeTaxesPaid = 0;
@@ -385,22 +386,26 @@ export function monthlyBudget(
   const utilityRevenue = costBalances.energy.baseRevenue + costBalances.water.baseRevenue;
   const forecastFlows = forecastPropertyFlows(world, propertyPayments);
   const bankFlow = policyCity ? forecastBankMonth(policyCity.bank) : forecastBankMonth({ nextId: 1, investments: [], loans: [] });
-  const income = taxRevenue + utilityRevenue + recycling + Math.round(forecastFlows.interest + forecastFlows.publicRent) + bankFlow.investmentInterest;
+  const regularIncome = taxRevenue + utilityRevenue + recycling;
+  const income = regularIncome + forecastFlows.interest + forecastFlows.publicRent + bankFlow.investmentInterest;
   const pensions = ages.seniors * pensionPerSenior;
   const demographicIncentives = policyCity ? demographicMonthlyCost(policyCity, true) : 0;
   const constructionGrants = policyCity?.demography.monthConstructionGrants ?? 0;
   const militaryPayroll = policyCity ? militaryMonthlyPayroll(policyCity) : 0;
-  const expenses = Math.round(roads + transport + services + defense + militaryPayroll + utilities + parks + pensions + demographicIncentives + housingSubsidies + constructionGrants + forecastFlows.publicOperating) + bankFlow.loanInterest;
+  const breakdown = {
+    roads: Math.round(roads), transport, services, defense, militaryPayroll, utilities, parks,
+    pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants,
+  };
+  const expenses = Object.values(breakdown).reduce((sum, value) => sum + value, 0) + forecastFlows.publicOperating + bankFlow.loanInterest;
   return {
     income,
     expenses,
     net: income - expenses,
-    cashNet: policyCity?.collectsTaxes
-      ? Math.round(forecastFlows.principal + forecastFlows.interest + forecastFlows.publicRent - expenses) + bankFlow.investmentPrincipal + bankFlow.investmentInterest - bankFlow.loanPrincipal
-      : income - expenses + forecastFlows.principal + bankFlow.investmentPrincipal - bankFlow.loanPrincipal,
+    materialTrade: { exportIncome: policyCity?.materialTrade.exportIncome ?? 0, importCost: policyCity?.materialTrade.importCost ?? 0 },
+    cashNet: income - (policyCity?.collectsTaxes ? regularIncome : 0) + forecastFlows.principal + bankFlow.investmentPrincipal - expenses - bankFlow.loanPrincipal,
     taxRate,
     incomeTaxRate,
-    breakdown: { roads: Math.round(roads), transport, services, defense, militaryPayroll, utilities, parks, pensions, demographicIncentives, housingSubsidies: Math.round(housingSubsidies), constructionGrants },
+    breakdown,
     recycling,
     taxRevenue,
     businessTaxRevenue,
@@ -442,6 +447,7 @@ export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | nu
   const openingFunds = city.funds;
   const openingChest = city.uncollected;
   const r = monthlyBudget(city.world, city.taxRate, city.pensionPerSenior, city.minimumWage, city.costTaxRates, city.incomeTaxRate, city.society, city);
+  city.materialTrade = { exportIncome: 0, importCost: 0 };
   const flows = settleProperties(city.world, Math.floor(city.day / BALANCE.daysPerMonth), r.propertyPayments);
   const bankFlow = settleBankMonth(city.bank);
   r.bankFlow = bankFlow;
@@ -459,47 +465,31 @@ export function collectBudget(city: City): BudgetReport & { held: HeldTaxes | nu
   city.propertyLedger.repaidEarlyThisMonth = 0;
   city.propertyLedger.earlyInterestThisMonth = 0;
   r.propertyFlows = flows;
-  const regularIncome = r.income - Math.round(anticipated.interest + anticipated.publicRent) - bankFlow.investmentInterest;
-  r.income += Math.round(flows.interest + flows.publicRent) - Math.round(anticipated.interest + anticipated.publicRent);
-  r.expenses += Math.round(flows.publicOperating) - Math.round(anticipated.publicOperating);
+  const regularIncome = r.taxRevenue + r.utilityRevenue + r.recycling;
+  r.income = regularIncome + flows.interest + flows.publicRent + bankFlow.investmentInterest;
+  r.expenses += flows.publicOperating - anticipated.publicOperating;
   r.net = r.income - r.expenses;
-  r.cashNet = r.net + flows.principal + bankFlow.investmentPrincipal - bankFlow.loanPrincipal;
-  if (!city.collectsTaxes) {
-    city.funds += r.cashNet;
-    r.cashNet = city.funds - openingFunds;
-    const directIncome = r.income + flows.principal + bankFlow.investmentPrincipal;
-    const expensesDebited = r.expenses + bankFlow.loanPrincipal;
-    const fundsDeltaExpected = directIncome - expensesDebited;
-    const fundsDeltaObserved = city.funds - openingFunds;
-    r.cashLedger = {
-      fundsBefore: openingFunds, fundsAfter: city.funds, fundsDeltaExpected, fundsDeltaObserved,
-      fundsDifference: fundsDeltaObserved - fundsDeltaExpected,
-      townHallBefore: openingChest, townHallAfter: city.uncollected, townHallIncomeAdded: 0, townHallIncomeLost: 0,
-      expensesDebited, directIncome,
-    };
-    return { ...r, held: null };
-  }
-  const directIncome = flows.principal + flows.interest + flows.publicRent + bankFlow.investmentPrincipal + bankFlow.investmentInterest;
+  const directIncome = r.income - (city.collectsTaxes ? regularIncome : 0) + flows.principal + bankFlow.investmentPrincipal;
   const expensesDebited = r.expenses + bankFlow.loanPrincipal;
   const fundsDeltaExpected = directIncome - expensesDebited;
-  city.funds += flows.principal + flows.interest + flows.publicRent + bankFlow.investmentPrincipal + bankFlow.investmentInterest - r.expenses - bankFlow.loanPrincipal;
+  city.funds += fundsDeltaExpected;
   r.cashNet = city.funds - openingFunds;
-  const cap = Math.max(0, regularIncome) * BALANCE.chestMonths;
-  const total = city.uncollected + regularIncome;
-  city.uncollected = Math.min(total, Math.max(cap, city.uncollected));
-  const fundsDeltaObserved = city.funds - openingFunds;
+  let held: HeldTaxes | null = null;
+  if (city.collectsTaxes) {
+    const cap = regularIncome * BALANCE.chestMonths;
+    const total = openingChest + regularIncome;
+    city.uncollected = Math.min(total, Math.max(cap, openingChest));
+    held = { waiting: city.uncollected, lost: total - city.uncollected, filling: regularIncome > 0 && city.uncollected >= regularIncome * BALANCE.chestWarnMonths };
+  }
   r.cashLedger = {
-    fundsBefore: openingFunds, fundsAfter: city.funds, fundsDeltaExpected, fundsDeltaObserved,
-    fundsDifference: fundsDeltaObserved - fundsDeltaExpected,
+    fundsBefore: openingFunds, fundsAfter: city.funds, fundsDeltaExpected, fundsDeltaObserved: r.cashNet,
+    fundsDifference: r.cashNet - fundsDeltaExpected,
     townHallBefore: openingChest, townHallAfter: city.uncollected,
     townHallIncomeAdded: city.uncollected - openingChest,
-    townHallIncomeLost: total - city.uncollected,
+    townHallIncomeLost: held?.lost ?? 0,
     expensesDebited, directIncome,
   };
-  return {
-    ...r,
-    held: { waiting: city.uncollected, lost: total - city.uncollected, filling: city.uncollected >= regularIncome * BALANCE.chestWarnMonths },
-  };
+  return { ...r, held };
 }
 
 /** The working Town Hall that taxes are collected at, if the city has one. */

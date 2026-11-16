@@ -90,7 +90,7 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
       <div className="more-stats">
         <span className="more-stat"><span className="air-dot" style={{ background: '#7b8da4' }} aria-hidden="true" /><span>
           <strong>População por idade</strong>
-          <small>Trabalhadores {city.society.adults.toLocaleString()} · idosos {city.society.seniors.toLocaleString()}</small>
+          <small>Adultos {city.society.adults.toLocaleString()} · aposentados {city.society.seniors.toLocaleString()}</small>
         </span></span>
         <span className="more-stat"><span className="air-dot" style={{ background: '#d23b5a' }} aria-hidden="true" /><span>
           <strong>Saúde e segurança</strong>
@@ -105,7 +105,10 @@ function MoreBody({ cityName, onNewCity, onSave, beforeLogout, onClose }: MoreSh
               {city.workers.toLocaleString('pt-BR')} / {city.jobs.toLocaleString('pt-BR')}
             </strong>
             <small>
-              empregados / vagas · {city.jobBuildings.toLocaleString('pt-BR')} prédio(s) oferecendo trabalho · {city.jobVacancies.toLocaleString('pt-BR')} vaga(s) abertas em {city.vacantJobBuildings.toLocaleString('pt-BR')} prédio(s) · {city.unemployed.toLocaleString('pt-BR')} desempregados · {Math.max(0, city.society.adults - city.workforce).toLocaleString('pt-BR')} afastados
+              empregados / empregos · {city.jobVacancies.toLocaleString('pt-BR')} vagas abertas em {city.vacantJobBuildings.toLocaleString('pt-BR')} prédios
+            </small>
+            <small>
+              {city.workforce.toLocaleString('pt-BR')} disponíveis para trabalhar · {city.unemployed.toLocaleString('pt-BR')} desempregados · {(city.society.adults - city.workforce).toLocaleString('pt-BR')} afastados
             </small>
           </span>
         </span>

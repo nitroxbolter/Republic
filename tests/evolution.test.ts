@@ -319,6 +319,29 @@ describe('taxes at the Town Hall (E5)', () => {
 });
 
 describe('construction materials (E6)', () => {
+  it('reports daily materials trade once without charging it again at the monthly close', () => {
+    const { city } = town();
+    city.collectsTaxes = true;
+    city.needsMaterials = true;
+    const materials = new MaterialsSystem(city);
+    const start = city.funds;
+    city.materials = BALANCE.materialsStorage + 30;
+    materials.onDay();
+    city.materials = 0;
+    expect(materials.stock.take(2)).toBe(true);
+    const trade = { exportIncome: 30 * BALANCE.materialsExportPrice, importCost: 2 * BALANCE.materialsImportPrice };
+    const terrain = { preset: 'plains', seed: 3, size: 40, water: 0, trees: 0, rivers: 0, coastSides: 0 } as const;
+    const loaded = deserialize(parseSave(JSON.parse(JSON.stringify(serialize(city, terrain, 'Materials')))));
+    expect(loaded.materialTrade).toEqual(trade);
+    const opening = loaded.funds;
+    expect(opening).toBe(start + trade.exportIncome - trade.importCost);
+    const closed = collectBudget(loaded);
+    expect(closed.materialTrade).toEqual(trade);
+    expect(loaded.funds).toBe(opening - closed.expenses);
+    expect(closed.cashLedger?.fundsDifference).toBe(0);
+    expect(loaded.materialTrade).toEqual({ exportIncome: 0, importCost: 0 });
+  });
+
   it('industry makes materials; storage caps the stock and the surplus is exported', () => {
     const { w, city, place } = town();
     city.needsMaterials = true;

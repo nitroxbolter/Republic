@@ -52,6 +52,7 @@ function Lines({ r }: { r: BudgetReport }) {
       ))}
       <div className="budget-line total"><span>Custo total</span><strong>−{money(r.expenses)}</strong></div>
       {r.bankFlow.investmentPrincipal > 0 && <div className="budget-line income"><span>Principal de aplicação resgatado no caixa</span><strong>+{money(r.bankFlow.investmentPrincipal)}</strong></div>}
+      {r.propertyFlows.principal > 0 && <div className="budget-line income"><span>Principal de financiamentos imobiliários recuperado</span><strong>+{money(r.propertyFlows.principal)}</strong></div>}
       {r.bankFlow.loanPrincipal > 0 && <div className="budget-line"><span>Principal de empréstimos amortizado no caixa</span><strong>−{money(r.bankFlow.loanPrincipal)}</strong></div>}
       <div className={`budget-line total ${r.net >= 0 ? 'gain' : 'loss'}`}>
         <span>Arrecadação − custo = resultado previsto</span>
@@ -65,6 +66,33 @@ function Lines({ r }: { r: BudgetReport }) {
         <strong>{r.cashNet >= 0 ? '+' : ''}{money(r.cashNet)}</strong>
       </div>
     </div>
+  );
+}
+
+function LastClosing({ r }: { r: BudgetReport }) {
+  const cash = r.cashLedger;
+  if (!cash) return null;
+  const { exportIncome, importCost } = r.materialTrade;
+  const monthlyIncome = r.income + exportIncome - cash.townHallIncomeLost;
+  const monthlyExpenses = r.expenses + importCost;
+  const monthlyResult = monthlyIncome - monthlyExpenses;
+  return (
+    <section className="budget-card budget-lines">
+      <h3 className="budget-heading">Último fechamento realizado</h3>
+      <div className="budget-line"><span>Saldo antes do fechamento</span><strong>{money(cash.fundsBefore)}</strong></div>
+      <div className="budget-line income"><span>Entradas diretas no caixa</span><strong>+{money(cash.directIncome)}</strong></div>
+      <div className="budget-line"><span>Despesas e amortizações debitadas</span><strong>−{money(cash.expensesDebited)}</strong></div>
+      <div className="budget-line total"><span>Saldo após o fechamento</span><strong>{money(cash.fundsAfter)}</strong></div>
+      <div className="budget-line"><span>Receitas depositadas no cofre</span><strong>{money(cash.townHallIncomeAdded)}</strong></div>
+      {cash.townHallIncomeLost > 0 && <div className="budget-line"><span>Receitas perdidas por cofre cheio</span><strong>{money(cash.townHallIncomeLost)}</strong></div>}
+      <h4 className="budget-heading">Resultado do período</h4>
+      <div className="budget-line"><span>Exportações recebidas durante o mês</span><strong>+{money(exportIncome)}</strong></div>
+      <div className="budget-line"><span>Importações pagas durante o mês</span><strong>−{money(importCost)}</strong></div>
+      <div className="budget-line"><span>Receitas do mês após perdas no cofre</span><strong>{money(monthlyIncome)}</strong></div>
+      <div className="budget-line"><span>Custos do mês</span><strong>{money(monthlyExpenses)}</strong></div>
+      <div className={`budget-line total ${monthlyResult >= 0 ? 'gain' : 'loss'}`}><span>Receitas menos custos</span><strong>{money(monthlyResult)}</strong></div>
+      <p className="tax-hint">O resultado inclui os materiais negociados ao longo do mês. Os saldos acima registram o momento da cobrança mensal.</p>
+    </section>
   );
 }
 
@@ -297,7 +325,8 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
 
       <h3 className="budget-heading">Próximo mês (previsão)</h3>
       <Lines r={info.forecast} />
-      {info.taxes && <p className="tax-hint">A arrecadação prevista fica no cofre até o recolhimento. A variação do saldo acima inclui os custos do mês e os recebimentos que entram diretamente no caixa.</p>}
+      {info.taxes && <p className="tax-hint">Impostos, contas de energia e água e receita de reciclagem vão para o cofre. Custos, aluguéis de imóveis públicos e movimentações bancárias afetam o caixa no fechamento.</p>}
+      {info.last && <LastClosing r={info.last} />}
       <h3 className="budget-heading">Mercado imobiliário e financiamentos</h3>
       <div className="budget-card">
         <div className="budget-line"><span>Imóveis inadimplentes</span><strong>{info.forecast.propertyFlows.delinquent}</strong></div>
@@ -313,17 +342,9 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
           <div className="budget-line income"><span>Juros quitados antecipadamente</span><strong>+{money(info.last.propertyFlows.earlyInterest)}</strong></div>
           <div className="budget-line"><span>Empréstimos concedidos no último mês</span><strong>−{money(info.last.propertyFlows.loansIssued)}</strong></div>
           <div className="budget-line"><span>Imóveis adquiridos no último mês</span><strong>−{money(info.last.propertyFlows.acquisitions)}</strong></div>
-          <div className="budget-line total"><span>Variação de caixa no fechamento anterior</span><strong>{money(info.last.cashNet)}</strong></div>
         </>}
       </div>
       <p className="tax-hint">A manutenção de energia e água já aparece nos saldos por conta acima. Outras infraestruturas continuam no resultado geral.</p>
-      {info.last && (
-        <p className="tax-hint">
-          Mês anterior: {info.last.net >= 0 ? '+' : ''}
-          {money(info.last.net)}
-        </p>
-      )}
-
       {info.materials && (
         <>
           <h3 className="budget-heading">Construction materials</h3>
@@ -333,6 +354,8 @@ function BudgetBody({ onClose }: { onClose: () => void }) {
               {Math.round(info.materials.stock).toLocaleString()} / {info.materials.storage.toLocaleString()} t
             </strong>
           </div>
+          <div className="budget-line income"><span>Exportações recebidas neste mês</span><strong>+{money(info.forecast.materialTrade.exportIncome)}</strong></div>
+          <div className="budget-line"><span>Importações pagas neste mês</span><strong>−{money(info.forecast.materialTrade.importCost)}</strong></div>
           <div className="budget-line dim">
             <span>Today: made · imported · used</span>
             <span>

@@ -601,6 +601,7 @@ export class Game {
   }
 
   private newDay(out: DayOutcome) {
+    this.events.emit('funds', this.city.funds);
     this.audit.daily(this.city, this.sim, out);
     this.showDay(out);
     this.explainMaterials();
@@ -617,7 +618,6 @@ export class Game {
         const phase = months === BALANCE.propertyBankruptcyMonths ? 'em falência' : months === BALANCE.propertyCriticalMonths ? 'em situação crítica' : months === BALANCE.propertyFinanceMonths ? 'aptos a financiamento' : 'inadimplentes';
         this.notify('error', `${affected.length} imóvel(is) ${phase}: ${names.join(', ')}${affected.length > 3 ? '…' : ''}.`, `property-${months}`);
       }
-      this.events.emit('funds', this.city.funds);
       const month = MONTH_NAMES[(this.city.date.month + 11) % 12];
       const sign = r.net >= 0 ? '+' : '−';
       const held = this.sim.budget.held;

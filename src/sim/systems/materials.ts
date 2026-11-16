@@ -76,6 +76,7 @@ export class MaterialsSystem implements SimSystem {
           this.importedToday += short;
           c.materials += short;
           c.funds -= cost;
+          c.materialTrade.importCost += cost;
           this.report.imported += short;
           this.report.importCost += cost;
         }
@@ -103,6 +104,7 @@ export class MaterialsSystem implements SimSystem {
     c.materials -= exported;
     const income = exported * BALANCE.materialsExportPrice;
     c.funds += income;
+    c.materialTrade.exportIncome += income;
     this.report = { ...this.report, stock: c.materials, storage, made, exported, exportIncome: income };
   }
 

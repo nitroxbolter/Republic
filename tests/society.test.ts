@@ -1,20 +1,40 @@
 import { describe, expect, it } from 'vitest';
 import { monthlyBudget } from '../src/sim/systems/budget';
 import { economyReport } from '../src/sim/systems/economy';
-import { cityStats } from '../src/sim/systems/population';
+import { assignJobs, cityStats } from '../src/sim/systems/population';
 import { demographics, societyDay } from '../src/sim/systems/society';
 import { deserialize, parseSave, serialize } from '../src/sim/save';
 import { presetSettings } from '../src/sim/terrain/presets';
 import { street } from './support/street';
 
 describe('sociedade e política salarial', () => {
+  it('distribui as contratações sem perder trabalhadores no arredondamento por prédio', () => {
+    const t = street();
+    const home = t.place('walkup', 4, 11);
+    for (let x = 8; x < 30; x++) t.place('corner_shop', x, 11);
+    t.refresh();
+    for (const b of t.world.buildings.values()) b.powered = b.watered = true;
+    home.occupants = 15;
+    t.city.society.sick = 2;
+    t.city.society.prisoners = 1;
+    assignJobs(t.world, t.city.taxRate, t.city.society, t.city);
+    const stats = cityStats(t.world, t.city.taxRate, t.city.society, t.city);
+    expect(stats.workforce).toBe(11);
+    expect(stats.jobs).toBeGreaterThan(stats.workforce);
+    expect(stats.workers).toBe(stats.workforce);
+    expect(stats.unemployed).toBe(0);
+    expect(stats.jobVacancies).toBe(stats.jobs - stats.workers);
+    expect([...t.world.buildings.values()].filter((b) => b.def === 'corner_shop').reduce((sum, b) => sum + b.occupants, 0)).toBe(stats.workers);
+  });
+
   it('fecha adultos = empregados + desempregados + afastados e tributa só empregados', () => {
     const t = street();
     const home = t.place('walkup', 4, 11);
-    const shop = t.place('corner_shop', 7, 11);
+    const employer = t.place('police_station', 7, 11);
     t.refresh();
+    home.powered = home.watered = true;
     home.occupants = 20;
-    shop.occupants = 5;
+    employer.occupants = 5;
     t.city.society.sick = 2;
     t.city.society.prisoners = 1;
     t.city.incomeTaxRate = 20;

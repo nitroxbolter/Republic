@@ -4,12 +4,11 @@ import { ZoneType } from '../sim/zones';
 import type { City } from '../sim/City';
 import type { Simulation } from '../sim/core/Simulation';
 import type { DayOutcome } from '../sim/core/System';
-import { cityStats } from '../sim/systems/population';
+import { cityStats, jobSlots } from '../sim/systems/population';
 import { demographics, societyReport } from '../sim/systems/society';
 import type { BudgetReport, HeldTaxes } from '../sim/systems/budget';
 import { diagnoseVacantLots, growthDemandAudit, type LotDiagnosis, type ZoneDiagnostics } from '../sim/systems/growth';
-import { hasUtilities } from '../sim/systems/utilities';
-import { effectiveJobs, economyReport } from '../sim/systems/economy';
+import { economyReport } from '../sim/systems/economy';
 import { materialsFor } from '../sim/systems/materials';
 import { techEffects } from '../sim/research';
 
@@ -42,7 +41,6 @@ function closedMonthDate(city: City) {
 function populationMood(city: City, sim: Simulation) {
   const stats = cityStats(city.world, city.taxRate, city.society, city);
   const society = societyReport(city);
-  const availableWorkers = stats.workforce;
   return {
     population: stats.population,
     jobs: stats.jobs,
@@ -50,8 +48,8 @@ function populationMood(city: City, sim: Simulation) {
     jobVacancies: stats.jobVacancies,
     vacantJobBuildings: stats.vacantJobBuildings,
     workforce: stats.workforce,
-    employed: Math.min(availableWorkers, stats.workers),
-    unemployed: Math.max(0, availableWorkers - stats.workers),
+    employed: stats.workers,
+    unemployed: stats.unemployed,
     adults: society.adults,
     seniors: society.seniors,
     sick: society.sick,
@@ -127,9 +125,9 @@ function sectorStaffing(city: City): Record<AuditSector, number> {
   const economy = economyReport(city.world, city.taxRate, city);
   for (const b of city.world.buildings.values()) {
     const def = BUILDINGS[b.def];
-    if (def.category === 'residential' || b.construction > 0 || b.abandoned || b.entrance === -1 || !hasUtilities(b)) continue;
+    if (def.category === 'residential') continue;
     const sector: AuditSector = def.category === 'industrial' ? 'indústria' : def.category === 'commercial' ? 'comercio' : 'serviços públicos';
-    staffed[sector] += Math.min(b.occupants, effectiveJobs(b, economy));
+    staffed[sector] += Math.min(b.occupants, jobSlots(b, economy));
   }
   return staffed;
 }
@@ -150,8 +148,7 @@ function sectorAuditLines(city: City, report: BudgetReport): string[] {
     if (b.construction > 0) { row.construction++; continue; }
     if (b.abandoned) continue;
     row.theoreticalCapacity += def.capacity;
-    if (b.entrance === -1 || !hasUtilities(b)) continue;
-    const active = effectiveJobs(b, economy);
+    const active = jobSlots(b, economy);
     row.activePosts += active;
     row.staffed += Math.min(b.occupants, active);
   }
@@ -246,19 +243,25 @@ function auditChecks(city: City, report: BudgetReport): string[] {
   const householdServiceTax = (['energy', 'water', 'housing', 'transport'] as const).reduce((sum, key) => sum + report.costBalances[key].taxRevenue, 0);
   const expectedResidentTax = Math.round(householdIncomeTax) + householdServiceTax;
   const expectedIncome = report.taxRevenue + report.utilityRevenue + report.recycling
-    + Math.round(report.propertyFlows.interest + report.propertyFlows.publicRent) + report.bankFlow.investmentInterest;
-  const expectedExpenses = Math.round(Object.values(report.breakdown).reduce((sum, value) => sum + value, 0) + report.propertyFlows.publicOperating) + report.bankFlow.loanInterest;
+    + report.propertyFlows.interest + report.propertyFlows.publicRent + report.bankFlow.investmentInterest;
+  const expectedExpenses = Object.values(report.breakdown).reduce((sum, value) => sum + value, 0) + report.propertyFlows.publicOperating + report.bankFlow.loanInterest;
   const checks: string[] = [];
   if (expectedBusinessTax !== report.businessTaxRevenue) checks.push(`imposto empresarial calculado ${money(expectedBusinessTax)} ≠ registrado ${money(report.businessTaxRevenue)}`);
   if (Math.abs(expectedResidentTax - report.residentTaxRevenue) > 1) checks.push(`impostos dos moradores calculados ${money(expectedResidentTax)} ≠ registrados ${money(report.residentTaxRevenue)}`);
-  if (Math.abs(expectedIncome - report.income) > 1) checks.push(`receitas por componentes ${money(expectedIncome)} ≠ total registrado ${money(report.income)}`);
-  if (Math.abs(expectedExpenses - report.expenses) > 1) checks.push(`despesas por componentes ${money(expectedExpenses)} ≠ total registrado ${money(report.expenses)}`);
+  if (Math.abs(expectedIncome - report.income) > 0.01) checks.push(`receitas por componentes ${money(expectedIncome)} ≠ total registrado ${money(report.income)}`);
+  if (Math.abs(expectedExpenses - report.expenses) > 0.01) checks.push(`despesas por componentes ${money(expectedExpenses)} ≠ total registrado ${money(report.expenses)}`);
   const subsidyBeneficiaries = [...city.world.buildings.values()].filter((b) => BUILDINGS[b.def].category === 'residential' && b.construction === 0 && b.occupants > 0 && !b.property?.publicOwned).reduce((sum, b) => sum + b.occupants, 0);
   if (city.demography.housingSubsidy > 0 && subsidyBeneficiaries === 0) checks.push('subsídio habitacional configurado sem moradores elegíveis; custo/efeito estimado deve ser zero');
   if (city.demography.housingSubsidy > 0 && subsidyBeneficiaries > 0 && report.breakdown.housingSubsidies === 0) checks.push(`${subsidyBeneficiaries} moradores elegíveis ao subsídio, mas nenhum pagamento foi estimado; revisar critérios/valores sem assumir erro`);
   const negatives = [report.businessTaxRevenue, report.residentTaxRevenue, report.incomeTaxRevenue, report.utilityRevenue, report.breakdown.pensions, report.breakdown.housingSubsidies].filter((value) => value < -0.01);
   if (negatives.length) checks.push(`${negatives.length} valor(es) de receita/custo que normalmente não deveriam ser negativos`);
-  if (report.jobVacancies > 0 && report.unemployed > 0) checks.push(`${number(report.jobVacancies)} vagas em aberto e ${number(report.unemployed)} desempregados; o modelo não registra qualificação por vaga, orçamento por empresa nem motivo individual de não contratação`);
+  if (report.jobs !== report.employed + report.jobVacancies) checks.push('total de postos difere da soma de empregados e vagas abertas');
+  if (report.workers !== report.employed + report.unemployed + report.unavailable) checks.push('total de adultos difere da soma de empregados, desempregados e afastados');
+  if (report.cashLedger) {
+    const { directIncome, townHallIncomeAdded, townHallIncomeLost } = report.cashLedger;
+    const principals = report.propertyFlows.principal + report.bankFlow.investmentPrincipal;
+    if (Math.abs(directIncome + townHallIncomeAdded + townHallIncomeLost - principals - report.income) > 0.01) checks.push('entradas no caixa e no cofre não fecham com as receitas e os resgates do mês');
+  }
   if (report.cashLedger && Math.abs(report.cashLedger.fundsDifference) > 0.01) checks.push(`diferença de caixa público ${money(report.cashLedger.fundsDifference)} entre variação esperada e observada`);
   return checks.length ? checks.map((check) => `ALERTA PARA INVESTIGAÇÃO (não confirma bug): ${check}.`) : ['Conciliações aritméticas disponíveis sem divergência acima da tolerância de $1; isso não valida os modelos agregados não conciliáveis.'];
 }
@@ -278,7 +281,7 @@ function diagnosticLines(diagnostics: ZoneDiagnostics, sim: Simulation) {
   return out.length ? out : ['Nenhum terreno zonificado aguardando construção.'];
 }
 
-function reportLines(city: City, sim: Simulation, report: BudgetReport, heading: string, closing?: { openingFunds: number; held: HeldTaxes | null }, timestamp = date(city), includeLotDetails = true, diagnosticSnapshot?: ZoneDiagnostics) {
+function reportLines(city: City, sim: Simulation, report: BudgetReport, heading: string, closing?: { held: HeldTaxes | null }, timestamp = date(city), includeLotDetails = true, diagnosticSnapshot?: ZoneDiagnostics) {
   const pop = populationMood(city, sim);
   const stats = cityStats(city.world, city.taxRate, city.society, city);
   const age = demographics(pop.population);
@@ -287,10 +290,12 @@ function reportLines(city: City, sim: Simulation, report: BudgetReport, heading:
   const water = sim.utilities.report.water;
   const commute = sim.commute.report;
   const debt = debtSummary(city);
+  const periodIncome = report.income + report.materialTrade.exportIncome - (report.cashLedger?.townHallIncomeLost ?? 0);
+  const periodExpenses = report.expenses + report.materialTrade.importCost;
   const lines = [
     '',
     `===== ${heading} · ${timestamp} =====`,
-    `População: ${pop.population} (adultos ${age.adults}, idosos ${age.seniors}); força de trabalho disponível ${pop.workforce}; empregos ativos ${pop.jobs} em ${pop.jobBuildings} prédios; empregados ${report.employed}; vagas abertas ${pop.jobVacancies} em ${pop.vacantJobBuildings} prédios; desempregados ${report.unemployed}; afastados ${report.unavailable}.`,
+    `População: ${pop.population} (adultos ${age.adults}, idosos ${age.seniors}). Força de trabalho disponível ${report.workers - report.unavailable} = empregados ${report.employed} + desempregados ${report.unemployed}; afastados ${report.unavailable}. Postos ativos ${report.jobs} em ${report.jobBuildings} prédios = empregados ${report.employed} + vagas abertas ${report.jobVacancies} em ${report.vacantJobBuildings} prédios.`,
     housingAuditLine(city, stats),
     `Satisfação média: ${percent(pop.happiness)}; imóveis abandonados: ${pop.abandoned}; doentes: ${pop.sick}; presos: ${pop.prisoners}; mortes acumuladas: ${pop.deaths} (recentes: ${pop.recentDeaths}).`,
     `Reclamações mais frequentes: ${pop.complaints}.`,
@@ -302,7 +307,8 @@ function reportLines(city: City, sim: Simulation, report: BudgetReport, heading:
     `Transporte: ${commute.commuters} deslocamentos/dia, ônibus ${commute.busRiders}, trem ${commute.trainRiders}, duração média ${number(commute.avgMinutes)} min, trechos congestionados ${commute.jammedTiles}; linhas férreas ${city.world.rail.reduce((sum, rail) => sum + (rail ? 1 : 0), 0)} tiles.`,
     `Arrecadação mensal calculada: empresas ${money(report.businessTaxRevenue)}; renda ${money(report.incomeTaxRevenue)}; contas dos moradores ${money(report.residentTaxRevenue - report.incomeTaxRevenue)}; contas base de energia/água ${money(report.utilityRevenue)}; reciclagem ${money(report.recycling)}; imóveis/juros ${money(report.propertyFlows.publicRent + report.propertyFlows.interest)}; juros de aplicações ${money(report.bankFlow.investmentInterest)}; total ${money(report.income)}.`,
     `Custos mensais calculados: vias ${money(report.breakdown.roads)}; transporte público/trilhos ${money(report.breakdown.transport)}; serviços ${money(report.breakdown.services)}; defesa ${money(report.breakdown.defense)}; soldos ${money(report.breakdown.militaryPayroll)}; infraestrutura ${money(report.breakdown.utilities)}; parques ${money(report.breakdown.parks)}; aposentadorias ${money(report.breakdown.pensions)}; incentivos migratórios ${money(report.breakdown.demographicIncentives)}; subsídios habitacionais ${money(report.breakdown.housingSubsidies)}; apoio à construção ${money(report.breakdown.constructionGrants)}; operação de imóveis públicos ${money(report.propertyFlows.publicOperating)}; juros de empréstimos ${money(report.bankFlow.loanInterest)}; total ${money(report.expenses)}.`,
-    `Resultado contábil (receitas − custos): ${money(report.net)}; variação real do caixa no fechamento: ${money(report.cashNet)}.`,
+    `Resultado do fechamento (receitas − custos): ${money(report.net)}; variação ${closing ? 'real' : 'prevista'} do caixa no fechamento: ${money(report.cashNet)}.`,
+    `Materiais já pagos ou recebidos durante o mês: exportações ${money(report.materialTrade.exportIncome)}; importações ${money(report.materialTrade.importCost)}. ${closing ? 'Resultado do período após perdas no cofre' : 'Resultado previsto com os materiais já negociados'}: ${money(periodIncome)} em receitas − ${money(periodExpenses)} em custos = ${money(periodIncome - periodExpenses)}.`,
     `Salários: ${report.employed} empregados; mínimo mensal ${money(city.minimumWage)}; folha bruta estimada por classe social ${money(grossPayroll(city, report.employed, report.workers))}; imposto de renda efetivamente arrecadado ${money(report.incomeTaxRevenue)}; aposentados ${report.seniors}; custo pago de aposentadorias ${money(report.breakdown.pensions)}.`,
     'Renda e despesas das famílias por classe econômica (estimativas do modelo agregado; despesas pagas respeitam os limites de renda):',
     ...householdAuditLines(report),
@@ -317,7 +323,7 @@ function reportLines(city: City, sim: Simulation, report: BudgetReport, heading:
       return `  ${label}: ${b.residents} moradores; base média ${money(b.billPerResident)} por pessoa; taxa ${b.taxRate}%; base recebida ${money(b.baseRevenue)}; taxa recebida ${money(b.taxRevenue)}; arrecadação total ${money(b.revenue)}; manutenção pública ${money(b.upkeep)}; saldo ${money(b.net)}.`;
     }),
     `Descontos/arrecadações dos moradores: imposto de renda ${money(report.incomeTaxRevenue)}; taxas de energia ${money(report.costBalances.energy.taxRevenue)}; água ${money(report.costBalances.water.taxRevenue)}; moradia ${money(report.costBalances.housing.taxRevenue)}; transporte ${money(report.costBalances.transport.taxRevenue)}.`,
-    `Materiais de construção: estoque ${number(city.materials)}; feitos ${number(sim.materials.report.made)}; importados ${number(sim.materials.report.imported)}; usados ${number(sim.materials.report.used)}; obras aguardando material hoje ${sim.materials.report.waiting}; gasto com importação hoje ${money(sim.materials.report.importCost)}.`,
+    `Materiais de construção: estoque ${number(city.materials)}; feitos ${number(sim.materials.report.made)}; importados ${number(sim.materials.report.imported)}; usados ${number(sim.materials.report.used)}; obras aguardando material hoje ${sim.materials.report.waiting}; exportação hoje ${money(sim.materials.report.exportIncome)}; importação hoje ${money(sim.materials.report.importCost)}.`,
     'Prédios por tipo (inclui estruturas em construção):',
     ...(buildingInventory(city).map((line) => `  ${line}`)),
     'Terrenos zonificados vazios e motivos para não crescer:',
@@ -334,7 +340,6 @@ function reportLines(city: City, sim: Simulation, report: BudgetReport, heading:
   }
   if (closing) {
     lines.push(
-      `Fechamento de caixa: saldo inicial ${money(closing.openingFunds)}; despesas debitadas ${money(report.expenses)}; saldo final ${money(city.funds)}.`,
       city.collectsTaxes
         ? `Arrecadações ficam no cofre da Prefeitura: saldo aguardando ${money(closing.held?.waiting ?? city.uncollected)}; receitas perdidas por limite do cofre ${money(closing.held?.lost ?? 0)}; recolhimento manual ${townHallStatus(city)}.`
         : `Receitas e impostos liquidados automaticamente no caixa: ${money(report.income)}.`,
@@ -343,7 +348,7 @@ function reportLines(city: City, sim: Simulation, report: BudgetReport, heading:
     if (report.cashLedger) {
       const ledger = report.cashLedger;
       lines.push(
-        `Conciliação de caixa efetiva: Prefeitura antes ${money(ledger.fundsBefore)}, entradas diretas ${money(ledger.directIncome)}, saídas debitadas ${money(ledger.expensesDebited)}, variação esperada ${money(ledger.fundsDeltaExpected)}, variação observada ${money(ledger.fundsDeltaObserved)}, diferença ${money(ledger.fundsDifference)}.`,
+        `Conciliação de caixa no fechamento: saldo antes ${money(ledger.fundsBefore)} + entradas diretas ${money(ledger.directIncome)} − saídas debitadas ${money(ledger.expensesDebited)} = saldo depois ${money(ledger.fundsAfter)}. Variação esperada ${money(ledger.fundsDeltaExpected)}, observada ${money(ledger.fundsDeltaObserved)}, diferença ${money(ledger.fundsDifference)}.`,
         `Cofre da Prefeitura: início ${money(ledger.townHallBefore)}, receitas adicionadas ${money(ledger.townHallIncomeAdded)}, perdidas por limite ${money(ledger.townHallIncomeLost)}, fim ${money(ledger.townHallAfter)}. Valores transferidos só quando o jogador recolhe impostos; essa transferência não é nova receita.`,
         `Conciliação automática: ${Math.abs(ledger.fundsDifference) < 0.01 ? 'sem diferença entre variação esperada e observada do caixa' : `diferença de ${money(ledger.fundsDifference)} a investigar (alerta, não confirmação automática de bug)`}.`,
       );
@@ -420,7 +425,7 @@ export class CityAudit {
     this.previousSectorStaffing = currentStaffing;
     this.entries.push(...reportLines(city, sim, sim.budget.forecast(), 'AUDITORIA DIÁRIA / PREVISÃO DO MÊS', undefined, date(city), false, diagnostics));
     if (diagnosticChanged || out.budget) this.captureLotChanges(city, sim);
-    if (out.budget) this.monthClose(city, sim, out.budget, sim.budget.held, city.funds - out.budget.cashNet);
+    if (out.budget) this.monthClose(city, sim, out.budget, sim.budget.held);
     this.trim();
   }
 
@@ -458,8 +463,8 @@ export class CityAudit {
     this.previous = current;
   }
 
-  monthClose(city: City, sim: Simulation, report: BudgetReport, held: HeldTaxes | null, openingFunds: number) {
-    this.entries.push(...reportLines(city, sim, report, 'FECHAMENTO MENSAL', { openingFunds, held }, closedMonthDate(city)));
+  private monthClose(city: City, sim: Simulation, report: BudgetReport, held: HeldTaxes | null) {
+    this.entries.push(...reportLines(city, sim, report, 'FECHAMENTO MENSAL', { held }, closedMonthDate(city)));
     this.trim();
   }
 
